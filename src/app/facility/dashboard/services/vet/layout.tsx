@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { ServiceSetupTitle } from "@/components/facility/services/service-setup-title";
 import { Stethoscope, Calendar, Settings } from "lucide-react";
 
 const tabs = [
@@ -30,9 +31,7 @@ export default function VetLayout({ children }: { children: React.ReactNode }) {
               <Stethoscope className="size-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">
-                Veterinary Module
-              </h1>
+              <ServiceSetupTitle service="veterinary" />
               <p className="text-muted-foreground text-sm">
                 Manage veterinary appointments and services
               </p>

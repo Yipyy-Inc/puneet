@@ -1,5 +1,6 @@
 import { Scissors } from "lucide-react";
 import { GroomingNav } from "@/components/facility/grooming/grooming-nav";
+import { ServiceSetupTitle } from "@/components/facility/services/service-setup-title";
 
 export default function GroomingLayout({
   children,
@@ -15,7 +16,7 @@ export default function GroomingLayout({
               <Scissors className="size-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Grooming</h1>
+              <ServiceSetupTitle service="grooming" />
               <p className="text-muted-foreground text-sm">
                 Manage appointments, stylists, and grooming services
               </p>

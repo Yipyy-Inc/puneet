@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { ServiceSetupTitle } from "@/components/facility/services/service-setup-title";
 import {
   GraduationCap,
   Calendar,
@@ -93,9 +94,7 @@ export default function TrainingLayout({
               <GraduationCap className="size-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">
-                Training Module
-              </h1>
+              <ServiceSetupTitle service="training" />
               <p className="text-muted-foreground text-sm">
                 Manage training classes, students, and course catalog
               </p>

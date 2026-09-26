@@ -417,7 +417,7 @@ These rules prevent the build-time regressions already present in the codebase (
 ### Layouts must be Server Components
 
 - Layouts (`layout.tsx`) should not have `"use client"`. Extract `usePathname`/interactive logic into a small client component (e.g., `<NavTabs />`).
-- The 7 service layouts (daycare, boarding, grooming, training, retail, store, vet) share identical patterns — use the shared `ServiceModuleLayout` component instead of duplicating.
+- The 7 service layouts (daycare, boarding, grooming, training, retail, store, vet) share identical patterns. A shared `ServiceModuleLayout` was proposed but has never existed (docs/architecture/overview.md calls it a candidate), so do not look for it; what they do share is the title, `ServiceSetupTitle` in `src/components/facility/services/service-setup-title.tsx` — extend that rather than writing an eighth.
 
 ### Separate state from UI
 

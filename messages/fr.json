@@ -3912,6 +3912,16 @@
         "training": "Dressage",
         "evaluation": "Évaluation"
       },
+      "serviceSetup": {
+        "boarding": "Configuration de la pension",
+        "daycare": "Configuration de la garderie",
+        "grooming": "Configuration du toilettage",
+        "training": "Configuration du dressage",
+        "retail": "Configuration de la vente au détail",
+        "store": "Configuration de la boutique en ligne",
+        "veterinary": "Configuration vétérinaire",
+        "disabled": "Désactivé"
+      },
       "paymentBreakdown": {
         "title": "Résumé du paiement",
         "serviceHint": "Service",
@@ -5052,15 +5062,15 @@
         "loadFailed": "Impossible de lire le journal d’audit."
       },
       "boarding": {
-        "intro": "Configuration du module de pension — tarifs, évaluation, médias et renseignements de base.",
+        "intro": "Configuration de la pension — tarifs, évaluation, médias et renseignements de base.",
         "goTo": "Ouvrir les paramètres de pension"
       },
       "daycare": {
-        "intro": "Configuration du module de garderie — tarifs, évaluation, médias et renseignements de base.",
+        "intro": "Configuration de la garderie — tarifs, évaluation, médias et renseignements de base.",
         "goTo": "Ouvrir les paramètres de garderie"
       },
       "grooming": {
-        "intro": "Configuration du module de toilettage — horaires, tarifs, suppléments, toiletteurs et politiques.",
+        "intro": "Configuration du toilettage — horaires, tarifs, suppléments, toiletteurs et politiques.",
         "goTo": "Ouvrir les paramètres de toilettage"
       },
       "service-modules": {

@@ -64,22 +64,18 @@ export default function CustomServiceLayout({
     { name: "Settings", href: `${basePath}/settings`, icon: Settings },
   ];
 
-  // Status badge
-  const statusVariant =
+  // Status badge — only for a state worth reporting. An "Enabled" badge on
+  // every visit told a facility nothing, and the client asked for it gone
+  // (2026-09-26); the built-in modules follow the same rule (ServiceSetupTitle).
+  const status =
     serviceModule.status === "active"
-      ? "default"
+      ? null
       : serviceModule.status === "disabled"
-        ? "destructive"
-        : "secondary";
-
-  const statusLabel =
-    serviceModule.status === "active"
-      ? "Enabled"
-      : serviceModule.status === "disabled"
-        ? "Disabled"
-        : serviceModule.status === "draft"
-          ? "Draft"
-          : "Archived";
+        ? { variant: "destructive" as const, label: "Disabled" }
+        : {
+            variant: "secondary" as const,
+            label: serviceModule.status === "draft" ? "Draft" : "Archived",
+          };
 
   return (
     <div className="flex flex-1 flex-col">
@@ -94,9 +90,11 @@ export default function CustomServiceLayout({
                 />
               </div>
               <div>
-                <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
+                <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold tracking-tight">
                   {serviceModule.name}
-                  <Badge variant={statusVariant}>{statusLabel}</Badge>
+                  {status ? (
+                    <Badge variant={status.variant}>{status.label}</Badge>
+                  ) : null}
                 </h1>
                 <p className="text-muted-foreground text-sm">
                   {serviceModule.description}

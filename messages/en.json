@@ -3912,6 +3912,16 @@
         "training": "Training",
         "evaluation": "Evaluation"
       },
+      "serviceSetup": {
+        "boarding": "Boarding setup",
+        "daycare": "Daycare setup",
+        "grooming": "Grooming setup",
+        "training": "Training setup",
+        "retail": "Retail setup",
+        "store": "Store setup",
+        "veterinary": "Veterinary setup",
+        "disabled": "Disabled"
+      },
       "paymentBreakdown": {
         "title": "Payment summary",
         "serviceHint": "Service",
@@ -5052,15 +5062,15 @@
         "loadFailed": "Could not read the audit trail."
       },
       "boarding": {
-        "intro": "Boarding module setup — pricing, evaluation, media and basic details.",
+        "intro": "Boarding setup — pricing, evaluation, media and basic details.",
         "goTo": "Open boarding settings"
       },
       "daycare": {
-        "intro": "Daycare module setup — pricing, evaluation, media and basic details.",
+        "intro": "Daycare setup — pricing, evaluation, media and basic details.",
         "goTo": "Open daycare settings"
       },
       "grooming": {
-        "intro": "Grooming module setup — scheduling, pricing, add-ons, stylists and policies.",
+        "intro": "Grooming setup — scheduling, pricing, add-ons, stylists and policies.",
         "goTo": "Open grooming settings"
       },
       "service-modules": {

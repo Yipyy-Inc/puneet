@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { ServiceSetupTitle } from "@/components/facility/services/service-setup-title";
 
 import {
   ShoppingCart,
@@ -68,9 +69,7 @@ export default function RetailLayout({
               <ShoppingCart className="size-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">
-                Retail / POS Module
-              </h1>
+              <ServiceSetupTitle service="retail" />
               <p className="text-muted-foreground text-sm">
                 Manage point of sale, products, inventory, and orders
               </p>

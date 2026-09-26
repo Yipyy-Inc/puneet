@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
+import { ServiceSetupTitle } from "@/components/facility/services/service-setup-title";
 import { useSettings } from "@/hooks/use-settings";
 import {
   Sun,
@@ -63,8 +63,9 @@ const tabs = [
 // dialog asking WHY made it look like the answer went somewhere.
 //
 // Removed 2026-09-24 on the client's instruction. The badge beside the title
-// stays: it REPORTS the state, which is worth knowing when a module's screens
-// are missing, and reporting is not the same as offering to change it.
+// REPORTS the state, which is worth knowing when a module's screens are
+// missing, and reporting is not the same as offering to change it — and since
+// 2026-09-26 it appears only when the module is off (see ServiceSetupTitle).
 //
 // ── AND NO "BOOK" BUTTON ──────────────────────────────────────────────────
 //
@@ -92,16 +93,10 @@ export default function DaycareLayout({
                 <Sun className="size-5 text-white" />
               </div>
               <div>
-                <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-                  Daycare Module
-                  <Badge
-                    variant={
-                      daycare.status.disabled ? "destructive" : "default"
-                    }
-                  >
-                    {daycare.status.disabled ? "Disabled" : "Enabled"}
-                  </Badge>
-                </h1>
+                <ServiceSetupTitle
+                  service="daycare"
+                  disabled={daycare.status.disabled}
+                />
                 <p className="text-muted-foreground text-sm">
                   Manage daycare operations, check-ins, rates, and report cards
                 </p>

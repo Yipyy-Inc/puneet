@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { ServiceSetupTitle } from "@/components/facility/services/service-setup-title";
 import { Store, ShoppingBag, Settings } from "lucide-react";
 
 const tabs = [
@@ -34,9 +35,7 @@ export default function StoreLayout({
               <Store className="size-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">
-                Store Module
-              </h1>
+              <ServiceSetupTitle service="store" />
               <p className="text-muted-foreground text-sm">
                 Manage your online store and inventory
               </p>
