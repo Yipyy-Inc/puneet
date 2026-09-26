@@ -8,7 +8,7 @@ import type { ResumeStepId } from "@/lib/resume-booking";
 import { formatDateLocal } from "@/lib/shift-recurrence";
 
 import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
-import { formatMoney } from "@/lib/i18n/format";
+import { formatCalendarDayLong, formatMoney } from "@/lib/i18n/format";
 import React, {
   useState,
   useMemo,
@@ -108,6 +108,7 @@ import {
   autoAssignBoardingUnit,
   roomsForAssignments,
 } from "@/lib/capacity-engine";
+import { planKennels, type KennelChange } from "@/lib/boarding/kennel-changes";
 import { lodgingTypesServing } from "@/lib/pricing/boarding-service-choice";
 import { defaultAddOnLines } from "@/lib/pricing/boarding-default-addons";
 import { toast } from "sonner";
@@ -371,6 +372,9 @@ export function BookingModal({
   const t = useShellText("booking");
   // The send toast's words, shared with the estimate card and the wizard.
   const estimateText = useStaffText("estimateActions");
+  // The kennel-change refusal, in the reader's language.
+  const { fill: kennelFill, locale: kennelLocale } =
+    useStaffText("kennelMoves");
   const { fees: careFees } = useCareFees();
   // The bookings the caller may see: the facility's for staff, a customer's
   // own for a customer. Availability and "new customer" were computed from a
@@ -836,6 +840,10 @@ export function BookingModal({
         : preSelectedRoomId;
     return roomId ? [{ petId: preSelectedPetId, roomId }] : [];
   });
+  // Boarding: the kennel changes planned with a NEW booking — from a night on,
+  // another lodging type. Each stretch becomes a free kennel of its type at
+  // save (`planKennels`), and the booking and its moves are one transaction.
+  const [kennelChanges, setKennelChanges] = useState<KennelChange[]>([]);
   // The kennel — or play area — that was clicked to open this form. It was
   // kept only when a pet came pre-selected too, and the occupancy grid opens
   // the form with a room and a date but no pet: so the kennel staff clicked
@@ -2674,6 +2682,7 @@ export function BookingModal({
     // it loads it reads as "no bookings": every room looked free, the first
     // was picked, and the database refused it as taken.
     let bookedRooms = roomAssignments;
+    let kennelMoves: KennelChange[] = [];
     if (
       selectedService === "boarding" &&
       boardingRangeStart &&
@@ -2695,14 +2704,57 @@ export function BookingModal({
         });
         return false;
       }
-      bookedRooms = roomsForAssignments({
-        assignments: roomAssignments,
-        startDate: nights.from,
-        endDate: nights.to,
-        categories: roomCategories,
-        units: facilityRooms,
-        bookings: stays,
-      });
+      const oneKennel =
+        roomAssignments.length > 0 &&
+        new Set(roomAssignments.map((a) => a.roomId)).size === 1;
+      if (
+        !editMode &&
+        !isCustomerMode &&
+        oneKennel &&
+        kennelChanges.length > 0
+      ) {
+        // Each stretch of nights its own free kennel of its type, for exactly
+        // those nights — the first stretch too, which no longer needs a kennel
+        // free for the whole stay.
+        const plan = planKennels({
+          petIds: roomAssignments.map((a) => a.petId),
+          startDate: nights.from,
+          endDate: nights.to,
+          first: roomAssignments[0]!.roomId,
+          changes: kennelChanges,
+          categories: roomCategories,
+          units: facilityRooms,
+          bookings: stays,
+        });
+        if (!plan.ok) {
+          const type =
+            roomCategories.find((c) => c.id === plan.stretch.roomId)?.name ??
+            facilityRooms.find((r) => r.id === plan.stretch.roomId)?.name ??
+            plan.stretch.roomId;
+          toast.error(t("bookingNotSaved"), {
+            description: kennelFill("noRoomForStretch", {
+              type,
+              from: formatCalendarDayLong(plan.stretch.from, kennelLocale),
+              to: formatCalendarDayLong(plan.stretch.to, kennelLocale),
+            }),
+          });
+          return false;
+        }
+        bookedRooms = roomAssignments.map((a) => ({
+          petId: a.petId,
+          roomId: plan.unitAssignment,
+        }));
+        kennelMoves = plan.kennelMoves;
+      } else {
+        bookedRooms = roomsForAssignments({
+          assignments: roomAssignments,
+          startDate: nights.from,
+          endDate: nights.to,
+          categories: roomCategories,
+          units: facilityRooms,
+          bookings: stays,
+        });
+      }
     }
 
     const booking: NewBooking = {
@@ -2792,6 +2844,7 @@ export function BookingModal({
         selectedService === "boarding" && bookedRooms.length > 0
           ? bookedRooms[0].roomId
           : undefined,
+      kennelMoves: kennelMoves.length > 0 ? kennelMoves : undefined,
       feedingSchedule: feedingSchedule || undefined,
       walkSchedule: walkSchedule || undefined,
       medications: medications || undefined,
@@ -4502,6 +4555,12 @@ export function BookingModal({
                       onBoardingServiceChange={setBoardingService}
                       onBoardingMenuChange={setBoardingMenuOffered}
                       boardingDefaultLines={boardingDefaultLines}
+                      kennelChanges={editMode ? undefined : kennelChanges}
+                      setKennelChanges={
+                        editMode || isCustomerMode
+                          ? undefined
+                          : setKennelChanges
+                      }
                       isCustomerMode={isCustomerMode}
                       feedingSchedule={feedingSchedule}
                       setFeedingSchedule={setFeedingSchedule}

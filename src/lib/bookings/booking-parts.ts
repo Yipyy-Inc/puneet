@@ -174,6 +174,10 @@ export function expandBookingParts(
       totalCost: part.totalCost,
       unitAssignment: part.unitAssignment ?? rest.unitAssignment,
       trainingSessionId: part.trainingSessionId ?? rest.trainingSessionId,
+      // A kennel change is the move of ONE kennel's guests. Copied onto every
+      // part it would move each room's dogs into the same kennel; the form
+      // plans changes only for a stay in one kennel, which has no parts.
+      kennelMoves: undefined,
     };
     if (rest.daycareSelectedDates) {
       booking.daycareSelectedDates = [part.startDate];

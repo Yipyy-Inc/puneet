@@ -293,4 +293,58 @@ test.describe("staff finish the New Booking wizard for every service", () => {
     expect(saved?.unitAssignment).toBeTruthy();
     expect(saved?.unitAssignment).not.toBe("cat-condo");
   });
+
+  // ── A STAY ACROSS TWO LODGING TYPES, BOOKED THAT WAY ─────────────────────
+  //
+  // Staff could only split a stay after it was made. The room step plans the
+  // change now — from a night on, another type — and the booking and its
+  // move are one transaction, so this reads back TWO kennels in order.
+  test("boarding across two lodging types is booked with its kennel change", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+    const dialog = await openWizard(page, ALICE);
+    await dialog.getByText("Buddy", { exact: true }).first().click();
+    await next(dialog);
+    await dialog
+      .getByText(/boarding/i)
+      .first()
+      .click();
+    await next(dialog);
+    await dialog
+      .locator("button:has(svg.lucide-chevron-right)")
+      .first()
+      .click();
+    const [tuesday] = nextMonthTuesday();
+    await dialog
+      .getByRole("button", { name: String(tuesday), exact: true })
+      .click();
+    await dialog
+      .getByRole("button", { name: String(tuesday + 2), exact: true })
+      .click();
+    await next(dialog);
+
+    await dialog.getByText("Condominium", { exact: true }).first().click();
+    await expect(dialog.getByText(/Buddy\s*·\s*Condominium/)).toBeVisible();
+
+    // The change starts on the second night, in the first kennel's type.
+    await dialog
+      .getByRole("button", { name: /^add a kennel change$/i })
+      .click();
+    await dialog.getByLabel("Lodging type", { exact: true }).click();
+    await page
+      .getByRole("option")
+      .filter({ hasNotText: /condominium|cat/i })
+      .first()
+      .click();
+
+    const ref = await create(page, dialog, "boarding kennel change");
+    const res = await page.request.get(`/api/boarding/stays?bookingRef=${ref}`);
+    expect(res.ok(), await res.text()).toBe(true);
+    const { stays } = (await res.json()) as {
+      stays: { roomId: string | null }[];
+    };
+    expect(stays.length, "two kennels, in order").toBe(2);
+    expect(stays[0]!.roomId).not.toBe(stays[1]!.roomId);
+  });
 });

@@ -377,6 +377,17 @@ export const newBookingSchema = z.object({
    * The two id spaces are disjoint; see the debt map.
    */
   unitAssignment: z.string().optional(),
+  /**
+   * Boarding: where the guest moves part-way, planned as the booking is made.
+   * From `from` — the first night in the new kennel, YYYY-MM-DD — they sleep
+   * in `roomId`, a room like `unitAssignment`. `create_bookings` makes the
+   * moves in the same transaction as the booking, so a kennel taken on those
+   * nights refuses the booking itself. Only with a `unitAssignment`.
+   */
+  kennelMoves: z
+    .array(z.object({ from: z.string(), roomId: z.string() }))
+    .max(10)
+    .optional(),
   /** Daycare: the DaycareSection.id the pet was assigned to */
   sectionId: z.string().optional(),
   /** Grooming: the GroomingStation.id assigned to this booking */

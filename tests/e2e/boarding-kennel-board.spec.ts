@@ -309,7 +309,13 @@ async function staysOf(page: import("@playwright/test").Page, ref: number) {
 
 /** Today in this machine's calendar, which is the one the board uses. */
 function localToday(): string {
+  return dayFromToday(0);
+}
+
+/** A day in this machine's calendar, `offset` days from today. */
+function dayFromToday(offset: number): string {
   const d = new Date();
+  d.setDate(d.getDate() + offset);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
@@ -429,6 +435,115 @@ test.describe("a guest who moves kennels part-way", () => {
     expect(merged.ok(), await merged.text()).toBe(true);
     expect((await staysOf(page, bookingRef)).map((s) => s.roomId)).toEqual([
       target.id,
+    ]);
+  });
+
+  // ── PLANNED WITH THE BOOKING, AND AN EARLY CHECK-OUT ────────────────────
+  //
+  // M5–M6: a booking can be MADE across two kennels, all or nothing — a taken
+  // later kennel refuses the booking itself. M7: leaving before a planned
+  // move used to be refused ("change the move first"); the kennel booked for
+  // later now lets go.
+
+  /** Kennels free across a window, clear of today's board. */
+  async function freeFor(
+    page: import("@playwright/test").Page,
+    window: { startDate: string; endDate: string },
+  ) {
+    const board = await rooms(page, window);
+    return board.rooms.filter(
+      (r) =>
+        r.active &&
+        !r.id.includes("e2e") &&
+        !board.occupied.some((o) => o.roomId === r.id),
+    );
+  }
+
+  test("M5 a booking made with its kennel change holds both kennels", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+    const window = { startDate: dayFromToday(30), endDate: dayFromToday(34) };
+    const [first, second] = await freeFor(page, window);
+    expect(first && second, "two kennels free").toBeTruthy();
+
+    const res = await page.request.post("/api/bookings", {
+      data: {
+        ...bookingBody(first!.id),
+        ...window,
+        status: "confirmed",
+        kennelMoves: [{ from: dayFromToday(32), roomId: second!.id }],
+      },
+    });
+    expect(res.status(), await res.text()).toBe(201);
+    const ref = ((await res.json()) as BookingPayload).id;
+    expect((await staysOf(page, ref)).map((s) => s.roomId)).toEqual([
+      first!.id,
+      second!.id,
+    ]);
+  });
+
+  test("M6 a later kennel already taken refuses the booking itself", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+    const window = { startDate: dayFromToday(40), endDate: dayFromToday(44) };
+    const [first, second] = await freeFor(page, window);
+    expect(first && second, "two kennels free").toBeTruthy();
+
+    const blocker = await page.request.post("/api/bookings", {
+      data: {
+        ...bookingBody(second!.id),
+        startDate: dayFromToday(42),
+        endDate: dayFromToday(43),
+        status: "confirmed",
+      },
+    });
+    expect(blocker.status(), await blocker.text()).toBe(201);
+
+    const refusedMarker = `${MARKER} refused-M6`;
+    const res = await page.request.post("/api/bookings", {
+      data: {
+        ...bookingBody(first!.id),
+        ...window,
+        status: "confirmed",
+        specialRequests: refusedMarker,
+        kennelMoves: [{ from: dayFromToday(42), roomId: second!.id }],
+      },
+    });
+    expect(res.status(), await res.text()).toBe(409);
+    expect(
+      await bookingsMarked(refusedMarker),
+      "nothing of the refused booking was left behind",
+    ).toEqual([]);
+  });
+
+  test("M7 an early check-out before the move lets the later kennel go", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+    const window = bookingBody("");
+    const [first, second] = await freeFor(page, window);
+    expect(first && second, "two kennels free").toBeTruthy();
+
+    const res = await page.request.post("/api/bookings", {
+      data: {
+        ...bookingBody(first!.id),
+        kennelMoves: [{ from: dayFromToday(1), roomId: second!.id }],
+      },
+    });
+    expect(res.status(), await res.text()).toBe(201);
+    const ref = ((await res.json()) as BookingPayload).id;
+    expect((await staysOf(page, ref)).length).toBe(2);
+
+    // What the booking page's early check-out writes first: the stay ends
+    // the day the guest left.
+    const shortened = await page.request.patch(`/api/bookings/${ref}`, {
+      data: { endDate: localToday() },
+    });
+    expect(shortened.ok(), await shortened.text()).toBe(true);
+    expect((await staysOf(page, ref)).map((s) => s.roomId)).toEqual([
+      first!.id,
     ]);
   });
 });

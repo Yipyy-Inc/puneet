@@ -28,6 +28,8 @@ import { bookingQueries } from "@/lib/api/booking";
 import type { Booking } from "@/types/booking";
 import { BoardingServicePicker } from "./BoardingServicePicker";
 import { IncludedAddOns } from "./IncludedAddOns";
+import { KennelChangesField } from "./KennelChangesField";
+import type { KennelChange } from "@/lib/boarding/kennel-changes";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import {
   boardingPetFactsFor,
@@ -37,6 +39,7 @@ import type { BoardingDefaultAddOn } from "@/lib/pricing/boarding-default-addons
 
 // Stable while the query loads, so a memo keyed on it does not recompute.
 const NO_BOOKINGS: Booking[] = [];
+const NO_KENNEL_CHANGES: KennelChange[] = [];
 
 /**
  * The boarding service a booking names, as the wizard carries it.
@@ -112,6 +115,9 @@ interface BoardingDetailsProps {
   boardingDefaultLines?: ExtraService[];
   /** True when a pet owner is booking for themselves. */
   isCustomerMode?: boolean;
+  /** Kennel changes planned with a new booking; absent while editing one. */
+  kennelChanges?: KennelChange[];
+  setKennelChanges?: (changes: KennelChange[]) => void;
 }
 
 export function BoardingDetails({
@@ -144,6 +150,8 @@ export function BoardingDetails({
   onBoardingMenuChange,
   boardingDefaultLines,
   isCustomerMode = false,
+  kennelChanges,
+  setKennelChanges,
 }: BoardingDetailsProps) {
   const t = useShellText("booking");
   // For the customer's menu, on the dates step (see below).
@@ -324,6 +332,8 @@ export function BoardingDetails({
             boardingService={boardingService}
             onBoardingServiceChange={onBoardingServiceChange}
             isCustomerMode={isCustomerMode}
+            kennelChanges={kennelChanges}
+            setKennelChanges={setKennelChanges}
           />
         )}
 
@@ -432,6 +442,9 @@ interface BoardingRoomSelectionStepProps {
   boardingService?: ChosenBoardingService | null;
   onBoardingServiceChange?: (service: ChosenBoardingService | null) => void;
   isCustomerMode?: boolean;
+  /** Kennel changes planned with the booking; absent while editing one. */
+  kennelChanges?: KennelChange[];
+  setKennelChanges?: (changes: KennelChange[]) => void;
 }
 
 function BoardingRoomSelectionStep({
@@ -446,6 +459,8 @@ function BoardingRoomSelectionStep({
   boardingService = null,
   onBoardingServiceChange,
   isCustomerMode = false,
+  kennelChanges = NO_KENNEL_CHANGES,
+  setKennelChanges,
 }: BoardingRoomSelectionStepProps) {
   const t = useShellText("booking");
   // The service picker's own strings. `staff.areas.boardingServices.<key>` —
@@ -502,6 +517,15 @@ function BoardingRoomSelectionStep({
   // counted for the wrong nights there.
   const startDate = boardingRangeStart ? localToday(boardingRangeStart) : "";
   const endDate = boardingRangeEnd ? localToday(boardingRangeEnd) : "";
+
+  // The one room — type or unit — every pet is in, which kennel changes move
+  // FROM; none when the pets are spread over several.
+  const firstKennel =
+    new Set(roomAssignments.map((ra) => ra.roomId)).size === 1
+      ? (roomAssignments[0]?.roomId ?? null)
+      : null;
+  const typeOf = (id: string) =>
+    boardingRooms.find((r) => r.id === id)?.categoryId ?? id;
 
   // The dog a room click is for: the one picked, else the next without a
   // room. A click on a room with no dog picked did nothing at all — with one
@@ -947,6 +971,31 @@ function BoardingRoomSelectionStep({
           )}
         </div>
       )}
+
+      {/* Kennel changes: staff only, a new booking only, and only once every
+          pet is in ONE room — a stay across two rooms is two bookings, and
+          each is moved on its own page. */}
+      {setKennelChanges &&
+        !isCustomerMode &&
+        startDate &&
+        endDate &&
+        firstKennel &&
+        roomAssignments.length === selectedPets.length && (
+          <KennelChangesField
+            startDate={startDate}
+            endDate={endDate}
+            first={firstKennel}
+            defaultType={typeOf(firstKennel)}
+            labelOf={(id) =>
+              boardingCategories.find((c) => c.id === id)?.name ??
+              boardingRooms.find((r) => r.id === id)?.name ??
+              id
+            }
+            categories={boardingCategories}
+            value={kennelChanges}
+            onChange={setKennelChanges}
+          />
+        )}
     </div>
   );
 }

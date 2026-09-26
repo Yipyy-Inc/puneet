@@ -319,7 +319,14 @@ export async function POST(request: NextRequest) {
   // taken off the booking here so `bookingToRow` never files it in `details`.
   const formOverrideReason = input.formOverrideReason?.trim() || undefined;
   const items = planned.map(
-    ({ initialDeposit: _deposit, formOverrideReason: _reason, ...booking }) => {
+    ({
+      initialDeposit: _deposit,
+      formOverrideReason: _reason,
+      // Made in the same transaction by create_bookings, not filed in
+      // `details`, where a copy would go stale the first time a move changed.
+      kennelMoves,
+      ...booking
+    }) => {
       const row = bookingToRow(booking, {
         facilityId: facility.facilityId,
         clientRowId: client.id,
@@ -336,7 +343,7 @@ export async function POST(request: NextRequest) {
           : row,
         petIds: refsOf(booking).map((ref) => petIdByRef.get(ref)),
         grooming: groomingFor(booking),
-        boarding: boardingFor(booking),
+        boarding: boardingFor(booking, kennelMoves),
       };
     },
   );
@@ -670,11 +677,20 @@ function groomingFor(booking: NewBooking) {
  * `unitAssignment` had nowhere to land until 20260804161002: every boarding row
  * then had `details->>'unitAssignment'` = null, because the room was React
  * state and no table held it.
+ *
+ * `moves` are the kennel changes planned with the booking — from a night on,
+ * another room. They need a first room to move FROM, so a stay without one
+ * sends none; `create_bookings` makes them in the booking's own transaction.
  */
-function boardingFor(booking: NewBooking) {
-  return booking.service === "boarding" && booking.unitAssignment
-    ? { roomId: booking.unitAssignment }
-    : null;
+function boardingFor(booking: NewBooking, moves?: NewBooking["kennelMoves"]) {
+  if (booking.service !== "boarding" || !booking.unitAssignment) return null;
+  const planned = (moves ?? []).filter(
+    (move) =>
+      /^\d{4}-\d{2}-\d{2}$/.test(move.from) && move.roomId.trim().length > 0,
+  );
+  return planned.length > 0
+    ? { roomId: booking.unitAssignment, moves: planned }
+    : { roomId: booking.unitAssignment };
 }
 
 /**

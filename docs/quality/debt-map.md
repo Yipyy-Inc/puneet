@@ -21627,10 +21627,28 @@ can book (`9b9425c4`), and the size-tier picker (`cc8889d9`).
 
    The BEFORE triggers fire in name order — cut-off, live-booking guard,
    space type — not space type first as 20260924200000's comment says.
-   **Still open:** an early check-out before a planned move is refused
-   ("change the move first"), and the early check-out flow does not offer
-   the undo; the staff wizard books one kennel and a split is made after, on
-   the kennels board, the lodging calendar or the booking page.
+   **Both follow-ups closed 2026-09-26** (`20260926140000`):
+   - An early check-out before a planned move goes through. New dates that
+     cut nights from the END drop the kennels the guest never reaches and
+     end the new last one at the departure; a stay moved whole (both ends by
+     the same amount) moves every kennel with it. Nights cut from the START
+     still refuse once the guest has arrived, because the arrival is stamped
+     on the first kennel (M11–M15; M5 asserted the old refusal and now
+     asserts the drop).
+   - The staff wizard books a stay across kennels. "Kennel changes" in the
+     room step takes a first night and a lodging type per change (up to
+     three); on save each stretch resolves to a free unit of its type for
+     exactly its nights (`planKennels`), and `create_bookings` makes the moves
+     with `split_boarding_stay` in the booking's own transaction, so a taken
+     later kennel refuses the whole request (C1–C2, e2e M5–M7 and the
+     wizard's two-type booking). It also books what nothing could before: no
+     suite free all week, two free half each.
+
+   **Limits, deliberately:** changes are offered only when every pet shares
+   one kennel (separate kennels are separate bookings, each movable on its
+   own page); the wizard's capacity engine reads `booking.unitAssignment`,
+   the FIRST kennel, for a split booking; and a class-priced stay prices by
+   its first type, as the server's `split_stay` rule already did.
 
 4. **The Rooms page still asks for a price the service now owns.** "Base Price
    ($/night)" on a room type feeds only the pre-cutover path: bookings made

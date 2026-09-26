@@ -13,6 +13,7 @@ import type {
   MedicationItem,
 } from "@/types/booking";
 import type { Pet } from "@/types/pet";
+import type { KennelChange } from "@/lib/boarding/kennel-changes";
 import type { Client } from "@/types/client";
 import type { AppointmentStage } from "@/types/grooming";
 
@@ -82,6 +83,9 @@ interface DetailsStepProps {
   onBoardingMenuChange?: (offered: number | null) => void;
   /** What the chosen boarding service attaches by itself, as priced. */
   boardingDefaultLines?: ExtraService[];
+  /** Boarding: kennel changes planned with a new booking. */
+  kennelChanges?: KennelChange[];
+  setKennelChanges?: (changes: KennelChange[]) => void;
   /** True when a pet owner is booking for themselves, not staff at the desk. */
   isCustomerMode?: boolean;
   onDaycareServiceChange: (
@@ -171,6 +175,8 @@ export function DetailsStep({
   onBoardingServiceChange,
   onBoardingMenuChange,
   boardingDefaultLines,
+  kennelChanges,
+  setKennelChanges,
   isCustomerMode = false,
   onDaycareServiceChange,
   feedingSchedule,
@@ -260,6 +266,8 @@ export function DetailsStep({
           onBoardingServiceChange={onBoardingServiceChange}
           onBoardingMenuChange={onBoardingMenuChange}
           boardingDefaultLines={boardingDefaultLines}
+          kennelChanges={kennelChanges}
+          setKennelChanges={setKennelChanges}
           isCustomerMode={isCustomerMode}
         />
       )}

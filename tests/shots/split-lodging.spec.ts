@@ -118,3 +118,76 @@ test("the kennels card and the move dialog", async ({ page }) => {
     });
   }
 });
+
+/** A Tuesday early next month, so Tuesday to Thursday stays in one month. */
+function nextMonthTuesday(): number {
+  const now = new Date();
+  for (let d = 1; d <= 7; d += 1) {
+    const day = new Date(now.getFullYear(), now.getMonth() + 1, d);
+    if (day.getDay() === 2) return d;
+  }
+  return 2;
+}
+
+// WRITES NOTHING: the wizard is photographed with a kennel change planned and
+// closed before it is saved.
+//   · wizard-kennel-changes-*: "Kennel changes" under the room types, one
+//     change with its two labelled fields and the bin, the two stretches in
+//     long form, "Add a kennel change"; at 599 the fields stack
+test("the kennel changes in the booking wizard", async ({ page }) => {
+  test.setTimeout(8 * 60 * 1000);
+  mkdirSync(OUT, { recursive: true });
+  await signIn(page, ACCOUNTS.owner);
+
+  for (const lang of ["en", "fr"] as const) {
+    if (lang === "fr") await french(page);
+    await page.setViewportSize({ width: 1440, height: 1400 });
+    await page.goto("/facility/dashboard/clients/15");
+    await page
+      .getByRole("button", { name: /^(book|réserver)$/i })
+      .first()
+      .click({ timeout: 90_000 });
+    const dialog = page.getByRole("dialog");
+    await dialog.getByText("Buddy", { exact: true }).first().click();
+    await dialog.getByRole("button", { name: /^(next|suivant)$/i }).click();
+    await dialog
+      .getByText(/boarding|pension/i)
+      .first()
+      .click();
+    await dialog.getByRole("button", { name: /^(next|suivant)$/i }).click();
+    await dialog
+      .locator("button:has(svg.lucide-chevron-right)")
+      .first()
+      .click();
+    const tuesday = nextMonthTuesday();
+    await dialog
+      .getByRole("button", { name: String(tuesday), exact: true })
+      .click();
+    await dialog
+      .getByRole("button", { name: String(tuesday + 2), exact: true })
+      .click();
+    await dialog.getByRole("button", { name: /^(next|suivant)$/i }).click();
+    await dialog
+      .getByText(/^(condominium|condominium)$/i)
+      .first()
+      .click();
+    await dialog
+      .getByRole("button", {
+        name: /^(add a kennel change|ajouter un changement de chenil)$/i,
+      })
+      .click();
+    const section = dialog.locator(
+      'section[aria-labelledby="kennel-changes-title"]',
+    );
+    await section.scrollIntoViewIfNeeded();
+    await section.screenshot({
+      path: `${OUT}/wizard-kennel-changes-${lang}-1440.png`,
+    });
+    await page.setViewportSize({ width: 599, height: 1400 });
+    await section.scrollIntoViewIfNeeded();
+    await section.screenshot({
+      path: `${OUT}/wizard-kennel-changes-${lang}-599.png`,
+    });
+    await page.keyboard.press("Escape");
+  }
+});
