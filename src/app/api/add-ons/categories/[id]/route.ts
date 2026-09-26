@@ -10,7 +10,7 @@ import {
 } from "@/lib/api/mappers/add-on";
 
 // ============================================================================
-// Rename an add-on category, or delete it (20260926230000).
+// Rename an add-on category, or delete it (20260926223644).
 //
 // Deleting a category does NOT delete its add-ons: `service_add_ons.category_id`
 // is `on delete set null` (service-add-ons A2), so they move to Uncategorized

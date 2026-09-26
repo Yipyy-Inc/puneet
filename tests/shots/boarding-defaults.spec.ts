@@ -75,7 +75,7 @@ test("the boarding menu for customers, and default add-ons for facilities", asyn
     .single();
   const facilityId = (pet as unknown as { clients: { facility_id: string } })
     .clients.facility_id;
-  // One walk in the one add-ons list (20260926230000), under the id the
+  // One walk in the one add-ons list (20260926223644), under the id the
   // service's default names; swept first and deleted again at the end.
   const removeWalk = () =>
     db

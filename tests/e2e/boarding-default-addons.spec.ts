@@ -114,7 +114,7 @@ test.beforeAll(async ({ browser }) => {
   facilityId = (pet as unknown as { clients: { facility_id: string } }).clients
     .facility_id;
 
-  // One walk joins the one add-ons list (20260926230000) for the run, under
+  // One walk joins the one add-ons list (20260926223644) for the run, under
   // the id bookings name it by. Swept first, in case a run died before its
   // afterAll; the facility's own add-ons are never touched.
   await removeAddOn();

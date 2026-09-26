@@ -5781,6 +5781,60 @@ $$;
 ALTER FUNCTION "private"."room_category_location_price_facility"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "private"."service_add_on_override_facility"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_facility uuid;
+begin
+  select facility_id into v_facility from public.service_add_ons where id = new.add_on_id;
+  if v_facility is null then
+    raise exception 'Cannot resolve the facility for this row.' using errcode = '23503';
+  end if;
+  if not exists (
+    select 1 from public.locations x where x.id = new.location_id and x.facility_id = v_facility
+  ) then
+    raise exception 'That location belongs to another facility.' using errcode = '23503';
+  end if;
+  new.facility_id := v_facility;
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "private"."service_add_on_override_facility"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."service_add_on_same_facility"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+begin
+  if new.category_id is not null and not exists (
+    select 1 from public.service_add_on_categories c
+     where c.id = new.category_id and c.facility_id = new.facility_id
+  ) then
+    raise exception 'That category belongs to another facility.' using errcode = '23503';
+  end if;
+
+  if exists (
+    select 1 from unnest(new.location_ids) l(id)
+     where not exists (
+       select 1 from public.locations x where x.id = l.id and x.facility_id = new.facility_id
+     )
+  ) then
+    raise exception 'That location belongs to another facility.' using errcode = '23503';
+  end if;
+
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "private"."service_add_on_same_facility"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "private"."set_updated_at"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
@@ -6897,50 +6951,31 @@ CREATE OR REPLACE FUNCTION "private"."yipyy_go_offered_add_on"("p_booking" "publ
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
     AS $$
-  select case when p_booking.service = 'grooming' then (
-    select jsonb_build_object(
-             'id', g.id::text, 'name', g.name, 'description', g.description,
-             'pricingType', 'flat', 'price', g.price, 'unitLabel', '',
-             'maxQuantity', 1, 'petScope', 'per_pet')
-      from public.grooming_add_ons g
-     where g.facility_id = p_booking.facility_id
-       and g.id::text = p_add_on_id
-       and g.is_active
-     limit 1
-  ) else (
-    select jsonb_build_object(
-             'id', a.value ->> 'id',
-             'name', coalesce(nullif(btrim(a.value ->> 'name'), ''), 'Add-on'),
-             'description', coalesce(a.value ->> 'description', ''),
-             'pricingType', a.value ->> 'pricingType',
-             'price', (a.value ->> 'price')::numeric,
-             'unitLabel', coalesce(a.value ->> 'unitLabel', ''),
-             'maxQuantity', greatest(1, floor(coalesce((a.value ->> 'maxQuantity')::numeric, 10)))::int,
-             'petScope', coalesce(a.value ->> 'petScope', 'per_booking'))
-      from public.facility_settings s
-      cross join lateral jsonb_array_elements(
-        case when jsonb_typeof(s.value -> 'addOns') = 'array' then s.value -> 'addOns' else '[]'::jsonb end
-      ) a(value)
-     where s.facility_id = p_booking.facility_id
-       and s.domain = 'service_addons'
-       and a.value ->> 'id' = p_add_on_id
-       and coalesce((a.value ->> 'isActive')::boolean, false)
-       and not coalesce((a.value ->> 'requiresScheduling')::boolean, false)
-       and a.value ->> 'pricingType' in ('flat', 'per_day', 'per_session', 'per_hour', 'per_item', 'percentage_of_booking')
-       and jsonb_typeof(a.value -> 'price') = 'number'
-       and coalesce(jsonb_array_length(
-             case when jsonb_typeof(a.value -> 'sizePricing') = 'array' then a.value -> 'sizePricing' end
-           ), 0) = 0
-       and jsonb_typeof(a.value -> 'applicableServices') = 'array'
-       and (a.value -> 'applicableServices') ?| array[p_booking.service, 'all']
-       and (
-         coalesce(jsonb_array_length(
-           case when jsonb_typeof(a.value -> 'locationIds') = 'array' then a.value -> 'locationIds' end
-         ), 0) = 0
-         or (p_booking.location_id is not null and (a.value -> 'locationIds') ? p_booking.location_id::text)
-       )
-     limit 1
-  ) end;
+  select jsonb_build_object(
+           'id', coalesce(a.legacy_id, a.id::text),
+           'name', a.name,
+           'description', a.description,
+           'pricingType', case when p_booking.service = 'grooming' then 'flat' else 'per_item' end,
+           'price', coalesce(o.price, a.price),
+           'unitLabel', '',
+           'maxQuantity', case when p_booking.service = 'grooming' then 1 else 10 end,
+           'petScope', 'per_pet')
+    from public.service_add_ons a
+    left join public.service_add_on_location_overrides o
+      on o.add_on_id = a.id and o.location_id = p_booking.location_id
+   where a.facility_id = p_booking.facility_id
+     and (a.legacy_id = p_add_on_id or a.id::text = p_add_on_id)
+     and a.is_active
+     and a.archived_at is null
+     and (cardinality(a.location_ids) = 0
+          or (p_booking.location_id is not null and p_booking.location_id = any (a.location_ids)))
+     and (a.applies_to_all_services
+          or exists (
+            select 1 from unnest(a.service_refs) r(ref)
+             where r.ref = p_booking.service
+                or r.ref like p_booking.service || ':%'
+                or r.ref = 'custom:' || p_booking.service))
+   limit 1;
 $$;
 
 
@@ -18074,23 +18109,11 @@ begin
              'petScope', o.offer ->> 'petScope'
            ) order by o.ord)
       from (
-        select private.yipyy_go_offered_add_on(v_booking, ids.id) as offer, ids.ord
-          from (
-            select g.id::text as id, g.display_order::bigint as ord
-              from public.grooming_add_ons g
-             where v_booking.service = 'grooming'
-               and g.facility_id = v_booking.facility_id
-               and g.is_active
-            union all
-            select a.value ->> 'id', a.ordinality
-              from public.facility_settings s
-              cross join lateral jsonb_array_elements(
-                case when jsonb_typeof(s.value -> 'addOns') = 'array' then s.value -> 'addOns' else '[]'::jsonb end
-              ) with ordinality a(value, ordinality)
-             where v_booking.service <> 'grooming'
-               and s.facility_id = v_booking.facility_id
-               and s.domain = 'service_addons'
-          ) ids
+        select private.yipyy_go_offered_add_on(v_booking, coalesce(a.legacy_id, a.id::text)) as offer,
+               a.display_order::bigint as ord
+          from public.service_add_ons a
+         where a.facility_id = v_booking.facility_id
+           and a.archived_at is null
       ) o
       cross join lateral private.yipyy_go_price_add_on(v_booking, o.offer, 1) pr
      where o.offer is not null
@@ -20044,24 +20067,77 @@ COMMENT ON COLUMN "public"."gift_card_transactions"."booking_id" IS 'Which booki
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."grooming_add_ons" (
+CREATE TABLE IF NOT EXISTS "public"."service_add_ons" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "facility_id" "uuid" NOT NULL,
     "legacy_id" "text",
+    "category_id" "uuid",
     "name" "text" NOT NULL,
     "description" "text" DEFAULT ''::"text" NOT NULL,
-    "price" numeric(10,2) DEFAULT 0 NOT NULL,
-    "duration_min" integer DEFAULT 0 NOT NULL,
     "is_active" boolean DEFAULT true NOT NULL,
+    "image_url" "text",
+    "color_code" "text",
+    "location_ids" "uuid"[] DEFAULT '{}'::"uuid"[] NOT NULL,
+    "price" numeric(10,2) DEFAULT 0 NOT NULL,
+    "taxable" boolean DEFAULT true NOT NULL,
+    "duration_min" integer DEFAULT 0 NOT NULL,
+    "requires_staff" boolean DEFAULT false NOT NULL,
+    "applies_to_all_services" boolean DEFAULT true NOT NULL,
+    "service_refs" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "eligible_species" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "eligible_breeds" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "eligible_weight_tiers" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "eligible_coat_types" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
     "display_order" integer DEFAULT 0 NOT NULL,
+    "archived_at" timestamp with time zone,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "grooming_add_ons_duration_min_check" CHECK (("duration_min" >= 0)),
-    CONSTRAINT "grooming_add_ons_price_check" CHECK (("price" >= (0)::numeric))
+    CONSTRAINT "service_add_ons_color_code_check" CHECK ((("color_code" IS NULL) OR ("length"("color_code") <= 32))),
+    CONSTRAINT "service_add_ons_description_check" CHECK (("length"("description") <= 2000)),
+    CONSTRAINT "service_add_ons_duration_min_check" CHECK ((("duration_min" >= 0) AND ("duration_min" <= 1440))),
+    CONSTRAINT "service_add_ons_eligible_coat_types_check" CHECK (("eligible_coat_types" <@ ARRAY['short'::"text", 'medium'::"text", 'long'::"text", 'wire'::"text", 'curly'::"text", 'hairless'::"text"])),
+    CONSTRAINT "service_add_ons_eligible_weight_tiers_check" CHECK (("eligible_weight_tiers" <@ ARRAY['small'::"text", 'medium'::"text", 'large'::"text", 'giant'::"text"])),
+    CONSTRAINT "service_add_ons_image_url_check" CHECK ((("image_url" IS NULL) OR ("length"("image_url") <= 2048))),
+    CONSTRAINT "service_add_ons_name_check" CHECK ((("length"("btrim"("name")) >= 1) AND ("length"("btrim"("name")) <= 120))),
+    CONSTRAINT "service_add_ons_price_check" CHECK (("price" >= (0)::numeric)),
+    CONSTRAINT "service_add_ons_service_refs_check" CHECK ((("cardinality"("service_refs") = 0) OR ("array_to_string"("service_refs", ','::"text") ~ '^((boarding|daycare|grooming):[0-9a-f-]{36}|training|evaluation|custom:[a-z0-9_-]+)(,((boarding|daycare|grooming):[0-9a-f-]{36}|training|evaluation|custom:[a-z0-9_-]+))*$'::"text")))
 );
 
 
-ALTER TABLE "public"."grooming_add_ons" OWNER TO "postgres";
+ALTER TABLE "public"."service_add_ons" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."service_add_ons" IS 'One add-ons list for every service (Settings > Services > Add-ons). Replaced the facility_settings service_addons JSON and grooming_add_ons on 2026-09-26; grooming_add_ons is now a view over it. Delete = archive (archived_at).';
+
+
+
+COMMENT ON COLUMN "public"."service_add_ons"."service_refs" IS 'When applies_to_all_services is false: boarding:<uuid> | daycare:<uuid> | grooming:<uuid> | training | evaluation | custom:<slug>.';
+
+
+
+CREATE OR REPLACE VIEW "public"."grooming_add_ons" WITH ("security_invoker"='true') AS
+ SELECT "id",
+    "facility_id",
+    "legacy_id",
+    "name",
+    "description",
+    "price",
+    "duration_min",
+    "is_active",
+    "display_order",
+    "created_at",
+    "updated_at"
+   FROM "public"."service_add_ons" "a"
+  WHERE (("archived_at" IS NULL) AND ("applies_to_all_services" OR (EXISTS ( SELECT 1
+           FROM "unnest"("a"."service_refs") "r"("ref")
+          WHERE ("r"."ref" ~~ 'grooming:%'::"text")))));
+
+
+ALTER VIEW "public"."grooming_add_ons" OWNER TO "postgres";
+
+
+COMMENT ON VIEW "public"."grooming_add_ons" IS 'The add-ons that apply to grooming, from service_add_ons (2026-09-26). Kept so create_booking and /api/grooming/add-ons read the one list unchanged; goes when they read it directly.';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."grooming_alert_notes" (
@@ -22526,6 +22602,46 @@ COMMENT ON TABLE "public"."schedule_templates" IS 'The shape of a week. Applying
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."service_add_on_categories" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "facility_id" "uuid" NOT NULL,
+    "name" "text" NOT NULL,
+    "display_order" integer DEFAULT 0 NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "service_add_on_categories_name_check" CHECK ((("length"("btrim"("name")) >= 1) AND ("length"("btrim"("name")) <= 80)))
+);
+
+
+ALTER TABLE "public"."service_add_on_categories" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."service_add_on_categories" IS 'The headings add-ons are grouped under in Settings > Services > Add-ons, in the order the facility sorted them. Deleting one leaves its add-ons Uncategorized (on delete set null).';
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."service_add_on_location_overrides" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "add_on_id" "uuid" NOT NULL,
+    "facility_id" "uuid" NOT NULL,
+    "location_id" "uuid" NOT NULL,
+    "price" numeric(10,2),
+    "taxable" boolean,
+    "duration_min" integer,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "service_add_on_location_overrides_duration_min_check" CHECK ((("duration_min" IS NULL) OR (("duration_min" >= 0) AND ("duration_min" <= 1440)))),
+    CONSTRAINT "service_add_on_location_overrides_price_check" CHECK ((("price" IS NULL) OR ("price" >= (0)::numeric)))
+);
+
+
+ALTER TABLE "public"."service_add_on_location_overrides" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."service_add_on_location_overrides" IS 'Override by business: a different price, tax or duration for one location. A null column inherits the add-on''s own value.';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."shift_swap_requests" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "facility_id" "uuid" NOT NULL,
@@ -23962,16 +24078,6 @@ ALTER TABLE ONLY "public"."gift_cards"
 
 
 
-ALTER TABLE ONLY "public"."grooming_add_ons"
-    ADD CONSTRAINT "grooming_add_ons_legacy_key" UNIQUE ("facility_id", "legacy_id");
-
-
-
-ALTER TABLE ONLY "public"."grooming_add_ons"
-    ADD CONSTRAINT "grooming_add_ons_pkey" PRIMARY KEY ("id");
-
-
-
 ALTER TABLE ONLY "public"."grooming_alert_notes"
     ADD CONSTRAINT "grooming_alert_notes_pkey" PRIMARY KEY ("id");
 
@@ -24609,6 +24715,26 @@ ALTER TABLE ONLY "public"."schedule_template_shifts"
 
 ALTER TABLE ONLY "public"."schedule_templates"
     ADD CONSTRAINT "schedule_templates_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."service_add_on_categories"
+    ADD CONSTRAINT "service_add_on_categories_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."service_add_on_location_overrides"
+    ADD CONSTRAINT "service_add_on_location_overrides_once" UNIQUE ("add_on_id", "location_id");
+
+
+
+ALTER TABLE ONLY "public"."service_add_on_location_overrides"
+    ADD CONSTRAINT "service_add_on_location_overrides_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."service_add_ons"
+    ADD CONSTRAINT "service_add_ons_pkey" PRIMARY KEY ("id");
 
 
 
@@ -25341,10 +25467,6 @@ CREATE INDEX "gift_cards_facility_idx" ON "public"."gift_cards" USING "btree" ("
 
 
 
-CREATE INDEX "grooming_add_ons_facility_idx" ON "public"."grooming_add_ons" USING "btree" ("facility_id");
-
-
-
 CREATE INDEX "grooming_alert_notes_booking_idx" ON "public"."grooming_alert_notes" USING "btree" ("booking_id");
 
 
@@ -25938,6 +26060,30 @@ CREATE INDEX "schedule_template_shifts_template_idx" ON "public"."schedule_templ
 
 
 CREATE INDEX "schedule_templates_facility_idx" ON "public"."schedule_templates" USING "btree" ("facility_id", "is_active", "name");
+
+
+
+CREATE INDEX "service_add_on_categories_facility_idx" ON "public"."service_add_on_categories" USING "btree" ("facility_id");
+
+
+
+CREATE UNIQUE INDEX "service_add_on_categories_name_key" ON "public"."service_add_on_categories" USING "btree" ("facility_id", "lower"("btrim"("name")));
+
+
+
+CREATE INDEX "service_add_on_location_overrides_facility_idx" ON "public"."service_add_on_location_overrides" USING "btree" ("facility_id");
+
+
+
+CREATE INDEX "service_add_ons_category_idx" ON "public"."service_add_ons" USING "btree" ("category_id");
+
+
+
+CREATE INDEX "service_add_ons_facility_idx" ON "public"."service_add_ons" USING "btree" ("facility_id");
+
+
+
+CREATE UNIQUE INDEX "service_add_ons_legacy_key" ON "public"."service_add_ons" USING "btree" ("facility_id", "legacy_id") WHERE ("legacy_id" IS NOT NULL);
 
 
 
@@ -26614,10 +26760,6 @@ CREATE OR REPLACE TRIGGER "gift_cards_balance_guard" BEFORE UPDATE ON "public"."
 
 
 
-CREATE OR REPLACE TRIGGER "grooming_add_ons_touch" BEFORE UPDATE ON "public"."grooming_add_ons" FOR EACH ROW EXECUTE FUNCTION "private"."set_updated_at"();
-
-
-
 CREATE OR REPLACE TRIGGER "grooming_alert_notes_facility" BEFORE INSERT OR UPDATE ON "public"."grooming_alert_notes" FOR EACH ROW EXECUTE FUNCTION "private"."grooming_appointment_facility"();
 
 
@@ -27051,6 +27193,26 @@ CREATE OR REPLACE TRIGGER "room_category_location_price_facility" BEFORE INSERT 
 
 
 CREATE OR REPLACE TRIGGER "room_category_location_prices_touch" BEFORE UPDATE ON "public"."room_category_location_prices" FOR EACH ROW EXECUTE FUNCTION "private"."set_updated_at"();
+
+
+
+CREATE OR REPLACE TRIGGER "service_add_on_categories_touch" BEFORE UPDATE ON "public"."service_add_on_categories" FOR EACH ROW EXECUTE FUNCTION "private"."set_updated_at"();
+
+
+
+CREATE OR REPLACE TRIGGER "service_add_on_location_overrides_touch" BEFORE UPDATE ON "public"."service_add_on_location_overrides" FOR EACH ROW EXECUTE FUNCTION "private"."set_updated_at"();
+
+
+
+CREATE OR REPLACE TRIGGER "service_add_on_override_facility" BEFORE INSERT OR UPDATE ON "public"."service_add_on_location_overrides" FOR EACH ROW EXECUTE FUNCTION "private"."service_add_on_override_facility"();
+
+
+
+CREATE OR REPLACE TRIGGER "service_add_ons_same_facility" BEFORE INSERT OR UPDATE OF "category_id", "location_ids", "facility_id" ON "public"."service_add_ons" FOR EACH ROW EXECUTE FUNCTION "private"."service_add_on_same_facility"();
+
+
+
+CREATE OR REPLACE TRIGGER "service_add_ons_touch" BEFORE UPDATE ON "public"."service_add_ons" FOR EACH ROW EXECUTE FUNCTION "private"."set_updated_at"();
 
 
 
@@ -27961,11 +28123,6 @@ ALTER TABLE ONLY "public"."gift_cards"
 
 
 
-ALTER TABLE ONLY "public"."grooming_add_ons"
-    ADD CONSTRAINT "grooming_add_ons_facility_id_fkey" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE CASCADE;
-
-
-
 ALTER TABLE ONLY "public"."grooming_alert_notes"
     ADD CONSTRAINT "grooming_alert_notes_booking_id_fkey" FOREIGN KEY ("booking_id") REFERENCES "public"."grooming_appointments"("booking_id") ON DELETE CASCADE;
 
@@ -27977,7 +28134,7 @@ ALTER TABLE ONLY "public"."grooming_alert_notes"
 
 
 ALTER TABLE ONLY "public"."grooming_appointment_add_ons"
-    ADD CONSTRAINT "grooming_appointment_add_ons_add_on_id_fkey" FOREIGN KEY ("add_on_id") REFERENCES "public"."grooming_add_ons"("id") ON DELETE SET NULL;
+    ADD CONSTRAINT "grooming_appointment_add_ons_add_on_id_fkey" FOREIGN KEY ("add_on_id") REFERENCES "public"."service_add_ons"("id") ON DELETE SET NULL;
 
 
 
@@ -28052,7 +28209,7 @@ ALTER TABLE ONLY "public"."grooming_service_categories"
 
 
 ALTER TABLE ONLY "public"."grooming_service_default_add_ons"
-    ADD CONSTRAINT "grooming_service_default_add_ons_add_on_id_fkey" FOREIGN KEY ("add_on_id") REFERENCES "public"."grooming_add_ons"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "grooming_service_default_add_ons_add_on_id_fkey" FOREIGN KEY ("add_on_id") REFERENCES "public"."service_add_ons"("id") ON DELETE CASCADE;
 
 
 
@@ -28953,6 +29110,36 @@ ALTER TABLE ONLY "public"."schedule_templates"
 
 ALTER TABLE ONLY "public"."schedule_templates"
     ADD CONSTRAINT "schedule_templates_facility_id_fkey" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."service_add_on_categories"
+    ADD CONSTRAINT "service_add_on_categories_facility_id_fkey" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."service_add_on_location_overrides"
+    ADD CONSTRAINT "service_add_on_location_overrides_add_on_id_fkey" FOREIGN KEY ("add_on_id") REFERENCES "public"."service_add_ons"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."service_add_on_location_overrides"
+    ADD CONSTRAINT "service_add_on_location_overrides_facility_id_fkey" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."service_add_on_location_overrides"
+    ADD CONSTRAINT "service_add_on_location_overrides_location_id_fkey" FOREIGN KEY ("location_id") REFERENCES "public"."locations"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."service_add_ons"
+    ADD CONSTRAINT "service_add_ons_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "public"."service_add_on_categories"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."service_add_ons"
+    ADD CONSTRAINT "service_add_ons_facility_id_fkey" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE CASCADE;
 
 
 
@@ -30392,25 +30579,6 @@ CREATE POLICY "gift_cards_update" ON "public"."gift_cards" FOR UPDATE USING ("pr
 
 
 
-ALTER TABLE "public"."grooming_add_ons" ENABLE ROW LEVEL SECURITY;
-
-
-CREATE POLICY "grooming_add_ons_delete" ON "public"."grooming_add_ons" FOR DELETE TO "authenticated" USING ("private"."has_permission"("facility_id", 'manage_services'::"text"));
-
-
-
-CREATE POLICY "grooming_add_ons_insert" ON "public"."grooming_add_ons" FOR INSERT TO "authenticated" WITH CHECK ("private"."has_permission"("facility_id", 'manage_services'::"text"));
-
-
-
-CREATE POLICY "grooming_add_ons_read" ON "public"."grooming_add_ons" FOR SELECT TO "authenticated" USING (("private"."is_platform_admin"() OR "private"."has_permission"("facility_id", 'view_services'::"text") OR ("is_active" AND ("facility_id" IN ( SELECT "private"."client_facility_ids"() AS "client_facility_ids")))));
-
-
-
-CREATE POLICY "grooming_add_ons_update" ON "public"."grooming_add_ons" FOR UPDATE TO "authenticated" USING ("private"."has_permission"("facility_id", 'manage_services'::"text")) WITH CHECK ("private"."has_permission"("facility_id", 'manage_services'::"text"));
-
-
-
 ALTER TABLE "public"."grooming_alert_notes" ENABLE ROW LEVEL SECURITY;
 
 
@@ -31752,6 +31920,39 @@ CREATE POLICY "schedule_templates_read" ON "public"."schedule_templates" FOR SEL
 
 
 CREATE POLICY "schedule_templates_write" ON "public"."schedule_templates" USING ("private"."has_permission"("facility_id", 'scheduling_create_shifts'::"text")) WITH CHECK ("private"."has_permission"("facility_id", 'scheduling_create_shifts'::"text"));
+
+
+
+ALTER TABLE "public"."service_add_on_categories" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "service_add_on_categories_read" ON "public"."service_add_on_categories" FOR SELECT TO "authenticated" USING (("private"."is_platform_admin"() OR "private"."has_permission"("facility_id", 'view_services'::"text") OR ("facility_id" IN ( SELECT "private"."client_facility_ids"() AS "client_facility_ids"))));
+
+
+
+CREATE POLICY "service_add_on_categories_write" ON "public"."service_add_on_categories" TO "authenticated" USING ("private"."has_permission"("facility_id", 'manage_services'::"text")) WITH CHECK ("private"."has_permission"("facility_id", 'manage_services'::"text"));
+
+
+
+ALTER TABLE "public"."service_add_on_location_overrides" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "service_add_on_location_overrides_read" ON "public"."service_add_on_location_overrides" FOR SELECT TO "authenticated" USING (("private"."is_platform_admin"() OR "private"."has_permission"("facility_id", 'view_services'::"text") OR ("facility_id" IN ( SELECT "private"."client_facility_ids"() AS "client_facility_ids"))));
+
+
+
+CREATE POLICY "service_add_on_location_overrides_write" ON "public"."service_add_on_location_overrides" TO "authenticated" USING ("private"."has_permission"("facility_id", 'manage_services'::"text")) WITH CHECK ("private"."has_permission"("facility_id", 'manage_services'::"text"));
+
+
+
+ALTER TABLE "public"."service_add_ons" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "service_add_ons_read" ON "public"."service_add_ons" FOR SELECT TO "authenticated" USING (("private"."is_platform_admin"() OR "private"."has_permission"("facility_id", 'view_services'::"text") OR ("is_active" AND ("archived_at" IS NULL) AND ("facility_id" IN ( SELECT "private"."client_facility_ids"() AS "client_facility_ids")))));
+
+
+
+CREATE POLICY "service_add_ons_write" ON "public"."service_add_ons" TO "authenticated" USING ("private"."has_permission"("facility_id", 'manage_services'::"text")) WITH CHECK ("private"."has_permission"("facility_id", 'manage_services'::"text"));
 
 
 
@@ -33405,6 +33606,14 @@ REVOKE ALL ON FUNCTION "private"."retail_stock_apply"() FROM PUBLIC;
 
 
 
+REVOKE ALL ON FUNCTION "private"."service_add_on_override_facility"() FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "private"."service_add_on_same_facility"() FROM PUBLIC;
+
+
+
 REVOKE ALL ON FUNCTION "private"."staff_can_write_booking"("p_booking_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "private"."staff_can_write_booking"("p_booking_id" "uuid") TO "authenticated";
 
@@ -35046,7 +35255,11 @@ GRANT ALL ON TABLE "public"."gift_card_transactions" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."grooming_add_ons" TO "anon";
+GRANT ALL ON TABLE "public"."service_add_ons" TO "authenticated";
+GRANT ALL ON TABLE "public"."service_add_ons" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."grooming_add_ons" TO "authenticated";
 GRANT ALL ON TABLE "public"."grooming_add_ons" TO "service_role";
 
@@ -35558,6 +35771,16 @@ GRANT ALL ON TABLE "public"."schedule_template_shifts" TO "service_role";
 
 GRANT ALL ON TABLE "public"."schedule_templates" TO "authenticated";
 GRANT ALL ON TABLE "public"."schedule_templates" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."service_add_on_categories" TO "authenticated";
+GRANT ALL ON TABLE "public"."service_add_on_categories" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."service_add_on_location_overrides" TO "authenticated";
+GRANT ALL ON TABLE "public"."service_add_on_location_overrides" TO "service_role";
 
 
 

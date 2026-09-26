@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 
-// Settings > Services > Add-ons: the one add-ons list (20260926230000).
+// Settings > Services > Add-ons: the one add-ons list (20260926223644).
 const AddOnsSettings = dynamic(
   () =>
     import("@/components/facility/add-ons/add-ons-settings").then(

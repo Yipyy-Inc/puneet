@@ -14,7 +14,7 @@ import type {
 // About thirty screens read `useServiceAddOns()` — the booking wizard's
 // pickers, the confirm step, the ops calendar, request review, custom fees —
 // and all of them were written against the JSON `ServiceAddOn`. The one list
-// (20260926230000) replaces the JSON; this turns a row back into that shape so
+// (20260926223644) replaces the JSON; this turns a row back into that shape so
 // they move without being edited in the same change. Each is rewritten to the
 // new type when the booking side learns the new rules, and this file goes then.
 //

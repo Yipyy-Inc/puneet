@@ -747,7 +747,7 @@ export function useServiceAddOns(): {
   configured: boolean;
   isPending: boolean;
 } {
-  // The one add-ons list (20260926230000) replaced the `service_addons` JSON.
+  // The one add-ons list (20260926223644) replaced the `service_addons` JSON.
   // Staff read their facility's list, a pet owner the live ones of their own
   // facility; both come back in the old shape (lib/add-ons/legacy-shape.ts) so
   // the screens that read this move without being edited in the same change.

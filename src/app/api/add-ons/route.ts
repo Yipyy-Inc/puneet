@@ -17,7 +17,7 @@ import {
 import { addOnInputSchema } from "@/types/add-on";
 
 // ============================================================================
-// The one add-ons list — Settings > Services > Add-ons (20260926230000).
+// The one add-ons list — Settings > Services > Add-ons (20260926223644).
 //
 // Staff read it with `view_services` and write it with `manage_services`; the
 // table's policies are the gate, and this route only makes sure a refusal is

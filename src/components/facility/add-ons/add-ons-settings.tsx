@@ -33,7 +33,7 @@ import { AddOnRow } from "./add-on-row";
 
 // ============================================================================
 // SETTINGS > SERVICES > ADD-ONS — the one list, set up as the reference
-// article describes (2026-09-26, 20260926230000).
+// article describes (2026-09-26, 20260926223644).
 //
 // The list is grouped under the facility's categories in the order it sorted
 // them, with the uncategorised last; each add-on has Edit, Duplicate and

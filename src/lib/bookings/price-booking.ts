@@ -447,7 +447,7 @@ async function withAddOns(
   if (lines.length === 0 && defaults.length === 0) {
     return { ok: true, basePrice: base, total: base };
   }
-  // The one add-ons list (20260926230000), read in the SAME shape the wizard
+  // The one add-ons list (20260926223644), read in the SAME shape the wizard
   // reads it through `useServiceAddOns()` — one conversion, so the ids both
   // sides key on and the prices both sides add cannot drift apart.
   const catalogue = await liveAddOns(input.facilityId);

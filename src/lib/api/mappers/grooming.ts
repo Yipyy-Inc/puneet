@@ -188,7 +188,7 @@ export function rowToService(
   return {
     id: appId(row),
     // The uuid, always — `id` may be a legacy string. What an add-on's
-    // `grooming:<uuid>` service reference names (20260926230000).
+    // `grooming:<uuid>` service reference names (20260926223644).
     rowId: row.id,
     name: row.name,
     categoryId: row.category_id ?? null,

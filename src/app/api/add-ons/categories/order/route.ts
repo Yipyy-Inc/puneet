@@ -4,7 +4,7 @@ import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
 
 // ============================================================================
-// "Sort the order of categories" (20260926230000).
+// "Sort the order of categories" (20260926223644).
 //
 // The body is every category id in its new order; each takes its position as
 // `display_order`. Written row by row, and COUNTED: an UPDATE refused by RLS

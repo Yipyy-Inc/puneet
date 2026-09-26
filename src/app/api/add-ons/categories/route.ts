@@ -15,7 +15,7 @@ import {
 
 // ============================================================================
 // The headings the add-ons list is grouped under, in the facility's order
-// (20260926230000). Deleting one leaves its add-ons Uncategorized — the
+// (20260926223644). Deleting one leaves its add-ons Uncategorized — the
 // foreign key is `on delete set null` (service-add-ons A2).
 // ============================================================================
 

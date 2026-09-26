@@ -8,7 +8,7 @@ import {
 
 // ============================================================================
 // The facility's grooming add-ons, from `grooming_add_ons` — since 2026-09-26
-// a view over the one add-ons list (20260926230000): every add-on that applies
+// a view over the one add-ons list (20260926223644): every add-on that applies
 // to grooming, deleted ones left out.
 //
 // Both grooming booking screens offered `GROOMING_ADD_ONS` from

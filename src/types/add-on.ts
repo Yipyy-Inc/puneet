@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // ============================================================================
-// AN ADD-ON — one list for every service (20260926230000).
+// AN ADD-ON — one list for every service (20260926223644).
 //
 // The shape of Settings > Services > Add-ons, section by section: basic info,
 // the locations that offer it, price / tax / duration with an override per

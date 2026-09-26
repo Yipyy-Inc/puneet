@@ -12,7 +12,7 @@ import {
 import { addOnInputSchema } from "@/types/add-on";
 
 // ============================================================================
-// Change an add-on, or delete it (20260926230000).
+// Change an add-on, or delete it (20260926223644).
 //
 // ── DELETE ARCHIVES ─────────────────────────────────────────────────────────
 //

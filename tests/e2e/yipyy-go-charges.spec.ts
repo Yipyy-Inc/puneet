@@ -219,7 +219,7 @@ test.beforeAll(async () => {
   await put("yipyy_go_config", config);
 
   // The facility's own add-ons stay; this one joins the one add-ons list
-  // (20260926230000) for the run, for the facility's daycare services — and
+  // (20260926223644) for the run, for the facility's daycare services — and
   // is swept first, in case an earlier run died before its afterAll.
   await db
     .from("service_add_ons")

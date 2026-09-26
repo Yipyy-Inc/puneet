@@ -6,7 +6,7 @@ import { createClient } from "@supabase/supabase-js";
 import { ACCOUNTS, signIn } from "../e2e/_auth";
 
 // ============================================================================
-// PHOTOGRAPH SETTINGS > SERVICES > ADD-ONS (2026-09-26, 20260926230000).
+// PHOTOGRAPH SETTINGS > SERVICES > ADD-ONS (2026-09-26, 20260926223644).
 //
 // The one add-ons list as the reference article sets it up: the list grouped
 // under sorted categories, "Edit categories", every section of the add-on

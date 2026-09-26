@@ -9,7 +9,7 @@ import type {
 } from "@/types/add-on";
 
 // ============================================================================
-// The one add-ons list, from Postgres (20260926230000).
+// The one add-ons list, from Postgres (20260926223644).
 //
 // Staff read `/api/add-ons` (their facility, archived ones left out); a pet
 // owner reads `/api/customer/add-ons` (their facility, live ones only) under

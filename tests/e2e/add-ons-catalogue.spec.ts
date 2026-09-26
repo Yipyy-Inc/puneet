@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { ACCOUNTS, signIn } from "./_auth";
 
 // ============================================================================
-// THE ONE ADD-ONS LIST, OVER HTTP (2026-09-26, 20260926230000).
+// THE ONE ADD-ONS LIST, OVER HTTP (2026-09-26, 20260926223644).
 //
 // Settings > Services > Add-ons, as the reference article sets it up: a list
 // grouped under categories the facility can sort, each add-on with its

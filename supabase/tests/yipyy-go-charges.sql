@@ -10,7 +10,7 @@
 --
 -- C1  An add-on is priced from the catalogue, whatever the request says.
 -- C2  The quantity asked is charged, up to ten, and a boarding add-on is not
---     multiplied by the nights: since the one add-ons list (20260926230000) an
+--     multiplied by the nights: since the one add-ons list (20260926223644) an
 --     add-on has one price, and the booking says how many.
 -- C3  An inactive, deleted, other-location, other-service or unknown add-on is
 --     refused.
@@ -124,7 +124,7 @@ insert into public.facility_settings (facility_id, domain, value) values
    ))
 on conflict (facility_id, domain) do update set value = excluded.value;
 
--- The one add-ons list (20260926230000). A service ref names a service; these
+-- The one add-ons list (20260926223644). A service ref names a service; these
 -- bookings carry no service id, so the uuids only have to be well formed.
 insert into public.locations (id, facility_id, name, is_primary, timezone) values
   ('00000000-0000-0000-0000-0000001f60e0', '00000000-0000-0000-0000-0000001f6020', 'Uptown', false, 'America/Toronto');
