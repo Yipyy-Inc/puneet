@@ -6020,7 +6020,11 @@ CREATE OR REPLACE FUNCTION "private"."sync_boarding_stay"() RETURNS "trigger"
     SET "search_path" TO ''
     AS $$
 declare
-  v_last integer;
+  v_last    integer;
+  v_shift   interval;
+  v_first   public.boarding_stays%rowtype;
+  v_order   integer;
+  r         record;
 begin
   if new.status in ('cancelled', 'no_show') then
     update public.boarding_stays
@@ -6032,41 +6036,98 @@ begin
      where booking_id = new.id;
   end if;
 
-  if new.start_at is distinct from old.start_at
-     or new.end_at is distinct from old.end_at
+  if new.start_at is not distinct from old.start_at
+     and new.end_at is not distinct from old.end_at
   then
-    select max(segment_order) into v_last
-      from public.boarding_stays where booking_id = new.id;
-
-    if v_last is null then
-      return new;
-    elsif v_last = 1 then
-      update public.boarding_stays
-         set occupies = tstzrange(new.start_at, new.end_at, '[)'), updated_at = now()
-       where booking_id = new.id;
-    else
-      -- The first stay starts at the arrival and the last ends at the
-      -- departure; the transfers between them are the staff's decisions and
-      -- stay where they were put. A new range that would leave a stay with
-      -- no night is refused: which kennel loses the night is not for a
-      -- trigger to guess.
-      if new.start_at >= (select upper(occupies) from public.boarding_stays
-                           where booking_id = new.id and segment_order = 1)
-         or new.end_at <= (select lower(occupies) from public.boarding_stays
-                           where booking_id = new.id and segment_order = v_last)
-      then
-        raise exception
-          'This stay moves kennels part-way. Change the move first, then the dates.'
-          using errcode = '22023', hint = 'split_stay_dates';
-      end if;
-      update public.boarding_stays
-         set occupies = tstzrange(new.start_at, upper(occupies), '[)'), updated_at = now()
-       where booking_id = new.id and segment_order = 1;
-      update public.boarding_stays
-         set occupies = tstzrange(lower(occupies), new.end_at, '[)'), updated_at = now()
-       where booking_id = new.id and segment_order = v_last;
-    end if;
+    return new;
   end if;
+
+  select max(segment_order) into v_last
+    from public.boarding_stays where booking_id = new.id;
+
+  if v_last is null then
+    return new;
+  end if;
+
+  if v_last = 1 then
+    update public.boarding_stays
+       set occupies = tstzrange(new.start_at, new.end_at, '[)'), updated_at = now()
+     where booking_id = new.id;
+    return new;
+  end if;
+
+  -- The deferred checks run at commit, over the final shape — not between
+  -- the statements below, where the sequence is briefly renumbered.
+  set constraints public.boarding_stays_segment_order_unique deferred;
+
+  -- ── Moved whole: every kennel moves by the same amount ──────────────────
+  v_shift := new.start_at - old.start_at;
+  if new.end_at - old.end_at = v_shift then
+    -- Last first when moving later, first first when moving earlier, so no
+    -- two of the booking's own stays overlap on the way.
+    for r in
+      select id from public.boarding_stays
+       where booking_id = new.id
+       order by case when v_shift > interval '0' then -segment_order else segment_order end
+    loop
+      update public.boarding_stays
+         set occupies = tstzrange(lower(occupies) + v_shift, upper(occupies) + v_shift, '[)'),
+             updated_at = now()
+       where id = r.id;
+    end loop;
+    return new;
+  end if;
+
+  -- ── Shortened or lengthened at either end ───────────────────────────────
+  select * into v_first from public.boarding_stays
+   where booking_id = new.id and segment_order = 1;
+
+  -- A kennel wholly outside the new dates is one the guest never sleeps in.
+  -- The first one carries the arrival, so a guest who arrived keeps it.
+  if v_first.checked_in_at is not null
+     and (upper(v_first.occupies) <= new.start_at
+          or lower(v_first.occupies) >= new.end_at)
+  then
+    raise exception
+      'This guest has already arrived. Change the move first, then the dates.'
+      using errcode = '22023', hint = 'split_stay_dates';
+  end if;
+
+  delete from public.boarding_stays
+   where booking_id = new.id
+     and (upper(occupies) <= new.start_at or lower(occupies) >= new.end_at);
+
+  -- Renumber what is left from 1, in order: out of the way first (the order
+  -- must stay positive), then 1, 2, 3…
+  update public.boarding_stays
+     set segment_order = segment_order + 1000
+   where booking_id = new.id;
+  v_order := 0;
+  for r in
+    select id from public.boarding_stays where booking_id = new.id
+     order by lower(occupies)
+  loop
+    v_order := v_order + 1;
+    update public.boarding_stays set segment_order = v_order where id = r.id;
+  end loop;
+
+  if v_order = 0 then
+    -- A new range that meets none of the old kennels: the first one takes it,
+    -- as a stay with one kennel always has.
+    insert into public.boarding_stays
+      (booking_id, facility_id, room_id, occupies, override_reason)
+    values
+      (new.id, v_first.facility_id, v_first.room_id,
+       tstzrange(new.start_at, new.end_at, '[)'), v_first.override_reason);
+    return new;
+  end if;
+
+  update public.boarding_stays
+     set occupies = tstzrange(new.start_at, upper(occupies), '[)'), updated_at = now()
+   where booking_id = new.id and segment_order = 1;
+  update public.boarding_stays
+     set occupies = tstzrange(lower(occupies), new.end_at, '[)'), updated_at = now()
+   where booking_id = new.id and segment_order = v_order;
 
   return new;
 end;
@@ -9061,6 +9122,7 @@ declare
   v_index   integer := 0;
   v_pets    uuid[];
   v_created record;
+  v_move    jsonb;
 begin
   if p_items is null or jsonb_typeof(p_items) <> 'array'
      or jsonb_array_length(p_items) = 0 then
@@ -9081,8 +9143,22 @@ begin
       v_item->'booking',
       v_pets,
       nullif(v_item->'grooming', 'null'::jsonb),
-      nullif(v_item->'boarding', 'null'::jsonb)
+      nullif(nullif(v_item->'boarding', 'null'::jsonb) - 'moves', '{}'::jsonb)
     );
+
+    -- The kennel changes planned with the booking, earliest first, in this
+    -- same transaction: a taken kennel refuses the lot.
+    for v_move in
+      select value
+        from jsonb_array_elements(coalesce(v_item->'boarding'->'moves', '[]'::jsonb))
+       order by (value->>'from')::date
+    loop
+      perform public.split_boarding_stay(
+        v_created.booking_ref,
+        (v_move->>'from')::date,
+        v_move->>'roomId',
+        nullif(trim(coalesce(v_move->>'overrideReason', '')), ''));
+    end loop;
 
     item_index  := v_index;
     booking_id  := v_created.booking_id;

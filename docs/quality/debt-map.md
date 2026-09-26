@@ -21627,7 +21627,7 @@ can book (`9b9425c4`), and the size-tier picker (`cc8889d9`).
 
    The BEFORE triggers fire in name order — cut-off, live-booking guard,
    space type — not space type first as 20260924200000's comment says.
-   **Both follow-ups closed 2026-09-26** (`20260926140000`):
+   **Both follow-ups closed 2026-09-26** (`20260926132616`):
    - An early check-out before a planned move goes through. New dates that
      cut nights from the END drop the kennels the guest never reaches and
      end the new last one at the departure; a stay moved whole (both ends by

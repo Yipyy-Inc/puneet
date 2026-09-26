@@ -712,7 +712,7 @@ end $$;
 
 -- M5: new dates move the outer bounds; the move stays where staff put it,
 -- and a stay shortened to before the move lets go of the kennel it never
--- reaches (it was refused until 20260926140000 — that refusal is what blocked
+-- reaches (it was refused until 20260926132616 — that refusal is what blocked
 -- every early check-out before a planned move).
 do $$
 declare v_ref bigint; v_after text; v_short text;
