@@ -33,9 +33,11 @@ on:
 #   1. It would kill the deploy job MID-SSH — quite possibly between "started
 #      the new container" and "pointed Caddy at it" — leaving the box in a state
 #      no script knows how to describe.
-#   2. It cancels the e2e job, which skips `afterAll`, which leaks rows into the
-#      one shared production Postgres. The next run's failure then looks like an
-#      application bug. That has happened twice.
+#   2. It cancels the e2e job, which skips `afterAll`, which leaked rows into
+#      the one shared production Postgres. The next run's failure then looked
+#      like an application bug. That happened twice. (Since 2026-09-26 the e2e
+#      and sql jobs run on a copy of production inside the runner, so this
+#      one no longer applies — the first still does.)
 #
 # With `false`, a second push to `main` QUEUES behind the first rather than
 # killing it — runs stay serialised, which is what the shared database needs,
@@ -259,39 +261,45 @@ jobs:
   # A test nobody runs is worse than no test: it is the APPEARANCE of a gate.
   # This job is the difference.
   #
-  # ── THESE RUN AGAINST THE REAL DATABASE, AND ROLL BACK ────────────────────
+  # ── THESE RUN AGAINST A COPY OF PRODUCTION, IN THE RUNNER ────────────────
   #
-  # There is one Postgres and this points at it. Every file seeds real rows into
-  # real tables — facilities, memberships, staff, bookings — because that is the
-  # only way to test RLS, which is the authorisation boundary this product rests
-  # on. What makes it safe is that scripts/run-sql-tests.ts owns the transaction
-  # rather than trusting the file: it STRIPS each file's own `begin`/`rollback`,
-  # wraps the body in its own transaction, and aborts it unconditionally. A file
-  # that forgot its rollback still cannot commit, and one whose shape it does
-  # not recognise is refused rather than run.
+  # Until 2026-09-26 this pointed at the one production Postgres. It now starts
+  # Supabase in the runner's Docker and loads what production IS — its schema,
+  # storage policies and rows, read ONCE with `db:local:pull` (one pg_dump) —
+  # then applies every migration file newer than production's recorded
+  # version, so a migration in this push that production has not had yet is
+  # tested here first. The 149 files then run against that copy: no Supabase
+  # API requests and no log ingestion, where a run used to open 149
+  # connections to production. scripts/local-db.ts says why it is a copy and
+  # not a replay of supabase/migrations (the files stop replaying at file 30).
   #
-  # `cancel-in-progress` above is therefore safe here in a way it is not for the
-  # browser tests: a cancelled connection aborts its transaction, so a killed
-  # SQL run leaves nothing behind. It has no `afterAll` to skip.
+  # The repository is PUBLIC. The copy lives only inside the runner and goes
+  # with it: nothing here prints it and nothing uploads it.
   #
-  # ── WHY IT IS CHEAP ───────────────────────────────────────────────────────
+  # Every file still seeds real rows and scripts/run-sql-tests.ts still owns
+  # the transaction and aborts it — that property is kept for anybody who
+  # points the runner at a shared database by hand.
   #
-  # No build, no browser, no server. Install and connect. The whole suite is
-  # ~90 seconds, against ~18 minutes for the browser job — which is the argument
-  # for it gating rather than reporting.
+  # ── WHY IT GATES ──────────────────────────────────────────────────────────
+  #
+  # No build, no browser, no server: start, copy, run. A few minutes, against
+  # ~18 for the browser job — which is the argument for it gating rather than
+  # reporting.
   sql:
     name: sql (RLS, grants & database invariants)
     runs-on: ubuntu-latest
     # Secrets are not available to forked pull requests, so the job would fail
     # for a reason that has nothing to do with the change.
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
 
-      # Fail here, in one line, rather than 41 identical connection errors.
-      # Same rule as the e2e preflight below.
+      # Fail here, in one line, rather than a pg_dump error three steps later.
+      # The connection string is now used for ONE read — the copy — and
+      # nothing else in this job can reach production. Same rule as the e2e
+      # preflight below.
       - name: Check the connection string is configured
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
@@ -321,10 +329,19 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      - name: Run the SQL tests
+      # Studio is the local dashboard, for people; nothing here reads it.
+      - name: Start Supabase in the runner
+        run: bunx supabase@2.118.0 start -x studio
+
+      - name: Copy production into it (one read)
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: bun run test:sql
+        run: bun run db:local:pull && bun run db:local:reset
+
+      # `bun run local` puts the runner's stack in the environment and refuses
+      # to run if it is down — it never falls back to production.
+      - name: Run the SQL tests against the copy
+        run: bun run local bun run test:sql
 
   # ── THE BROWSER TESTS ──────────────────────────────────────────────────────
   #
@@ -378,14 +395,21 @@ jobs:
   # eight production-identity specs keep skipping honestly instead of failing at
   # sign-in against staging keys.
   #
-  # ── THESE TESTS TOUCH THE REAL DATABASE ──────────────────────────────────
+  # ── THESE TESTS RUN ON A COPY OF PRODUCTION, IN THE RUNNER ───────────────
   #
-  # There is one Postgres. A localhost server still talks to it, so this subset
-  # was checked for write-cleanliness before being put on every PR: counts for
-  # facilities, memberships, clients, pets, bookings, profiles, platform team
-  # and role overrides were identical before and after a full run. Anything
-  # added to `test:e2e:ci` must clean up after itself the way
-  # role-editor-writes.spec.ts does.
+  # Until 2026-09-26 the server here talked to the one production Postgres:
+  # ~40,000 Supabase requests a gate run, and on that day the suites were 99%
+  # of 1,040,161 requests and most of 16.8 GB of logs. Now the job starts
+  # Supabase in Docker and copies production into it once (see the sql job),
+  # and the build, the server and the runner all go through `bun run local`,
+  # so nothing in this job holds a key that reaches production except the one
+  # read that makes the copy. WorkOS stays on staging: the copy trusts those
+  # tokens through [auth.third_party.workos] in supabase/config.toml.
+  #
+  # Specs still clean up after themselves the way role-editor-writes.spec.ts
+  # does — the rule outlives this job, because anybody can point a run at a
+  # shared database. What went is the purge step: the copy is thrown away with
+  # the runner.
   # ── SPLIT 2026-08-25: THE GATE RUNS ON EVERY PUSH, THE REST NIGHTLY ──────
   #
   # 59 specs is ~45 minutes, and GitHub holds only ONE pending run per branch —
@@ -482,7 +506,8 @@ jobs:
     # NOTE this job is NOT one of the four required status checks (typecheck,
     # lint, format, build). It reports; it does not gate — and pushes go
     # straight to main anyway. Run `bun run test:e2e:ci` BEFORE pushing.
-    timeout-minutes: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 100 || 25 }}
+    # +5 since 2026-09-26 for starting Supabase and copying production into it.
+    timeout-minutes: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 105 || 30 }}
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -495,15 +520,12 @@ jobs:
           WORKOS_API_KEY: ${{ secrets.WORKOS_API_KEY }}
           WORKOS_CLIENT_ID: ${{ secrets.WORKOS_CLIENT_ID }}
           WORKOS_COOKIE_PASSWORD: ${{ secrets.WORKOS_COOKIE_PASSWORD }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
         run: |
           missing=""
           for name in WORKOS_API_KEY WORKOS_CLIENT_ID WORKOS_COOKIE_PASSWORD \
-                      NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY \
-                      SUPABASE_SERVICE_ROLE_KEY E2E_PASSWORD; do
+                      SUPABASE_DB_URL E2E_PASSWORD; do
             if [ -z "${!name}" ]; then missing="$missing $name"; fi
           done
           if [ -n "$missing" ]; then
@@ -520,7 +542,7 @@ jobs:
                echo "a production key would try to create them on the live one."
                exit 1 ;;
           esac
-          echo "All seven secrets present."
+          echo "All five secrets present."
 
       - run: bun install --frozen-lockfile
 
@@ -536,10 +558,18 @@ jobs:
       - name: Install Chromium
         run: bunx playwright install --with-deps chromium
 
+      - name: Start Supabase in the runner
+        run: bunx supabase@2.118.0 start -x studio
+
+      - name: Copy production into it (one read)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: bun run db:local:pull && bun run db:local:reset
+
+      # Under `bun run local`: NEXT_PUBLIC_SUPABASE_* are inlined at BUILD
+      # time, so this is the step that decides which database the app talks to.
       - name: Build
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_WORKOS_REDIRECT_URI: http://localhost:3000/auth/callback
           NEXT_PUBLIC_APP_DOMAIN: yipyy.test
           # ── DO NOT ADD WORKOS_COOKIE_DOMAIN HERE ──────────────────────────
@@ -552,16 +582,14 @@ jobs:
           # Measured on 2026-08-26 — one run spent forty minutes retrying before
           # the cause was found, and the same probe passes in 6 seconds without
           # it.
-        run: bun run build
+        run: bun run local bun run build
 
       # Backgrounded with a readiness poll rather than a fixed sleep: the first
       # request is what decides whether the run is testing an app or an empty
-      # port, and `next start` is ready in seconds or not at all.
+      # port, and `next start` is ready in seconds or not at all. Under
+      # `bun run local`, which hands the server the runner's service key.
       - name: Start the built server
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           WORKOS_API_KEY: ${{ secrets.WORKOS_API_KEY }}
           WORKOS_CLIENT_ID: ${{ secrets.WORKOS_CLIENT_ID }}
           WORKOS_COOKIE_PASSWORD: ${{ secrets.WORKOS_COOKIE_PASSWORD }}
@@ -591,7 +619,7 @@ jobs:
           CLOVER_APP_ID: e2e-placeholder-app-id
           CLOVER_APP_SECRET: e2e-placeholder-app-secret
         run: |
-          bun run start --port 3000 > /tmp/server.log 2>&1 &
+          bun run local bun run start --port 3000 > /tmp/server.log 2>&1 &
           for i in $(seq 1 60); do
             if [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/sign-in)" = "200" ]; then
               echo "Server up after ${i}s."
@@ -615,17 +643,10 @@ jobs:
           NEXT_PUBLIC_APP_DOMAIN: yipyy.test
           WORKOS_API_KEY: ${{ secrets.WORKOS_API_KEY }}
           WORKOS_CLIENT_ID: ${{ secrets.WORKOS_CLIENT_ID }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
-          # The runner needs this one too, for the same reason as the line
-          # above. `call-qa-exposure.spec.ts` seeds a `call_record` as
-          # service_role because there is no other door — the table is a
-          # trigger-fed projection with no insert policy, and the webhook that
-          # fills it needs a provisioned number. Locally the key arrives via
-          # .env.local, which does not exist here, so the spec failed its own
-          # loud check on the first CI run rather than skipping quietly. That
-          # is the design working; this is the missing half.
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # No Supabase keys here any more. The RUNNER still needs them —
+          # `call-qa-exposure.spec.ts` seeds a `call_record` as service_role,
+          # because the table is a trigger-fed projection with no insert policy
+          # — and `bun run local` hands it the runner's own stack's keys.
         # ── ONE JOB, TWO SUITES, CHOSEN BY WHAT TRIGGERED IT ──────────────
         #
         # A push or a PR runs the 40-spec gate: the authorisation boundary and
@@ -637,37 +658,21 @@ jobs:
         # is the command to run by hand when the whole suite is asked for.
         #
         # A second job would have meant duplicating ~100 lines of preflight,
-        # server build and purge, and the two would have drifted.
+        # start and build, and the two would have drifted.
+        #
+        # There used to be a purge step after this one, taking the suite's
+        # bookings back out of production (434 of 477 rows were e2e leftovers
+        # before it existed). The copy it cleaned is now thrown away with the
+        # runner, so it went; `bun run e2e:purge` is still there for a run
+        # somebody points at a shared database by hand.
         run: |
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "Full suite (147 specs)."
-            bun run test:e2e:ci
+            bun run local bun run test:e2e:ci
           else
             echo "Gate (40 specs: access & money). The full suite runs weekly, and on demand."
-            bun run test:e2e:gate
+            bun run local bun run test:e2e:gate
           fi
-
-      # ── THE SUITE TAKES ITS BOOKINGS BACK OUT ───────────────────────────
-      #
-      # There is one Postgres. The specs clean up by CANCELLING, which keeps the
-      # boards honest but not the table: measured before this step existed,
-      # `bookings` held 477 rows and 434 were e2e leftovers, against 43 the
-      # facility had made itself. The operations cluster leaves ~35 a run.
-      #
-      # `always()`, because a failed run is the one that leaves the most behind.
-      # It deletes only cancelled, money-free rows matching `%[e2e %` — see
-      # scripts/purge-e2e-bookings.ts — so a booking that took a payment keeps
-      # its row and the append-only ledger still points at something.
-      #
-      # `continue-on-error` so a purge that cannot connect never turns a green
-      # test run red. The cleanup is important; it is not the assertion.
-      - name: Purge the bookings the suite created
-        if: always()
-        continue-on-error: true
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: bun run e2e:purge
 
       # `|| echo` because the commonest failure is the preflight, which runs
       # before any server exists — and `tail` on a missing file adds a second

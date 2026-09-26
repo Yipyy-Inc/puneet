@@ -226,7 +226,24 @@ async function pull(): Promise<void> {
       "\n",
   );
   await Bun.write(`${BASELINE}/version.txt`, `${version}\n`);
-  console.log(`Baseline refreshed: production as of ${version}.`);
+
+  // The rows, into the git-ignored file `reset` loads. Last, so the schema
+  // and the rows are read as close together as the two dumps allow — a row
+  // whose column the schema lacks fails the load.
+  run([
+    ...CLI,
+    "db",
+    "dump",
+    "--db-url",
+    url,
+    "--data-only",
+    "--use-copy",
+    "-f",
+    DATA,
+  ]);
+  console.log(
+    `Baseline refreshed: production as of ${version}, with its rows.`,
+  );
 }
 
 const command = process.argv[2];

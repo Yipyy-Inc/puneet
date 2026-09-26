@@ -103,8 +103,9 @@ a mess on your machine. Every verification script in this project cleans up in
 **Unless you run it against the local one, which you should.** Since
 2026-09-26 Supabase also runs in Docker on the development machine, built from
 production's schema and a git-ignored copy of its rows. `bun run local <cmd>`
-points any command at it; AGENTS.md has the sequence. CI still uses the shared
-database until its jobs move over.
+points any command at it; AGENTS.md has the sequence. CI does the same in the
+runner: its sql and e2e jobs start Supabase in Docker and copy production into
+it with one read, so a push no longer runs its tests against production.
 
 **Whether you can sign in locally depends on which WorkOS environment
 `.env.local` carries, so CHECK — do not assume either answer.**
