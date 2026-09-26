@@ -82,14 +82,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: overlapError.message }, { status: 500 });
   }
 
-  // Physically on site, whatever the dates say.
+  // Physically on site, whatever the dates say. Filtered through `present`,
+  // not `boarding_stays`, so a guest who moved kennels keeps every stay —
+  // see BOARDING_ON_SITE_SELECT.
   const { data: onSite, error: onSiteError } = await supabase
     .from("bookings")
     .select(BOARDING_ON_SITE_SELECT)
     .match(inFacility(scope))
     .eq("service", "boarding")
-    .not("boarding_stays.checked_in_at", "is", null)
-    .is("boarding_stays.checked_out_at", null);
+    .not("present.checked_in_at", "is", null)
+    .is("present.checked_out_at", null);
 
   if (onSiteError) {
     return NextResponse.json({ error: onSiteError.message }, { status: 500 });

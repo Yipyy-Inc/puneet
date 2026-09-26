@@ -270,10 +270,16 @@ async function serviceTaxable(
     // boarding bookings in the database — the class a stay belongs to is
     // reachable only as boarding_stays → facility_rooms → room_categories.
     // Falling back to the detail key would have quietly resolved none of them.
+    //
+    // The FIRST stay: a booking that moves kennels part-way holds several,
+    // and `.maybeSingle()` over two rows is an error, not an answer. The class
+    // it was booked into decides, as it did before a stay could move.
     const { data: stay } = await admin
       .from("boarding_stays")
       .select("room_id")
       .eq("booking_id", row.id)
+      .order("segment_order", { ascending: true })
+      .limit(1)
       .maybeSingle();
     const roomId = (stay as { room_id?: string | null } | null)?.room_id;
 

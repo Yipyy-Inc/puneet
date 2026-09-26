@@ -157,6 +157,7 @@ import { BookingTasksCard } from "@/components/bookings/BookingTasksCard";
 import { YipyyGoBookingCard } from "@/components/yipyygo/staff/yipyy-go-booking-card";
 import { taskTemplateQueries } from "@/lib/api/task-templates";
 import { BookingDetailsCard } from "./_components/booking-details-card";
+import { BookingKennelsCard } from "./_components/booking-kennels-card";
 import { BookingHero } from "./_components/booking-hero";
 import { BookingNotices } from "./_components/booking-notices";
 import { BookingPetsCard } from "./_components/booking-pets-card";
@@ -668,6 +669,9 @@ export default function ClientBookingDetailPage({
   const arrival = useBookingArrival();
   const markNoShow = useMarkBookingNoShow();
   const canTakePayment = usePermission("take_payment");
+  // Moving a guest between kennels writes the booking's stays, which RLS
+  // gives to whoever may edit the booking.
+  const canEditBooking = usePermission("edit_bookings");
   const { t: actT, fill: actFill } = useStaffText("bookingActions");
   const bookingActions = useBookingActions(booking, {
     depositRuleApplies: Boolean(
@@ -1336,6 +1340,20 @@ export default function ClientBookingDetailPage({
                 onSite={booking.presence === "on-site"}
               />
             </div>
+
+            {booking.service.toLowerCase() === "boarding" && (
+              <BookingKennelsCard
+                bookingRef={booking.id}
+                petName={String(petName)}
+                startDate={booking.startDate}
+                endDate={booking.endDate}
+                canMove={
+                  canEditBooking &&
+                  !isCancelled &&
+                  !["completed", "declined", "no_show"].includes(booking.status)
+                }
+              />
+            )}
 
             {/* Care-instruction visibility is per-service config; default "optional" is backwards-compatible */}
             {(() => {

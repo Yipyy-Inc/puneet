@@ -1,3 +1,5 @@
+import { firstStay, stayForNight } from "@/lib/boarding/stay-segments";
+
 // ============================================================================
 // A boarding guest as the arrivals board needs one.
 //
@@ -89,6 +91,9 @@ export interface BoardingStayJoin {
   checked_out_at: string | null;
   status: string;
   released_at: string | null;
+  /** Its place in the booking, from 1; presence is stamped on 1 only. */
+  segment_order: number | null;
+  occupies: unknown;
   // `facility_rooms`, not `boarding_rooms`: 20260806660000 repointed the stay
   // at the facility's own room table so the Rooms page and the kennel board
   // describe one kennel the same way.
@@ -117,27 +122,11 @@ export interface BoardingArrivalRow {
         } | null;
       }[]
     | null;
-  /** One stay today, a list once a booking can have several — `embeddedStay`. */
+  /**
+   * A LIST once a booking can move kennels; one object before that — read
+   * through `firstStay` and `stayForNight`, which take either.
+   */
   boarding_stays: BoardingStayJoin | BoardingStayJoin[] | null;
-}
-
-/**
- * A booking's stay, however PostgREST embeds it.
- *
- * ONE object today, because `boarding_stays` is keyed by `booking_id` and
- * PostgREST embeds a to-one relation as an object. Split lodging gives a
- * booking several stays in sequence, and the day that key changes PostgREST
- * sends a LIST instead — which a reader expecting an object reads as
- * `undefined` on every row: an empty board, and no error anywhere, which is
- * exactly how `/api/daily-care` once failed. So both readers take either
- * shape, and ship BEFORE the key changes. The first stay is the only one until
- * a booking can be split; choosing the one that covers the day comes with it.
- */
-export function embeddedStay<T>(
-  value: T | readonly T[] | null | undefined,
-): T | null {
-  if (Array.isArray(value)) return (value[0] as T | undefined) ?? null;
-  return (value as T | null | undefined) ?? null;
 }
 
 export const BOARDING_ARRIVAL_SELECT = `
@@ -146,21 +135,25 @@ export const BOARDING_ARRIVAL_SELECT = `
   clients ( ref, name, phone ),
   booking_pets ( pets ( ref, name, breed, species ) ),
   boarding_stays ( room_id, checked_in_at, checked_out_at, status, released_at,
+                   segment_order, occupies,
                    facility_rooms ( legacy_id, name ) )
 ` as const;
 
 /**
- * The same read, restricted to bookings that HAVE a stay on site.
+ * The same read, restricted to bookings that HAVE a guest on site.
  *
- * `!inner` turns the embedded stay into a join rather than a left join, which
- * is what lets the filters below it (`checked_in_at is not null`) narrow the
+ * `!inner` turns an embedded stay into a join rather than a left join, which
+ * is what lets the filters on it (`checked_in_at is not null`) narrow the
  * bookings themselves. Without it PostgREST would return every booking and
  * merely blank the embedded row.
+ *
+ * The filter goes on a SECOND embed, `present`, and not on `boarding_stays`:
+ * a filtered embed also drops the rows that fail it, and presence is stamped
+ * on a booking's first stay only — so filtering the one embed would leave a
+ * moved guest with nothing but the kennel they left.
  */
-export const BOARDING_ON_SITE_SELECT = BOARDING_ARRIVAL_SELECT.replace(
-  "boarding_stays (",
-  "boarding_stays!inner (",
-);
+export const BOARDING_ON_SITE_SELECT = `${BOARDING_ARRIVAL_SELECT},
+  present:boarding_stays!inner ( checked_in_at, checked_out_at )`;
 
 function sameDay(iso: string, day: string): boolean {
   return iso.slice(0, 10) === day;
@@ -179,7 +172,10 @@ export function rowToBoardingArrival(
     .map((bp) => bp.pets)
     .filter((p): p is NonNullable<typeof p> => p !== null);
 
-  const stay = embeddedStay(row.boarding_stays);
+  // Presence from the first stay, where the database stamps it; the kennel
+  // from the stay the pet sleeps in on the board's night.
+  const stay = firstStay(row.boarding_stays);
+  const kennel = stayForNight(row.boarding_stays, day) ?? stay;
   const start = new Date(row.start_at);
   const end = new Date(row.end_at);
   const nights = Math.max(
@@ -198,8 +194,8 @@ export function rowToBoardingArrival(
     ownerId: row.clients?.ref ?? 0,
     ownerName: row.clients?.name ?? "",
     ownerPhone: row.clients?.phone ?? "",
-    roomId: stay?.facility_rooms?.legacy_id ?? stay?.room_id ?? null,
-    roomName: stay?.facility_rooms?.name ?? null,
+    roomId: kennel?.facility_rooms?.legacy_id ?? kennel?.room_id ?? null,
+    roomName: kennel?.facility_rooms?.name ?? null,
     scheduledArrival: row.start_at,
     scheduledDeparture: row.end_at,
     checkedInAt: stay?.checked_in_at ?? null,

@@ -18,8 +18,11 @@ import {
 import {
   useAssignBoardingRoom,
   useBoardingRooms,
+  useMoveBoardingStay,
   type BoardingRoomsPayload,
 } from "@/lib/api/boarding-rooms";
+import { pgTimestamp } from "@/lib/boarding/stay-segments";
+import { todayIso } from "@/lib/care-log-scheduler";
 import {
   useBoardingCheckIn,
   useBoardingStayUpdate,
@@ -367,6 +370,7 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
   // staff catalogue does not have, which renders as an uppercased "vacant".
   const { t, fill, locale } = useStaffText("occupancy");
   const assignRoom = useAssignBoardingRoom();
+  const moveStay = useMoveBoardingStay();
   const boardingCheckIn = useBoardingCheckIn();
   const boardingStay = useBoardingStayUpdate();
   const nameFor = (list: Kennel[], bookingId: number) =>
@@ -427,6 +431,11 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
   // state, so the board showed the dog in its new kennel until the reload put
   // it back. Shown at once, written, and stepped back if the write is refused
   // (a kennel taken in the meantime is a 409 with its own sentence).
+  //
+  // THE BAR, NOT THE BOOKING. A guest who moves kennels part-way has a bar in
+  // each, and dragging one moves that stay alone, from its own first night
+  // (`POST /api/boarding/stays/move`). Moving the booking would have merged
+  // both bars into whichever kennel one of them was dropped on.
   const handleMoveBooking = (
     bookingId: number,
     from: string,
@@ -435,19 +444,32 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
   ) => {
     const pet = nameFor(kennels, bookingId);
     const room = kennels.find((k) => k.id === to)?.name ?? to;
-    moveWithin(setKennels, bookingId, from, to, staff);
-    assignRoom.mutate(
-      { bookingRef: bookingId, roomId: to },
-      {
-        onSuccess: () => toast.success(fill("moved", { pet, room })),
-        onError: (error) => {
-          moveWithin(setKennels, bookingId, to, from, staff);
-          toast.error(fill("moveFailed", { pet }), {
-            description: error.message,
-          });
-        },
+    const bar = kennels
+      .find((k) => k.id === from)
+      ?.stays?.find((s) => s.bookingId === bookingId);
+    const barStart = bar?.checkIn ? pgTimestamp(bar.checkIn) : null;
+    const handlers = {
+      onSuccess: () => toast.success(fill("moved", { pet, room })),
+      onError: (error: Error) => {
+        moveWithin(setKennels, bookingId, to, from, staff);
+        toast.error(fill("moveFailed", { pet }), {
+          description: error.message,
+        });
       },
-    );
+    };
+    moveWithin(setKennels, bookingId, from, to, staff);
+    if (barStart !== null) {
+      moveStay.mutate(
+        {
+          bookingRef: bookingId,
+          from: todayIso(new Date(barStart)),
+          roomId: to,
+        },
+        handlers,
+      );
+      return;
+    }
+    assignRoom.mutate({ bookingRef: bookingId, roomId: to }, handlers);
   };
   // A daycare move is the booking's section.
   const handleDaycareMoveBooking = (
@@ -484,6 +506,20 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
     if (!kennel?.bookingId) return;
     const before = { checkIn: kennel.checkIn, checkOut: kennel.checkOut };
     const pet = kennel.petName ?? t("guest");
+    // A guest who moves kennels part-way has a bar in each kennel, and a
+    // bar's edges are not the booking's: stretching the first bar's end would
+    // end the whole booking where the move is. The booking's own form changes
+    // its dates, and the database moves the outer ends only.
+    const bars = kennels.reduce(
+      (count, k) =>
+        count +
+        (k.stays ?? []).filter((s) => s.bookingId === kennel.bookingId).length,
+      0,
+    );
+    if (bars > 1) {
+      toast.error(fill("resizeSplit", { pet }));
+      return;
+    }
     const setDates = (dates: { checkIn?: string; checkOut?: string }) =>
       setKennels((prev) =>
         prev.map((k) => (k.id === kennelId ? { ...k, ...dates } : k)),

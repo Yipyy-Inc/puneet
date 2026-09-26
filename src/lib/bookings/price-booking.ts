@@ -95,6 +95,11 @@ export type ServerQuoteRefusal =
    * off, or a request made before the service had it. Staff look instead.
    */
   | "missing_add_on"
+  /**
+   * A class-priced stay that moves kennels part-way: two classes on
+   * different nights, and a quote made for one. Staff price it.
+   */
+  | "split_stay"
   /** The server's price and the customer's quote disagree. */
   | "quote_mismatch";
 
@@ -218,10 +223,13 @@ async function settingValue(
  * before staff put the pet anywhere. It returns no classes and one lodging,
  * which is what the wizard quotes for an unassigned stay.
  */
-async function boardingKennels(
-  bookingId: string | undefined,
-): Promise<{ categoryIds: string[]; lodgings: number }> {
-  if (!bookingId) return { categoryIds: [], lodgings: 1 };
+async function boardingKennels(bookingId: string | undefined): Promise<{
+  categoryIds: string[];
+  lodgings: number;
+  /** The booking moves kennels part-way: more than one room, in sequence. */
+  moves: boolean;
+}> {
+  if (!bookingId) return { categoryIds: [], lodgings: 1, moves: false };
 
   const admin = createAdminClient();
   const { data: stays } = await admin
@@ -236,7 +244,9 @@ async function boardingKennels(
         .filter((id): id is string => Boolean(id)),
     ),
   ];
-  if (roomIds.length === 0) return { categoryIds: [], lodgings: 1 };
+  if (roomIds.length === 0) {
+    return { categoryIds: [], lodgings: 1, moves: false };
+  }
 
   const { data: units } = await admin
     .from("facility_rooms")
@@ -252,9 +262,11 @@ async function boardingKennels(
     .map((id) => byRoom.get(id))
     .filter((id): id is string => Boolean(id));
 
-  // DISTINCT ROOMS, the same rule `boardingPricing` uses: two pets from one
-  // household in one suite are one suite being paid for once.
-  return { categoryIds, lodgings: roomIds.length };
+  // ONE LODGING A NIGHT. A booking's stays never overlap — the database
+  // refuses it (`boarding_stays_segments_do_not_overlap`) — so several rooms
+  // are a guest MOVING between them, not two kennels held at once. Counting
+  // distinct rooms here would bill a moved guest for both on every night.
+  return { categoryIds, lodgings: 1, moves: roomIds.length > 1 };
 }
 
 /**
@@ -286,7 +298,9 @@ async function priceBoarding(input: PriceRequest): Promise<ServerQuote> {
     return { ok: false, reason: "bad_dates" };
   }
 
-  const { categoryIds, lodgings } = await boardingKennels(input.bookingId);
+  const { categoryIds, lodgings, moves } = await boardingKennels(
+    input.bookingId,
+  );
 
   // ── THE SERVICE THE BOOKING NAMES ────────────────────────────────────────
   if (input.boardingServiceId) {
@@ -311,6 +325,11 @@ async function priceBoarding(input: PriceRequest): Promise<ServerQuote> {
   }
 
   // ── THE PRE-CUTOVER PATH: the class the stay is actually in ─────────────
+  //
+  // A stay that moves kennels is in two classes on different nights, and a
+  // class-priced quote was made for one of them. Pricing it here would be a
+  // number nobody was shown, so it is left for staff.
+  if (moves) return { ok: false, reason: "split_stay" };
   const classIds =
     categoryIds.length > 0
       ? categoryIds

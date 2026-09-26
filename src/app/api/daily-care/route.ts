@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getViewer } from "@/lib/auth/viewer";
 import { createServerClient } from "@/lib/supabase/server";
 import { readAllPages, type RangeableQuery } from "@/lib/api/read-all-pages";
-import { embeddedStay } from "@/lib/api/mappers/boarding-arrival";
+import { firstStay, stayForNight } from "@/lib/boarding/stay-segments";
 import {
   careGuestFromBooking,
   type BookingCareDetails,
@@ -65,7 +65,7 @@ const SELECT = `
   ref, start_at, end_at, details,
   clients ( name, phone ),
   booking_pets ( pets ( id, ref, name ) ),
-  boarding_stays!inner ( checked_in_at, checked_out_at,
+  boarding_stays!inner ( checked_in_at, checked_out_at, segment_order, occupies,
                          facility_rooms ( name ) )
 ` as const;
 
@@ -79,14 +79,13 @@ interface Row {
     | { pets: { id: string; ref: number; name: string } | null }[]
     | null;
   /**
-   * ONE stay, embedded as an object rather than a list — for now.
+   * A LIST of stays once a booking can move kennels, and one object before.
    *
-   * PostgREST embeds a to-one relation as an object, and reading it as an array
-   * silently yields `undefined` for every row — so the board came back empty
-   * with no error anywhere. `mappers/boarding-arrival.ts` had this right; this
-   * route did not, and the spec caught it. The same trap runs the other way the
-   * day a booking can hold several stays, so it is read through
-   * `embeddedStay`, which takes either shape.
+   * Reading an embed in the wrong shape silently yields `undefined` for every
+   * row — the board came back empty with no error anywhere, once, when this
+   * route read a to-one embed as a list. So it is read through `firstStay`
+   * (presence, stamped on the first stay only) and `stayForNight` (the kennel
+   * the pet sleeps in that night), which take either shape.
    */
   boarding_stays: CareStay | CareStay[] | null;
 }
@@ -94,6 +93,8 @@ interface Row {
 interface CareStay {
   checked_in_at: string | null;
   checked_out_at: string | null;
+  segment_order: number | null;
+  occupies: unknown;
   facility_rooms: { name: string } | null;
 }
 
@@ -147,7 +148,7 @@ export async function GET(request: NextRequest) {
   const petIdsByGuest = new Map<string, string[]>();
   const guests = (data as unknown as Row[])
     .filter((row) => {
-      const stay = embeddedStay(row.boarding_stays);
+      const stay = firstStay(row.boarding_stays);
       // Arrived, and not yet collected. A booking with a stay row but no
       // arrival is expected rather than present.
       return Boolean(stay?.checked_in_at) && !stay?.checked_out_at;
@@ -171,7 +172,8 @@ export async function GET(request: NextRequest) {
           ownerName: row.clients?.name ?? "",
           ownerPhone: row.clients?.phone ?? null,
           roomName:
-            embeddedStay(row.boarding_stays)?.facility_rooms?.name ?? null,
+            stayForNight(row.boarding_stays, date)?.facility_rooms?.name ??
+            null,
           scheduledArrival: row.start_at,
           scheduledDeparture: row.end_at,
           nights: nightsBetween(row.start_at, row.end_at),

@@ -87,6 +87,40 @@ export function useBoardingRoomsForStay(from?: string, to?: string) {
   });
 }
 
+/** One of a booking's kennels, and the nights it covers (`[from, to)`). */
+export interface BookingStay {
+  segment: number;
+  roomId: string | null;
+  roomName: string | null;
+  from: string;
+  to: string;
+}
+
+/**
+ * A booking's kennels, in the order its guest sleeps in them — one until the
+ * guest moves part-way. Under `boardingRoomKeys.all`, so every move and
+ * assignment refreshes it with the boards.
+ */
+export function useBookingStays(bookingRef: number | undefined) {
+  return useQuery({
+    queryKey: [...boardingRoomKeys.all, "booking", bookingRef ?? 0] as const,
+    enabled: typeof bookingRef === "number" && bookingRef > 0,
+    queryFn: async (): Promise<BookingStay[]> => {
+      const response = await fetch(
+        `/api/boarding/stays?bookingRef=${bookingRef}`,
+      );
+      const parsed = (await response.json().catch(() => null)) as {
+        stays?: unknown;
+        error?: string;
+      } | null;
+      if (!response.ok || !Array.isArray(parsed?.stays)) {
+        throw new Error(parsed?.error ?? "Could not load the kennels.");
+      }
+      return parsed.stays as BookingStay[];
+    },
+  });
+}
+
 /**
  * Move a booked guest between kennels, or take them out of one.
  *
@@ -136,6 +170,56 @@ export function useAssignBoardingRoom() {
       // `boardingRoomKeys.all`, not a hand-written `["boarding","rooms"]` —
       // the key here is `["boarding-rooms", from, to]`, and a near-miss
       // invalidates nothing while looking exactly like it does.
+      void queryClient.invalidateQueries({ queryKey: boardingRoomKeys.all });
+      void queryClient.invalidateQueries({ queryKey: ["bookings"] });
+    },
+  });
+}
+
+/** Why a move was refused, as `POST /api/boarding/stays/move` names it. */
+export class BoardingMoveError extends Error {
+  constructor(
+    message: string,
+    readonly reason: string | null,
+  ) {
+    super(message);
+    this.name = "BoardingMoveError";
+  }
+}
+
+/**
+ * A guest moves kennels from a night on: `from` is the first night in the new
+ * kennel, and the nights before it stay where they were. The whole-booking
+ * move is `useAssignBoardingRoom`, which is right before arrival and wrong
+ * after — it rewrites the nights already slept.
+ */
+export function useMoveBoardingStay() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      bookingRef: number;
+      from: string;
+      roomId: string;
+      overrideReason?: string;
+    }) => {
+      const response = await fetch("/api/boarding/stays/move", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      const parsed = (await response.json().catch(() => null)) as {
+        error?: string;
+        reason?: string;
+      } | null;
+      if (!response.ok) {
+        throw new BoardingMoveError(
+          parsed?.error ?? "Could not move that guest.",
+          parsed?.reason ?? null,
+        );
+      }
+      return input;
+    },
+    onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: boardingRoomKeys.all });
       void queryClient.invalidateQueries({ queryKey: ["bookings"] });
     },

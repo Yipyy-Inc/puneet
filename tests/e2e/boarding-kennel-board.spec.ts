@@ -282,3 +282,153 @@ test.describe("the kennels board", () => {
     ).toBe(mine!.roomId);
   });
 });
+
+// ============================================================================
+// A GUEST WHO MOVES KENNELS PART-WAY (split lodging).
+//
+// Moving a guest used to move the whole BOOKING: every night was rewritten to
+// the new kennel, the ones already slept included, so a kennel somebody else
+// had used earlier in the week refused a guest being moved into it today.
+// `POST /api/boarding/stays/move` moves them from a night on, and the nights
+// before stay where they were.
+//
+// M2 is the positive control for the kennel left behind: if the old stay kept
+// its whole range, the second guest below would be refused a kennel that is
+// empty from the move on.
+// ============================================================================
+
+interface StaysPayload {
+  stays: { segment: number; roomId: string | null; roomName: string | null }[];
+}
+
+async function staysOf(page: import("@playwright/test").Page, ref: number) {
+  const res = await page.request.get(`/api/boarding/stays?bookingRef=${ref}`);
+  expect(res.ok(), await res.text()).toBe(true);
+  return ((await res.json()) as StaysPayload).stays;
+}
+
+/** Today in this machine's calendar, which is the one the board uses. */
+function localToday(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+test.describe("a guest who moves kennels part-way", () => {
+  test.slow();
+
+  let bookingRef = 0;
+  let origin = { id: "", name: "" };
+  let target = { id: "", name: "" };
+  let third = { id: "", name: "" };
+
+  test("M1 a move from tonight keeps the nights already slept", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+    const board = await rooms(page, bookingBody(""));
+    const free = board.rooms.filter(
+      (r) =>
+        r.active &&
+        !r.id.includes("e2e") &&
+        !board.occupied.some((o) => o.roomId === r.id),
+    );
+    expect(
+      free.length,
+      "three kennels free for the whole stay",
+    ).toBeGreaterThanOrEqual(3);
+    [origin, target, third] = free;
+
+    const res = await page.request.post("/api/bookings", {
+      data: bookingBody(origin.id),
+    });
+    expect(res.status(), await res.text()).toBe(201);
+    bookingRef = ((await res.json()) as BookingPayload).id;
+
+    const moved = await page.request.post("/api/boarding/stays/move", {
+      data: { bookingRef, from: localToday(), roomId: target.id },
+    });
+    expect(moved.ok(), await moved.text()).toBe(true);
+
+    const stays = await staysOf(page, bookingRef);
+    expect(
+      stays.map((s) => s.roomId),
+      "the old kennel first, then the new one",
+    ).toEqual([origin.id, target.id]);
+  });
+
+  test("M2 the kennel left behind is free from the move", async ({ page }) => {
+    await signIn(page, ACCOUNTS.owner);
+    expect(bookingRef, "M1 moved a guest").toBeGreaterThan(0);
+
+    const today = localToday();
+    const later = new Date(`${today}T12:00:00`);
+    later.setDate(later.getDate() + 2);
+    const res = await page.request.post("/api/bookings", {
+      data: {
+        ...bookingBody(origin.id),
+        startDate: today,
+        endDate: later.toISOString().slice(0, 10),
+        status: "confirmed",
+      },
+    });
+    expect(
+      res.status(),
+      `a guest arriving the day of the move gets the old kennel: ${await res.text()}`,
+    ).toBe(201);
+  });
+
+  test("M3 the booking page lists both kennels and makes a move", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+    expect(bookingRef, "M1 moved a guest").toBeGreaterThan(0);
+
+    await page.goto(
+      `/facility/dashboard/clients/${CLIENT_REF}/bookings/${bookingRef}`,
+    );
+    const card = page
+      .locator('[data-slot="card"]')
+      .filter({ has: page.getByText(/^kennels$/i) });
+    await expect(card.getByText(origin.name)).toBeVisible({ timeout: 60_000 });
+    await expect(card.getByText(target.name)).toBeVisible();
+
+    await card.getByRole("button", { name: /^move /i }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("New kennel", { exact: true }).click();
+    // "Kennel 3 · Suites": the name, then its type — and "Kennel 3" must not
+    // pick "Kennel 30", so the name is matched whole.
+    const escaped = third.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    await page
+      .getByRole("option", { name: new RegExp(`^${escaped}( ·|$)`) })
+      .click();
+    await dialog.getByRole("button", { name: /^move /i }).click();
+    await expect(dialog).toBeHidden({ timeout: 30_000 });
+
+    await expect
+      .poll(
+        async () => (await staysOf(page, bookingRef)).map((s) => s.roomId),
+        {
+          timeout: 30_000,
+          message: "the move is in the database",
+        },
+      )
+      .toEqual([origin.id, third.id]);
+    await expect(card.getByText(third.name)).toBeVisible();
+  });
+
+  test("M4 one kennel for the whole booking merges it back", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+    expect(bookingRef, "M1 moved a guest").toBeGreaterThan(0);
+
+    const merged = await page.request.put("/api/boarding/stays", {
+      data: { bookingRef, roomId: target.id },
+    });
+    expect(merged.ok(), await merged.text()).toBe(true);
+    expect((await staysOf(page, bookingRef)).map((s) => s.roomId)).toEqual([
+      target.id,
+    ]);
+  });
+});

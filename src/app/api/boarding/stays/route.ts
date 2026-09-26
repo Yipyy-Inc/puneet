@@ -1,5 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import {
+  activeFacilityIdForStaff,
+  inFacility,
+} from "@/lib/api/facility-context";
+import { parseOccupies } from "@/lib/api/mappers/boarding";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 
 // ============================================================================
@@ -97,4 +102,72 @@ export async function PUT(request: NextRequest) {
   }
 
   return NextResponse.json({ roomId: data ?? null });
+}
+
+// ============================================================================
+// A booking's kennels, in the order its guest sleeps in them.
+//
+// One row until a guest moves part-way; then one per kennel, each with the
+// nights it covers. The booking page reads this rather than `booking.kennel`,
+// a field nothing writes for a real booking.
+// ============================================================================
+
+interface StayRow {
+  segment_order: number;
+  occupies: string;
+  facility_rooms: { legacy_id: string | null; name: string } | null;
+}
+
+export async function GET(request: NextRequest) {
+  const user = await getCurrentUser().catch(() => null);
+  if (!user) {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
+  const ref = Number(new URL(request.url).searchParams.get("bookingRef"));
+  if (!Number.isInteger(ref) || ref <= 0) {
+    return NextResponse.json(
+      { error: "`bookingRef` must be a booking number." },
+      { status: 422 },
+    );
+  }
+
+  const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
+
+  const { data: booking, error: bookingError } = await supabase
+    .from("bookings")
+    .select("id")
+    .match(inFacility(scope))
+    .eq("ref", ref)
+    .maybeSingle();
+  if (bookingError) {
+    return NextResponse.json({ error: bookingError.message }, { status: 500 });
+  }
+  if (!booking) {
+    return NextResponse.json({ stays: [] });
+  }
+
+  const { data, error } = await supabase
+    .from("boarding_stays")
+    .select("segment_order, occupies, facility_rooms ( legacy_id, name )")
+    .match(inFacility(scope))
+    .eq("booking_id", (booking as { id: string }).id)
+    .order("segment_order", { ascending: true });
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  const stays = ((data ?? []) as unknown as StayRow[]).map((row) => {
+    const { from, to } = parseOccupies(row.occupies);
+    return {
+      segment: row.segment_order,
+      roomId: row.facility_rooms?.legacy_id ?? null,
+      roomName: row.facility_rooms?.name ?? null,
+      from,
+      to,
+    };
+  });
+
+  return NextResponse.json({ stays });
 }

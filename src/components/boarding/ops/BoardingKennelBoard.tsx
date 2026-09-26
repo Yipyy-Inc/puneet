@@ -9,9 +9,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AlertTriangle } from "lucide-react";
 import type { PetType } from "@/data/boarding-ops";
 import {
+  BoardingMoveError,
   useAssignBoardingRoom,
   useBoardingRooms,
+  useMoveBoardingStay,
 } from "@/lib/api/boarding-rooms";
+import type { RoomOccupancy } from "@/lib/api/mappers/boarding";
+import { pgTimestamp } from "@/lib/boarding/stay-segments";
+import { todayIso } from "@/lib/care-log-scheduler";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import {
   RoomAssignmentBoard,
   type AssignableOccupant,
@@ -35,9 +41,13 @@ import {
 //
 // ── THE UNIT DRAGGED HERE IS A BOOKING, NOT A PET ─────────────────────────
 //
-// A booking may cover several pets and they stay together — `boarding_stays`
-// keys on `booking_id`. That is why `AssignableOccupant.id` is neutral and this
-// file puts a booking ref in it.
+// A booking may cover several pets and they stay together — a kennel is held
+// by a BOOKING. That is why `AssignableOccupant.id` is neutral and this file
+// puts a booking ref in it. A booking can move kennels part-way, so it holds
+// its stays as a sequence; the board shows the one the guest sleeps in
+// tonight, and dragging a guest who arrived before today moves them from
+// tonight on (`POST /api/boarding/stays/move`) rather than rewriting the
+// nights already slept.
 //
 // ── THE BOARD IS A COURTESY; THE CONSTRAINT IS THE RULE ───────────────────
 //
@@ -60,46 +70,56 @@ export function BoardingKennelBoard() {
   const { from, to } = useMemo(today, []);
   const { data, isLoading, error } = useBoardingRooms();
   const assign = useAssignBoardingRoom();
+  const moveStay = useMoveBoardingStay();
+  const { fill } = useStaffText("kennelMoves");
   const [allowOverride, setAllowOverride] = useState(false);
 
   const occupied = useMemo(() => data?.occupied ?? [], [data]);
 
   /**
-   * One occupant per BOOKING, not per stay row.
+   * Each guest's stay TONIGHT — one per booking, not one per stay row.
    *
-   * A booking holds one kennel at a time, so the two are the same today. They
-   * would not be if a stay were ever split across kennels, and de-duplicating
-   * here means this board shows one card per guest either way.
+   * A guest who moves kennels today holds two stays that both touch today:
+   * the kennel they leave and the one they sleep in. The card goes where they
+   * sleep, which is the stay that began last.
    */
-  const occupants = useMemo<AssignableOccupant[]>(() => {
-    const byRef = new Map<number, AssignableOccupant>();
+  const tonight = useMemo(() => {
+    const byRef = new Map<number, RoomOccupancy>();
     for (const stay of occupied) {
-      if (stay.bookingRef === 0 || byRef.has(stay.bookingRef)) continue;
-      const pets = stay.petNames.length > 0 ? stay.petNames : ["Guest"];
-      byRef.set(stay.bookingRef, {
-        id: stay.bookingRef,
-        name: pets.join(", "),
-        petType: (stay.petType as PetType) ?? "dog",
-        // Already booked and already placed: eligibility was decided when the
-        // stay was created. Re-litigating it here would grey out a guest who
-        // is asleep in the kennel.
-        eligible: true,
-        detail: [stay.clientName, `#${stay.bookingRef}`]
-          .filter(Boolean)
-          .join(" · "),
-      });
+      if (stay.bookingRef === 0) continue;
+      const seen = byRef.get(stay.bookingRef);
+      if (!seen || stay.from > seen.from) byRef.set(stay.bookingRef, stay);
     }
-    return [...byRef.values()];
+    return byRef;
   }, [occupied]);
+
+  const occupants = useMemo<AssignableOccupant[]>(
+    () =>
+      [...tonight.values()].map((stay) => {
+        const pets = stay.petNames.length > 0 ? stay.petNames : ["Guest"];
+        return {
+          id: stay.bookingRef,
+          name: pets.join(", "),
+          petType: (stay.petType as PetType) ?? "dog",
+          // Already booked and already placed: eligibility was decided when
+          // the stay was created. Re-litigating it here would grey out a guest
+          // who is asleep in the kennel.
+          eligible: true,
+          detail: [stay.clientName, `#${stay.bookingRef}`]
+            .filter(Boolean)
+            .join(" · "),
+        };
+      }),
+    [tonight],
+  );
 
   const assignments = useMemo<RoomAssignments>(() => {
     const map: RoomAssignments = {};
-    for (const stay of occupied) {
-      if (stay.bookingRef === 0) continue;
+    for (const stay of tonight.values()) {
       (map[stay.roomId] ??= []).push(stay.bookingRef);
     }
     return map;
-  }, [occupied]);
+  }, [tonight]);
 
   // EVERY occupied kennel, including the one each guest is already in. The
   // board takes this as a prop rather than per-drag, so it cannot know which
@@ -115,6 +135,38 @@ export function BoardingKennelBoard() {
   );
 
   const move = (bookingRef: number, roomId: string | null) => {
+    const stay = tonight.get(bookingRef);
+    const leaves = stay ? pgTimestamp(stay.to) : null;
+    // A guest staying tonight moves FROM TONIGHT: the nights already slept
+    // stay in the kennel they were slept in, and a later move already planned
+    // stays planned. Moving the whole booking rewrote all of it, so a kennel
+    // somebody else had used earlier in the week refused a guest being moved
+    // into it today. A guest leaving today has no night left to move, and is
+    // moved whole, as before.
+    if (roomId && stay && leaves !== null && leaves > Date.parse(to)) {
+      const guest = stay.petNames.join(", ") || `#${bookingRef}`;
+      const room = data?.rooms.find((r) => r.id === roomId)?.name ?? roomId;
+      moveStay.mutate(
+        {
+          bookingRef,
+          from: todayIso(),
+          roomId,
+          ...(allowOverride ? { overrideReason: "Manual override" } : {}),
+        },
+        {
+          onSuccess: () =>
+            toast.success(fill("movedFromTonight", { guest, room })),
+          onError: (err) =>
+            toast.error(
+              fill(
+                `refused_${err instanceof BoardingMoveError && err.reason ? err.reason : "failed"}`,
+                { guest, room },
+              ),
+            ),
+        },
+      );
+      return;
+    }
     assign.mutate(
       {
         bookingRef,
