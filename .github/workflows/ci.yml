@@ -140,7 +140,7 @@ jobs:
 
   # ── THE PROJECT'S OWN RULES ────────────────────────────────────────────────
   #
-  # 40 `check:*` scripts run here, read from package.json. Each one exists because a
+  # 41 `check:*` scripts run here, read from package.json. Each one exists because a
   # specific mistake was made and cost something: a route that took its facility
   # from the request body, an update that could not tell an RLS refusal from a
   # no-op, a screen that said "Saved" with nothing behind it, a dialog with a
@@ -267,8 +267,10 @@ jobs:
   # Supabase in the runner's Docker and loads what production IS — its schema,
   # storage policies and rows, read ONCE with `db:local:pull` (one pg_dump) —
   # then applies every migration file newer than production's recorded
-  # version, so a migration in this push that production has not had yet is
-  # tested here first. The SQL files then run against that copy: no Supabase
+  # version. Since 2026-09-26 a push carrying such a file stops at the next
+  # step instead: a migration is tested LOCALLY, applied to production, and
+  # only then pushed, because a copy that has it says nothing about a
+  # production that does not. The SQL files then run against that copy: no Supabase
   # API requests and no log ingestion, where a run used to open 149
   # connections to production. scripts/local-db.ts says why it is a copy and
   # not a replay of supabase/migrations (the files stop replaying at file 30).
@@ -337,6 +339,17 @@ jobs:
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: bun run db:local:pull && bun run db:local:reset
+
+      # The copy above tests a push's NEW migrations against itself — so a
+      # migration nobody applied to production passes every test here, and
+      # the code that needs it deploys anyway. That is how the service-picture
+      # bucket was missing from production for two days (2026-09-25→26) with
+      # every gate green. The pull just wrote production's migration ledger to
+      # supabase/baseline/ledger.txt; this refuses to let the deploy go ahead
+      # while any file in supabase/migrations/ is missing from it. It reads the
+      # file the pull wrote, so the job still makes one production read.
+      - name: Every migration in this push is already in production
+        run: bun run check:migrations-recorded --require-applied
 
       # `bun run local` puts the runner's stack in the environment and refuses
       # to run if it is down — it never falls back to production.

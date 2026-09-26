@@ -31,7 +31,9 @@
  *
  * ── PULL READS PRODUCTION, ONCE ───────────────────────────────────────────
  *
- * One pg_dump of the schema and two small catalogue reads. Run it after a
+ * One pg_dump of the schema and three small catalogue reads — the storage
+ * buckets and policies, and the migration ledger, which becomes
+ * `baseline/ledger.txt` for check:migrations-recorded. Run it after a
  * migration reaches production, or when the baseline drifts; never per test.
  * ============================================================================
  */
@@ -181,6 +183,7 @@ async function pull(): Promise<void> {
 
   const prod = new SQL(url, { max: 1 });
   const lines: string[] = [];
+  const ledger: string[] = [];
   let version = "";
   try {
     await prod.begin(async (tx) => {
@@ -213,6 +216,17 @@ async function pull(): Promise<void> {
       const [v] =
         await tx`select max(version) v from supabase_migrations.schema_migrations`;
       version = v.v;
+      // The whole ledger, not just its newest entry, for
+      // check:migrations-recorded — which asks whether production has every
+      // migration this repository does. Read here, in the transaction this
+      // pull already opens, so the CI job that copies production still makes
+      // exactly one production read. Version and name only: `created_by` is
+      // nobody's business in a public repository.
+      for (const row of await tx`
+        select version, coalesce(name, '') as name
+        from supabase_migrations.schema_migrations order by version`) {
+        ledger.push(`${row.version}\t${row.name}`);
+      }
     });
   } finally {
     await prod.close();
@@ -226,6 +240,13 @@ async function pull(): Promise<void> {
       "\n",
   );
   await Bun.write(`${BASELINE}/version.txt`, `${version}\n`);
+  await Bun.write(
+    `${BASELINE}/ledger.txt`,
+    "# supabase_migrations.schema_migrations, read from production by `bun run db:local:pull`.\n" +
+      "# version<TAB>name. Generated; do not edit. Read by check:migrations-recorded.\n" +
+      ledger.join("\n") +
+      "\n",
+  );
 
   // The rows, into the git-ignored file `reset` loads. Last, so the schema
   // and the rows are read as close together as the two dumps allow — a row

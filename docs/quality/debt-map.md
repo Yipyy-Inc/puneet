@@ -21690,6 +21690,11 @@ never `db push`.
 > **2026-09-26: one of the 26 was never applied at all** — the `service-images`
 > bucket. "Nothing is wrong that the suite can see" was true; the suite could
 > not see it. See "The one unrecorded migration that was not there", below.
+>
+> **Resolved 2026-09-26, with the maintainer's approval:** backfilled — these
+> 26 and 21 more, 47 in all, each recorded only after its objects were found
+> in production. `check:migrations-recorded` now fails on any file the ledger
+> does not name, so the gap cannot reopen silently. Details below.
 
 ## 2026-09-26 — The suites were the log bill, and the identity chain was most of each request
 
@@ -21835,11 +21840,13 @@ the statement was. **Nothing in `storage` or `auth` is ours to COMMENT or
 ALTER.**
 
 **Measured, because the entry above said the schema was fine.** Every
-migration file since 2026-08-22 that production's ledger does not name — 39,
-the 26 above plus 13 from late August — was checked by the OBJECTS it creates
-(tables, columns, functions, policies, triggers, indexes, buckets), not by the
-ledger. 38 are present. One is not: this one. So the record gap above hid
-exactly one real gap, and it was client-visible.
+migration file since 2026-08-22 that production's ledger does not name — 40:
+the 26 above, 13 from late August, and one applied in two parts under other
+names — was checked by the OBJECTS it creates (tables, columns, functions,
+policies, triggers, indexes, buckets), not by the ledger. 39 are present. One
+is not: this one. So the record gap above hid exactly one real gap, and it was
+client-visible. (First written here as "39 … 38 present": the two-part file
+was miscounted, corrected the same day.)
 
 **Why nothing noticed, in order of how much it matters:**
 
@@ -21866,15 +21873,42 @@ exactly one real gap, and it was client-visible.
 client's own account (`admin@yipyy.com`, an owner of Doggieville Mtl) was run
 through the exact insert the app makes, rolled back, and admitted.
 
-**Not fixed — the gate this wants, and why it needs a decision.** The precise
-guard for (2) and (3) is a check in the `sql` job, after the pull: every file
-in `supabase/migrations/` must be named in production's ledger, by version or
-by name. A migration pushed before it was applied would then fail the job and
-hold the deploy — "apply at push time" becomes a gate instead of a habit. It
-cannot land as-is: the 38 unrecorded-but-present files would fail it on day
-one. Either the ledger is backfilled (the decision the entry above left for
-the maintainer, and the honest fix) or they go on a frozen list that can only
-shrink. Also worth knowing: a platform **superadmin** can upload into any
+**Also fixed the same day — the gate, and the backfill it needed.** Every
+file in `supabase/migrations/` must now be named in production's ledger, by
+version or by name. `db:local:pull` writes that ledger to
+`supabase/baseline/ledger.txt` inside the transaction it already opened, so
+CI's `sql` job still makes one production read, and
+`check:migrations-recorded` compares against it:
+
+- a file missing from the ledger that sorts BELOW production's newest version
+  is FORGOTTEN — case (2) exactly — and fails everywhere;
+- a file NEWER than production's newest is PENDING: a notice locally, where
+  it is being tested, and a failure in the `sql` job
+  (`--require-applied`), where the push is about to deploy — case (3).
+
+It landed at zero rather than on an exception list because the ledger was
+backfilled first, with the maintainer's approval: **47 files** matched
+neither a version nor a name — the 39 above, three from before the ledger was
+used (`audit_log_append_only`, `tenancy_and_identity`,
+`custom_access_token_hook`), and five applied under another name
+(`link_client_record` as `link_client_record_on_signup`, and so on). Each was
+checked by its objects before a row vouched for it — 272 checks — and every
+object was present except four removed on purpose by later, RECORDED
+migrations: two audit policies replaced by `20260807460000`, the token hook
+dropped by `20260805235000`, and `on_auth_user_created`, which is in
+production on `auth.users` and only looked absent because the local dump
+leaves `auth` out. The one data-only file, `20260924100000`, was verified by
+its effect: its column comment names it, and none of the 5 discounted bookings
+remain in the state it fixed. The rows carry `created_by = 'backfill
+2026-09-26: …'`, so they can be told from the ones `apply_migration` wrote.
+
+Four controls, run before wiring it in: an old unrecorded file fails; a new
+one is a notice locally and a failure with `--require-applied`; **the bucket
+file at its original version with no ledger row — this incident, replayed —
+fails as FORGOTTEN**; and a real file renamed to a version production never
+used still matches by name.
+
+Also worth knowing: a platform **superadmin** can upload into any
 facility's folder, because `private.platform_may` passes every permission for
 that role — by design (`20260919195116`), the same for logos, and not
 something this bucket introduced.

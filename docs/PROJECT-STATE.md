@@ -69,6 +69,16 @@ nothing records a migration version, so do not apply DDL that way and then
 hand-write a version number to match — the two will disagree and the next
 `db push` will not know which order it wanted.
 
+**And since 2026-09-26 CI enforces it.** `bun run check:migrations-recorded`
+compares every file in `supabase/migrations/` with production's ledger, which
+`bun run db:local:pull` copies to `supabase/baseline/ledger.txt`. A file the
+ledger does not name fails it — in CI's `sql` job even when it is new, so a
+migration pushed before it was applied holds the deploy instead of shipping
+code whose table, column or bucket production lacks. That happened: the
+service-picture bucket was two days late, silently (debt map, 2026-09-26). The
+order is test locally, `apply_migration`, rename the file, `db:local:pull`,
+push.
+
 **Verify against a BUILT server, not `bun run dev`.**
 
 ```
