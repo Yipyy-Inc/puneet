@@ -20,6 +20,7 @@ import {
 } from "@/lib/quickbooks/settings-store";
 import { useQuickBooksSetup } from "@/lib/quickbooks/setup-store";
 import { buildMappableGroups } from "@/lib/quickbooks/yipyy-catalog";
+import { useServiceAddOns } from "@/lib/api/facility-settings";
 
 // The end of setup. Full screen, one message, and the numbers that matter — a
 // facility should be able to read this and know exactly what they just turned
@@ -39,8 +40,9 @@ export function QuickBooksSetupSuccess({
   const setup = useQuickBooksSetup(scope);
   const data = useQuickBooksData(scope);
   const mappings = useQuickBooksMappings(scope);
+  const { addOns } = useServiceAddOns();
 
-  const groups = useMemo(() => buildMappableGroups(), []);
+  const groups = useMemo(() => buildMappableGroups({ addOns }), [addOns]);
   const progress = mappingProgress(groups, mappings);
   const depositAccount = data.accounts.find(
     (a) => a.Id === settings.depositAccountId,

@@ -20,8 +20,8 @@ import {
   useDepositRules,
   useFacilitySettings,
   usePricingRules,
-  useServiceAddOns,
 } from "@/lib/api/facility-settings";
+import { usePricedAddOns } from "@/lib/add-ons/use-offered-add-ons";
 import type { TaxConfig } from "@/lib/settings/tax";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -119,11 +119,8 @@ import {
   type SentEstimate,
 } from "@/components/bookings/use-estimate-actions";
 import { useStaffText } from "@/lib/staff/use-staff-text";
-import {
-  useGroomingMenu,
-  useGroomingAddOns,
-} from "@/lib/api/grooming-catalogue";
-import type { GroomingAddOnOption } from "@/app/api/grooming/add-ons/route";
+import { useGroomingMenu } from "@/lib/api/grooming-catalogue";
+import { useGroomingAddOnOffer } from "@/lib/add-ons/use-grooming-add-on-offer";
 import { useBookingWaivers } from "./use-booking-waivers";
 import {
   findApplicableDepositRule,
@@ -272,8 +269,6 @@ interface EstimatePricingSnapshot {
   adjustmentsSignature: string;
 }
 
-const NO_GROOMING_ADD_ONS: GroomingAddOnOption[] = [];
-
 const SIMPLE_EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function buildAdjustmentsSignature(
@@ -400,7 +395,6 @@ export function BookingModal({
   // amounts on the same booking.
   const { rules: depositRules, isPending: depositRulesPending } =
     useDepositRules();
-  const { addOns: serviceAddOns } = useServiceAddOns();
   const configs = useMemo(
     () => ({ daycare, boarding, grooming, training }),
     [daycare, boarding, grooming, training],
@@ -442,12 +436,6 @@ export function BookingModal({
   const { data: groomingMenu = [] } = useGroomingMenu({
     asCustomer: isCustomerMode,
   });
-  // The groom's own extras, from `grooming_add_ons` — the list create_booking
-  // checks every requested add-on against. The details step offered the
-  // sample-data list, so an add-on staff picked was either refused by the
-  // booking or recorded at a price the quote never showed.
-  const { data: groomingAddOnCatalog = NO_GROOMING_ADD_ONS } =
-    useGroomingAddOns();
   // Travel-zone surcharge (Step 6). The ZIP-prefix TAX that came with it is
   // gone: see "NO TAX IN A BOOKING'S PRICE" in calculatePrice.
   // Distance to a travel zone is measured from the facility's own postal
@@ -1320,6 +1308,16 @@ export function BookingModal({
     selectedPets,
   ]);
 
+  // The groom's extras: the one list create_booking checks every requested
+  // add-on against, narrowed by the add-on rules for this service, location
+  // and these pets — the SAME call the details step makes, so the list priced
+  // here is the list offered there (lib/add-ons/use-grooming-add-on-offer.ts).
+  const groomingAddOnCatalog = useGroomingAddOnOffer({
+    packageId: selectedService === "grooming" ? serviceType : null,
+    pets: effectiveSelectedPets,
+    asCustomer: isCustomerMode,
+  });
+
   // Only the bookings on the dates being booked, for auto-assigning a section
   // or a unit, not every booking the facility (or customer) ever had.
   const sortedDaycareDays = daycareSelectedDates
@@ -1526,46 +1524,15 @@ export function BookingModal({
     [bookingFlow, configs],
   );
 
-  // The facility's own extras. This read localStorage under a key that
-  // thirteen files carried a copy of, so what a booking could be upsold
-  // depended on the browser it was taken in.
-  const storedAddOns = useMemo(
-    () => serviceAddOns.filter((addOn) => addOn.isActive),
-    [serviceAddOns],
-  );
-
-  // Auto-seed extraServices with the facility's default + required add-ons
-  // for the picked service, applied per selected pet. Defaults are
-  // pre-selected (and removable); required are auto-included and cannot be
-  // removed (lock enforced in the UI). We only ADD missing rows — never
-  // remove rows the user has toggled on — so navigating back and forth in
-  // the wizard doesn't wipe customer choices.
-  useEffect(() => {
-    if (!selectedService) return;
-    if (selectedPetIds.length === 0) return;
-    const applicable = storedAddOns.filter(
-      (a) =>
-        a.isActive &&
-        (a.isDefault || a.isRequired) &&
-        (a.applicableServices?.includes(selectedService) ?? false),
-    );
-    if (applicable.length === 0) return;
-    setExtraServices((prev) => {
-      const next = [...prev];
-      for (const pid of selectedPetIds) {
-        for (const a of applicable) {
-          const already = next.some(
-            (es) => es.serviceId === a.id && es.petId === pid,
-          );
-          if (!already) {
-            next.push({ serviceId: a.id, quantity: 1, petId: pid });
-          }
-        }
-      }
-      return next;
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedService, selectedPetIds.join(","), storedAddOns]);
+  // What the total adds for an add-on already on the booking: every live
+  // add-on for this type of service, at the booking location's price — the
+  // rule the server's re-price applies (lib/add-ons/use-offered-add-ons.ts),
+  // so the quote and the server agree. The pickers offer a narrower list.
+  //
+  // An effect here used to add every "default" and "required" add-on to each
+  // pet. Add-ons carry neither flag since the one list (defaults belong to a
+  // SERVICE, as boarding's do), so it could never fire, and it went.
+  const storedAddOns = usePricedAddOns(selectedService);
 
   const boardingNights = useMemo(() => {
     if (!boardingRangeStart || !boardingRangeEnd) return 0;
@@ -1762,14 +1729,22 @@ export function BookingModal({
       }
     }
 
+    // The SERVICE's length, which the facility's duration rules were written
+    // against. The appointment's end now includes its add-ons' minutes (the
+    // schedule step adds them), so they come back off here — a 15-minute
+    // add-on must not tip a groom into a "long appointment" surcharge.
     const groomingDurationMinutes =
       selectedService === "grooming"
         ? (() => {
             const checkIn = new Date(`2000-01-01T${checkInTime}`);
             const checkOut = new Date(`2000-01-01T${checkOutTime}`);
-            const diff = Math.round(
-              (checkOut.getTime() - checkIn.getTime()) / (1000 * 60),
-            );
+            const addOnMinutes = groomingAddOnCatalog
+              .filter((ao) => groomingSelectedAddOnIds.includes(ao.id))
+              .reduce((sum, ao) => sum + ao.duration, 0);
+            const diff =
+              Math.round(
+                (checkOut.getTime() - checkIn.getTime()) / (1000 * 60),
+              ) - addOnMinutes;
             return Number.isFinite(diff) && diff > 0 ? diff : undefined;
           })()
         : undefined;

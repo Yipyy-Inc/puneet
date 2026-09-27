@@ -1,6 +1,5 @@
 import { bookings } from "@/data/bookings";
 import { masterServices } from "@/data/service-catalog";
-import { defaultServiceAddOns } from "@/data/service-addons";
 import { groomingPrepaidPackages } from "@/data/grooming-prepaid-packages";
 import { membershipPlans } from "@/data/services-pricing";
 import { products } from "@/data/retail";
@@ -102,7 +101,9 @@ function serviceItems(): MappableItem[] {
     }));
 }
 
-function addOnItems(): MappableItem[] {
+function addOnItems(
+  addOns: NonNullable<MappableGroupOptions["addOns"]>,
+): MappableItem[] {
   const catalogAddOns = masterServices
     .filter((s) => s.isActive && s.category === "addon")
     .map((s) => ({
@@ -110,7 +111,7 @@ function addOnItems(): MappableItem[] {
       name: s.name,
       type: "Add-on",
     }));
-  const facilityAddOns = defaultServiceAddOns.map((a) => ({
+  const facilityAddOns = addOns.map((a) => ({
     id: `addon:${a.id}`,
     name: a.name,
     // Add-on categories are optional in the facility catalog.
@@ -185,6 +186,10 @@ export interface MappableGroupOptions {
    *  location tracking is off, because mapping branches you aren't tracking is
    *  work with no effect. */
   locations?: { id: string; name: string; city?: string; shortCode?: string }[];
+  /** The facility's own add-ons (`useServiceAddOns().addOns`). They were a
+   *  sample-data list until 2026-09-26, so the screen offered to map extras
+   *  the facility never sold and left out the ones it does. */
+  addOns?: { id: string; name: string; category?: string }[];
 }
 
 export function buildMappableGroups(
@@ -224,7 +229,7 @@ export function buildMappableGroups(
       key: "addons",
       title: "Add-ons",
       description: "Extras sold alongside a booking.",
-      items: addOnItems(),
+      items: addOnItems(options.addOns ?? []),
     },
     {
       key: "packages",

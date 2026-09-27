@@ -636,3 +636,165 @@ test.describe("boarding confirms with the add-ons its service attaches", () => {
     expect(booking.status).toBe("request_submitted");
   });
 });
+
+// ============================================================================
+// DAYCARE AND GROOMING, WITH THE ADD-ONS A CUSTOMER CHOSE (2026-09-26).
+//
+// The server priced a daycare booking's BASE only, so an add-on on a
+// customer's daycare request made the quote disagree and every one of those
+// bookings stayed a request — silently, with auto-confirm switched on. It
+// prices them now, by the rule the wizard's total uses: every live add-on for
+// THIS type of service, at the booking location's price.
+//
+// D1  A day plus an add-on for every service, quoted right → confirmed, at
+//     that total. Failed before: the server total left the add-on out.
+// D2  The same line, and a quote that leaves the add-on out → still a request.
+// D3  A line for an add-on the facility set up for TRAINING only → still a
+//     request: the server does not price an add-on that is not for daycare.
+// G1  A groom plus the add-on for every service — which the groom's one list
+//     now carries — quoted right → confirmed.
+// ============================================================================
+
+const EXTRA_MARKER = `${MARKER} extras`;
+/** An add-on for every service, and one for training only — beforeAll. */
+let treatId = "";
+let trainingOnlyId = "";
+const TREAT = 6;
+const TRAINING_ONLY = 9;
+
+test.describe("daycare and grooming confirm with the add-ons chosen", () => {
+  test.beforeAll(async ({ browser }) => {
+    const page = await browser.newPage();
+    try {
+      await signIn(page, ACCOUNTS.owner);
+      // The facility's own add-ons stay; two join for the run. Anything a
+      // crashed run left is archived first.
+      await archiveMarkedAddOns(page);
+      const treat = await page.request.post("/api/add-ons", {
+        data: { name: `${MARKER} Treat`, price: TREAT },
+      });
+      expect(treat.status(), await treat.text()).toBe(201);
+      treatId = ((await treat.json()) as { addOn: { id: string } }).addOn.id;
+      const training = await page.request.post("/api/add-ons", {
+        data: {
+          name: `${MARKER} Training only`,
+          price: TRAINING_ONLY,
+          appliesToAllServices: false,
+          serviceRefs: ["training"],
+        },
+      });
+      expect(training.status(), await training.text()).toBe(201);
+      trainingOnlyId = ((await training.json()) as { addOn: { id: string } })
+        .addOn.id;
+
+      await setAutoConfirm(page, { daycare: true, grooming: true });
+    } finally {
+      await page.close();
+    }
+  });
+
+  test.afterAll(async ({ browser }) => {
+    const page = await browser.newPage();
+    try {
+      await signIn(page, ACCOUNTS.owner);
+      await setAutoConfirm(page, {}).catch(() => undefined);
+      await archiveMarkedAddOns(page);
+    } finally {
+      await page.close();
+      await cancelBookingsMarked(browser, EXTRA_MARKER, "after");
+    }
+  });
+
+  /** A full day, with the lines as a customer's form saves them. */
+  const bookDay = (page: Page, total: number, addOnId: string) =>
+    page.request.post("/api/bookings", {
+      data: {
+        clientId: ALICE.client,
+        petId: ALICE.pet,
+        service: "daycare",
+        startDate: day(16),
+        endDate: day(16),
+        checkInTime: "08:00",
+        checkOutTime: "17:00",
+        status: "confirmed",
+        basePrice: FULL_DAY,
+        discount: 0,
+        totalCost: total,
+        specialRequests: EXTRA_MARKER,
+        extraServices: [{ serviceId: addOnId, quantity: 1, petId: ALICE.pet }],
+      },
+    });
+
+  test("D1 a day and an add-on for every service, quoted right: confirmed", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.customer);
+    const res = await bookDay(page, FULL_DAY + TREAT, treatId);
+    expect(res.ok(), await res.text()).toBe(true);
+    const booking = (await res.json()) as {
+      id: number;
+      status: string;
+      totalCost?: number;
+    };
+    made.push(booking.id);
+    expect(booking.status, "the server priced the add-on too").toBe(
+      "confirmed",
+    );
+    expect(booking.totalCost).toBe(FULL_DAY + TREAT);
+  });
+
+  test("D2 the add-on on the booking but not in the quote: a request", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.customer);
+    const res = await bookDay(page, FULL_DAY, treatId);
+    expect(res.ok(), await res.text()).toBe(true);
+    const booking = (await res.json()) as { id: number; status: string };
+    made.push(booking.id);
+    expect(booking.status).toBe("request_submitted");
+  });
+
+  test("D3 an add-on set up for training only, on a day: a request", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.customer);
+    const res = await bookDay(page, FULL_DAY + TRAINING_ONLY, trainingOnlyId);
+    expect(res.ok(), await res.text()).toBe(true);
+    const booking = (await res.json()) as { id: number; status: string };
+    made.push(booking.id);
+    expect(booking.status).toBe("request_submitted");
+  });
+
+  test("G1 a groom and an add-on for every service, quoted right: confirmed", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.customer);
+    const res = await page.request.post("/api/bookings", {
+      data: {
+        clientId: ALICE.client,
+        petId: ALICE.pet,
+        service: "grooming",
+        startDate: day(17),
+        endDate: day(17),
+        checkInTime: "13:00",
+        checkOutTime: "14:00",
+        status: "confirmed",
+        basePrice: GROOM_MEDIUM + TREAT,
+        discount: 0,
+        totalCost: GROOM_MEDIUM + TREAT,
+        specialRequests: EXTRA_MARKER,
+        serviceType: GROOM_SERVICE,
+        groomingAddOns: [treatId],
+      },
+    });
+    expect(res.ok(), await res.text()).toBe(true);
+    const booking = (await res.json()) as {
+      id: number;
+      status: string;
+      totalCost?: number;
+    };
+    made.push(booking.id);
+    expect(booking.status).toBe("confirmed");
+    expect(booking.totalCost).toBe(GROOM_MEDIUM + TREAT);
+  });
+});

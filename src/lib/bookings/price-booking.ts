@@ -19,6 +19,7 @@ import {
   defaultAddOnLines,
   type BoardingDefaultAddOn,
 } from "@/lib/pricing/boarding-default-addons";
+import { addOnFor } from "@/lib/add-ons/availability";
 import { toLegacyServiceAddOn } from "@/lib/add-ons/legacy-shape";
 import {
   ADD_ON_SELECT,
@@ -409,11 +410,18 @@ async function priceBoarding(input: PriceRequest): Promise<ServerQuote> {
 }
 
 /**
- * The facility's live add-ons — active, not deleted — in the booking screens'
- * shape. An unreadable list is no list: both sides then price no add-ons, and
- * a booking that carries one disagrees and stays a request.
+ * The facility's live add-ons for this TYPE of service, at this location's
+ * price, tax and minutes, in the booking screens' shape — exactly what the
+ * wizard's total adds (`usePricedAddOns`, lib/add-ons/use-offered-add-ons.ts),
+ * decided by the same `addOnFor`. An unreadable list is no list: both sides
+ * then price no add-ons, and a booking that carries one disagrees and stays a
+ * request.
  */
-async function liveAddOns(facilityId: string): Promise<ServiceAddOn[]> {
+async function liveAddOns(
+  facilityId: string,
+  careType: string,
+  locationId: string | null,
+): Promise<ServiceAddOn[]> {
   const { data, error } = await createAdminClient()
     .from("service_add_ons")
     .select(ADD_ON_SELECT)
@@ -421,21 +429,34 @@ async function liveAddOns(facilityId: string): Promise<ServiceAddOn[]> {
     .eq("is_active", true)
     .is("archived_at", null);
   if (error || !data) return [];
-  return (data as unknown as AddOnRow[]).map((row) =>
-    toLegacyServiceAddOn(rowToAddOn(row), []),
-  );
+  return (data as unknown as AddOnRow[]).flatMap((row) => {
+    const addOn = rowToAddOn(row);
+    const terms = addOnFor(addOn, { careType, locationId });
+    return terms.unavailable === null
+      ? [
+          {
+            ...toLegacyServiceAddOn(addOn, []),
+            price: terms.price,
+            taxable: terms.taxable,
+            duration: terms.durationMin > 0 ? terms.durationMin : undefined,
+          },
+        ]
+      : [];
+  });
 }
 
 /**
- * The stay's price plus its add-ons, as the wizard adds them.
+ * The booking's price plus its add-ons, as the wizard adds them.
  *
  * Until 2026-09-25 the server priced boarding's BASE only, so any add-on on a
  * customer's request made its quote disagree and the booking stayed a
  * request — including, once services could attach them, the add-ons the
- * service itself insists on. The lines are merged and totalled by the SAME
- * functions the wizard uses (`lib/pricing/add-on-lines.ts`), from the
- * facility's catalogue at its own prices, and a booking missing one of its
- * service's defaults is not confirmed at all.
+ * service itself insists on. Daycare and custom modules stayed that way until
+ * 2026-09-26: an add-on on a daycare request was never priced here, and every
+ * one of those bookings silently became a request. The lines are merged and
+ * totalled by the SAME functions the wizard uses (`lib/pricing/add-on-lines.ts`),
+ * from the add-ons for this type of service at this location's prices, and a
+ * booking missing one of its service's defaults is not confirmed at all.
  */
 async function withAddOns(
   input: PriceRequest,
@@ -447,10 +468,14 @@ async function withAddOns(
   if (lines.length === 0 && defaults.length === 0) {
     return { ok: true, basePrice: base, total: base };
   }
-  // The one add-ons list (20260926223644), read in the SAME shape the wizard
-  // reads it through `useServiceAddOns()` — one conversion, so the ids both
+  // The one add-ons list (20260926223644), read in the SAME shape and by the
+  // SAME rule the wizard's total uses (`usePricedAddOns`) — so the ids both
   // sides key on and the prices both sides add cannot drift apart.
-  const catalogue = await liveAddOns(input.facilityId);
+  const catalogue = await liveAddOns(
+    input.facilityId,
+    input.service,
+    input.locationId ?? null,
+  );
   const required = defaultAddOnLines({
     defaults,
     nights,
@@ -498,7 +523,7 @@ async function priceDaycare(input: PriceRequest): Promise<ServerQuote> {
   }
 
   const total = perDay * days;
-  return { ok: true, basePrice: total, total };
+  return withAddOns(input, total, [], days);
 }
 
 /** A custom module carries its own price, set by the facility. */
@@ -517,7 +542,7 @@ async function priceCustomModule(input: PriceRequest): Promise<ServerQuote> {
   if (typeof price !== "number" || !Number.isFinite(price) || price <= 0) {
     return { ok: false, reason: "no_rate" };
   }
-  return { ok: true, basePrice: price, total: price };
+  return withAddOns(input, price, [], 1);
 }
 
 /**

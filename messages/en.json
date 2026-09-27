@@ -9687,7 +9687,7 @@
       "routePreviewArriving": "Route preview for {date} · arriving {time}",
       "exactTimeDependsOnRoute": "The exact time depends on the van’s route — we’ll text you when we’re about 15 minutes away.",
       "noGroomingAddOns": "No add-ons are set up for grooming. You’re all set — continue to the schedule.",
-      "toggleExtras": "Turn on the extras you’d like. Required items are included automatically.",
+      "toggleExtras": "Turn on the extras you’d like.",
       "forThisPackage": "For this {package}",
       "forPet": "For {pet}",
       "addsDuration": "adds {duration}",

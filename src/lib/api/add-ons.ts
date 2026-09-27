@@ -58,7 +58,12 @@ export const addOnQueries = {
   customer: () => ({
     queryKey: addOnKeys.customer(),
     queryFn: () =>
-      json<{ addOns: AddOn[]; categories: AddOnCategory[] }>(CUSTOMER),
+      json<{
+        addOns: AddOn[];
+        categories: AddOnCategory[];
+        /** Where the client's booking lands: the primary location. */
+        locationId: string | null;
+      }>(CUSTOMER),
   }),
 };
 

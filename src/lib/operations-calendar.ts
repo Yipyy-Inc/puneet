@@ -5,7 +5,9 @@ import {
 import type { Tag, TagAssignment } from "@/types/tags";
 import type { VaccinationRecord } from "@/types/pet";
 import { users } from "@/data/users";
-import { defaultServiceAddOns } from "@/data/service-addons";
+// The facility's add-ons arrive on BuildUnifiedEventsInput too (2026-09-26):
+// the sample-data list this imported coloured the calendar by names no
+// facility had, and a real add-on took no colour at all.
 import { daycareRates } from "@/data/daycare";
 // `groomingPackages` is gone from this import: the menu arrives on
 // BuildUnifiedEventsInput, because this module cannot fetch it itself.
@@ -18,6 +20,7 @@ import type {
   CustomServiceCheckIn,
   CustomServiceModule,
   FacilityResource,
+  ServiceAddOn,
 } from "@/types/facility";
 import type { Transaction } from "@/types/retail";
 
@@ -397,6 +400,12 @@ interface BuildUnifiedEventsInput {
    * list costs a default chip colour, which is the pre-existing behaviour.
    */
   groomingMenu?: GroomingPackage[];
+  /**
+   * The facility's add-ons (`useServiceAddOns().addOns`), for an add-on's
+   * name and colour. Passed in for the same reason as `groomingMenu`. Absent,
+   * a line shows its id and takes the default colour.
+   */
+  addOns?: ServiceAddOn[];
   /**
    * The facility's tag catalogue and its assignments.
    *
@@ -847,17 +856,34 @@ function mapTaskSubtype(task: FacilityTask): string {
 
 // ── Color lookups ──────────────────────────────────────────────────────────────
 
-let _addOnColorLookup: Map<string, string> | null = null;
-function getAddOnColor(name: string): string | undefined {
-  if (!_addOnColorLookup) {
-    _addOnColorLookup = new Map();
-    for (const addon of defaultServiceAddOns) {
-      if (addon.colorCode) {
-        _addOnColorLookup.set(addon.name.toLowerCase(), addon.colorCode);
-      }
-    }
+// The facility's add-ons by id and by name, rebuilt when the list changes —
+// compared by reference, as `_rateColorMenu` is below. A booking's own lines
+// name an add-on by id; an invoice line only by name.
+let _addOnLookup: {
+  byId: Map<string, ServiceAddOn>;
+  byName: Map<string, ServiceAddOn>;
+} | null = null;
+let _addOnSource: ServiceAddOn[] | null = null;
+// One empty list, so a caller without the catalogue does not rebuild the
+// lookup on every call.
+const NO_ADD_ONS: ServiceAddOn[] = [];
+
+function addOnLookup(addOns: ServiceAddOn[]) {
+  if (!_addOnLookup || _addOnSource !== addOns) {
+    _addOnSource = addOns;
+    _addOnLookup = {
+      byId: new Map(addOns.map((a) => [a.id, a])),
+      byName: new Map(addOns.map((a) => [a.name.toLowerCase(), a])),
+    };
   }
-  return _addOnColorLookup.get(name.toLowerCase());
+  return _addOnLookup;
+}
+
+function getAddOnColor(
+  name: string,
+  addOns: ServiceAddOn[],
+): string | undefined {
+  return addOnLookup(addOns).byName.get(name.toLowerCase())?.colorCode;
 }
 
 let _rateColorLookup: Map<string, string> | null = null;
@@ -965,23 +991,30 @@ function inferAddOnScheduledAt(
   return undefined;
 }
 
-function extractBookingAddOns(booking: Booking): CalendarAddOn[] {
+function extractBookingAddOns(
+  booking: Booking,
+  addOns: ServiceAddOn[],
+): CalendarAddOn[] {
   const invoiceAddOns = [
     ...(booking.invoice?.items ?? []),
     ...(booking.invoice?.fees ?? []),
   ].filter((lineItem) => lineItem.type === "addon");
 
+  // A line names its add-on by id; the add-on's name is the facility's. The
+  // id title-cased was the name until 2026-09-26 — readable for "nail-trim",
+  // a uuid for every add-on in the one list.
+  const { byId } = addOnLookup(addOns);
   const explicitExtras = (booking.extraServices ?? []).map((extra, index) => {
     if (typeof extra === "string") {
       return {
         id: `extra-${booking.id}-${index}`,
-        name: titleCase(extra),
+        name: byId.get(extra)?.name ?? titleCase(extra),
       };
     }
 
     return {
       id: `extra-${booking.id}-${extra.serviceId}`,
-      name: titleCase(extra.serviceId),
+      name: byId.get(extra.serviceId)?.name ?? titleCase(extra.serviceId),
     };
   });
 
@@ -1006,7 +1039,7 @@ function extractBookingAddOns(booking: Booking): CalendarAddOn[] {
     name: addOn.name,
     iconKey: getAddOnIconKey(addOn.name),
     scheduledAt: inferAddOnScheduledAt(booking, addOn.name, index),
-    colorCode: getAddOnColor(addOn.name),
+    colorCode: getAddOnColor(addOn.name, addOns),
   }));
 }
 
@@ -1231,6 +1264,7 @@ function buildBookingEvents(
   decorationContext: DecorationContext,
   groomingMenu: GroomingPackage[],
   buildTagNames: TagNameLookup,
+  addOnCatalogue: ServiceAddOn[],
 ): OperationsCalendarEvent[] {
   const { petLookup } = buildClientLookups(clients);
 
@@ -1253,7 +1287,7 @@ function buildBookingEvents(
       booking.stylistPreference ?? booking.trainerId ?? "Unassigned";
     const staffRole = resolveStaffRole(staff);
     const roleGroup = resolveRoleGroup(staffRole, serviceLabel);
-    const addOns = extractBookingAddOns(booking);
+    const addOns = extractBookingAddOns(booking, addOnCatalogue);
     const resourceType = inferBookingResourceType(booking);
     const rateColor = getRateColor(
       booking.service,
@@ -1752,7 +1786,8 @@ function buildStayAddOnCalendarEvents(
   stayBookings: Booking[],
   clients: Client[],
   buildTagNames: TagNameLookup,
-  completedAddOns?: CompletedAddOnEntry[],
+  completedAddOns: CompletedAddOnEntry[] | undefined,
+  addOnCatalogue: ServiceAddOn[],
 ): OperationsCalendarEvent[] {
   const completedLookup = new Map(
     (completedAddOns ?? []).map((entry) => [
@@ -1796,7 +1831,7 @@ function buildStayAddOnCalendarEvents(
         name: item.name,
         iconKey: getAddOnIconKey(item.name),
         scheduledAt,
-        colorCode: getAddOnColor(item.name),
+        colorCode: getAddOnColor(item.name, addOnCatalogue),
       };
 
       // Check if this add-on has been marked completed
@@ -1890,6 +1925,7 @@ export function buildUnifiedEvents(
       decorationContext,
       input.groomingMenu ?? [],
       buildTagNames,
+      input.addOns ?? NO_ADD_ONS,
     ),
     // Evaluations still surface for ALL bookings (including boarding/daycare)
     ...buildEvaluationEvents(
@@ -1919,6 +1955,7 @@ export function buildUnifiedEvents(
     input.clients,
     buildTagNames,
     input.completedAddOns,
+    input.addOns ?? NO_ADD_ONS,
   );
 
   const taskEvents = buildTaskEvents(

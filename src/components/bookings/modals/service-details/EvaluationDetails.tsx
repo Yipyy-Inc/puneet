@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
-import { useServiceAddOns } from "@/lib/api/facility-settings";
+import { useOfferedAddOns } from "@/lib/add-ons/use-offered-add-ons";
 import type { Pet } from "@/types/pet";
 import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
 import { addOnPriceLabel } from "./addon-price-label";
@@ -561,30 +561,15 @@ function EvaluationAddOnsSubStep({
 }) {
   const t = useShellText("booking");
   const locale = useShellLocale();
-  // Show add-ons applicable to evaluation OR daycare (since eval is a daycare trial)
-  // The facility's own extras, from `facility_settings`. One of thirteen
-  // copies of a localStorage loader, so what a booking could be upsold
-  // depended on the browser it was taken in.
-  const { addOns: facilityAddOns } = useServiceAddOns();
-
-  const addOns = facilityAddOns.filter((a) => {
-    if (!a.isActive) return false;
-    if (
-      !a.applicableServices.includes("evaluation") &&
-      !a.applicableServices.includes("daycare")
-    )
-      return false;
-    if (a.petTypeFilter && selectedPets.length > 0) {
-      const pf = a.petTypeFilter;
-      const allMatch = selectedPets.every((pet) => {
-        if (pf.types?.length && !pf.types.includes(pet.type)) return false;
-        if (pf.weightMin != null && pet.weight < pf.weightMin) return false;
-        if (pf.weightMax != null && pet.weight > pf.weightMax) return false;
-        return true;
-      });
-      if (!allMatch) return false;
-    }
-    return true;
+  // The add-ons an evaluation may be offered: those the facility set up for
+  // evaluations (or for every service), at this location, for every pet on
+  // it — the add-on rules (lib/add-ons/use-offered-add-ons.ts). It used to
+  // offer every DAYCARE add-on too, treating an evaluation as a daycare trial;
+  // the facility now says which services an add-on is for, "Evaluation" among
+  // them, and that answer is the one kept.
+  const addOns = useOfferedAddOns({
+    careType: "evaluation",
+    pets: selectedPets,
   });
 
   const accessible = isStepAccessible ? isStepAccessible(0) : true;

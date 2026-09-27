@@ -19,6 +19,7 @@ import { useAddLineItems } from "@/lib/api/booking-line-items";
 import { clientQueries } from "@/lib/api/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
+import { useServiceAddOns } from "@/lib/api/facility-settings";
 import { useFacilityVaccinations } from "@/lib/api/vaccinations";
 import { useTagCatalogue } from "@/lib/api/tags";
 import { getModuleWorkflowQuestionnaire } from "@/data/custom-services";
@@ -826,6 +827,10 @@ export function OperationsCalendar() {
   const { data: groomingMenu = [] } = useQuery(
     groomingCatalogueQueries.services(),
   );
+  // The facility's add-ons, for an add-on chip's name and colour — passed in
+  // for the same reason (2026-09-26). The calendar used to colour them from a
+  // sample-data list and name a booking's add-on after its id.
+  const { addOns: addOnCatalogue } = useServiceAddOns();
   // The tag catalogue and its assignments, for the chips and the two tag
   // filters. operations-calendar.ts is not a component and cannot fetch them
   // itself -- the same reason the grooming menu is passed in above.
@@ -860,6 +865,7 @@ export function OperationsCalendar() {
       viewerKey: userId,
       resources,
       groomingMenu,
+      addOns: addOnCatalogue,
       tags: tagCatalogue,
       tagAssignments: tagAssignmentList,
       vaccinations,
@@ -888,6 +894,7 @@ export function OperationsCalendar() {
     convertedLeadBookings,
     convertedLeadEventIds,
     groomingMenu,
+    addOnCatalogue,
     vaccinations,
   ]);
 

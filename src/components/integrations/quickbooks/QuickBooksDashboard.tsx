@@ -61,6 +61,7 @@ import { useSyncJobs } from "@/lib/quickbooks/sync-engine";
 import { useSyncedDocuments } from "@/lib/quickbooks/synced-documents-store";
 import type { SyncLogStatus } from "@/lib/quickbooks/sync-log";
 import { buildMappableGroups } from "@/lib/quickbooks/yipyy-catalog";
+import { useServiceAddOns } from "@/lib/api/facility-settings";
 
 import { QuickBooksErrorPanel } from "./QuickBooksErrorPanel";
 import { QuickBooksHistoricalSync } from "./QuickBooksHistoricalSync";
@@ -230,7 +231,8 @@ function NewServiceBanner({
 }) {
   const watch = useCatalogWatch(scope);
   const mappings = useQuickBooksMappings(scope);
-  const groups = useMemo(() => buildMappableGroups(), []);
+  const { addOns } = useServiceAddOns();
+  const groups = useMemo(() => buildMappableGroups({ addOns }), [addOns]);
 
   // Recorded in an effect, not during render: this writes to a store, and the
   // first visit baselines the whole catalog.

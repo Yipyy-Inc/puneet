@@ -302,8 +302,6 @@ export function DetailsStep({
           setCheckOutTime={setCheckOutTime}
           selectedPets={selectedPets}
           applyEligibilityFilter={applyEligibilityFilter}
-          extraServices={extraServices}
-          setExtraServices={setExtraServices}
           isMobile={groomingIsMobile ?? false}
           setIsMobile={setGroomingIsMobile ?? (() => {})}
           selectedClient={selectedClient}

@@ -16,7 +16,7 @@ import type {
 import type { Pet } from "@/types/pet";
 import { SimpleFeedingForm } from "@/components/booking/shared/SimpleFeedingForm";
 import { SimpleMedicationForm } from "@/components/booking/shared/SimpleMedicationForm";
-import { useServiceAddOns } from "@/lib/api/facility-settings";
+import { useOfferedAddOns } from "@/lib/add-ons/use-offered-add-ons";
 import { getBoardingCategoryAvailability } from "@/lib/capacity-engine";
 import { useRooms } from "@/hooks/use-rooms";
 import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
@@ -344,6 +344,7 @@ export function BoardingDetails({
             setExtraServices={setExtraServices}
             selectedPets={selectedPets}
             serviceType={serviceType}
+            serviceRowId={boardingService?.rowId ?? null}
             includedLines={boardingDefaultLines}
             includedFrom={boardingService?.name}
           />
@@ -1010,10 +1011,13 @@ function BoardingAddOnsSubStep({
   setExtraServices,
   selectedPets,
   serviceType,
+  serviceRowId = null,
   includedLines = [],
   includedFrom,
 }: {
   isStepAccessible: (step: number) => boolean;
+  /** The chosen boarding service's row uuid — what an add-on names. */
+  serviceRowId?: string | null;
   /** What the chosen service attaches by itself — see `IncludedAddOns`. */
   includedLines?: ExtraService[];
   /** The chosen service's name, which the included lines are credited to. */
@@ -1041,24 +1045,15 @@ function BoardingAddOnsSubStep({
   // feature — a column on the class and a price effect — not a keyword match
   // against a rate name.
 
-  // The facility's own extras, from `facility_settings`. This file carried its
-  // own copy of a localStorage loader — one of thirteen — so what a booking
-  // could be upsold depended on the browser it was taken in.
-  const { addOns: facilityAddOns } = useServiceAddOns();
-
-  const boardingAddOns = facilityAddOns.filter((a) => {
-    if (!a.isActive || !a.applicableServices.includes("boarding")) return false;
-    if (a.petTypeFilter && selectedPets.length > 0) {
-      const pf = a.petTypeFilter;
-      const allMatch = selectedPets.every((pet) => {
-        if (pf.types?.length && !pf.types.includes(pet.type)) return false;
-        if (pf.weightMin != null && pet.weight < pf.weightMin) return false;
-        if (pf.weightMax != null && pet.weight > pf.weightMax) return false;
-        return true;
-      });
-      if (!allMatch) return false;
-    }
-    return true;
+  // The add-ons this stay may be offered: active, at this location, for the
+  // chosen boarding service, and for every pet on it — the add-on rules
+  // (lib/add-ons/use-offered-add-ons.ts), priced at this location. This used
+  // to check the care type, the species by exact spelling and a weight
+  // range, and nothing about the service, breed, coat or location.
+  const boardingAddOns = useOfferedAddOns({
+    careType: "boarding",
+    serviceId: serviceRowId,
+    pets: selectedPets,
   });
 
   return (

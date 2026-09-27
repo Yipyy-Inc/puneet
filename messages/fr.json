@@ -9687,7 +9687,7 @@
       "routePreviewArriving": "Aperçu de l’itinéraire du {date} · arrivée à {time}",
       "exactTimeDependsOnRoute": "L’heure exacte dépend de l’itinéraire de la camionnette — nous vous écrirons quand nous serons à environ 15 minutes.",
       "noGroomingAddOns": "Aucun supplément n’est offert pour le toilettage. C’est tout — passez à l’horaire.",
-      "toggleExtras": "Activez les extras souhaités. Les éléments obligatoires sont inclus automatiquement.",
+      "toggleExtras": "Activez les extras souhaités.",
       "forThisPackage": "Pour ce forfait {package}",
       "forPet": "Pour {pet}",
       "addsDuration": "ajoute {duration}",

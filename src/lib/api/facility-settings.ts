@@ -743,6 +743,18 @@ export function useIncidentReporting(): {
 export function useServiceAddOns(): {
   addOns: ServiceAddOn[];
   categories: AddOnCategory[];
+  /**
+   * The same list in its own shape, with every rule the old one cannot carry
+   * (services, pet details, locations and their overrides) — what
+   * `lib/add-ons/availability.ts` decides from.
+   */
+  catalogue: NewAddOn[];
+  /**
+   * For a pet owner, the location their booking will land at (the primary
+   * one), which may override an add-on's price. Null for staff, whose
+   * location is the one the switcher shows.
+   */
+  bookingLocationId: string | null;
   /** False means no add-ons: this facility sells no extras, not "we cannot tell". */
   configured: boolean;
   isPending: boolean;
@@ -784,6 +796,9 @@ export function useServiceAddOns(): {
   return {
     addOns: legacyAddOns,
     categories: legacyCategories,
+    catalogue: addOns,
+    bookingLocationId:
+      audience === "customer" ? (customer.data?.locationId ?? null) : null,
     configured: addOns.length > 0,
     isPending,
   };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useServiceAddOns } from "@/lib/api/facility-settings";
+import { usePricedAddOns } from "@/lib/add-ons/use-offered-add-ons";
 import { formatMoney } from "@/lib/i18n/format";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import type { ExtraService } from "@/types/booking";
@@ -31,7 +31,9 @@ export function IncludedAddOns({
   pets: readonly Pet[];
 }) {
   const { t, fill, locale } = useStaffText("boardingServices");
-  const { addOns } = useServiceAddOns();
+  // At the booking location's price — the catalogue the total adds these
+  // lines from (lib/add-ons/use-offered-add-ons.ts), so the two agree.
+  const addOns = usePricedAddOns("boarding");
 
   if (lines.length === 0) return null;
 

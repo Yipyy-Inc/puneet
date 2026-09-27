@@ -13,7 +13,7 @@ import type { Pet } from "@/types/pet";
 import { DaycareServicePicker } from "./DaycareServicePicker";
 import { SimpleFeedingForm } from "@/components/booking/shared/SimpleFeedingForm";
 import { SimpleMedicationForm } from "@/components/booking/shared/SimpleMedicationForm";
-import { useServiceAddOns } from "@/lib/api/facility-settings";
+import { useOfferedAddOns } from "@/lib/add-ons/use-offered-add-ons";
 import { getDaycareAvailabilitySummary } from "@/lib/capacity-engine";
 import { useDaycareAreas } from "@/hooks/use-daycare-areas";
 import { useDaycareRates } from "@/hooks/use-daycare-rates";
@@ -265,6 +265,7 @@ export function DaycareDetails({
             setExtraServices={setExtraServices}
             selectedPets={selectedPets}
             daycareDateTimes={daycareDateTimes}
+            serviceRowId={daycareServiceId}
           />
         )}
 
@@ -930,8 +931,11 @@ function DaycareAddOnsSubStep({
   setExtraServices,
   selectedPets,
   daycareDateTimes,
+  serviceRowId = null,
 }: {
   isStepAccessible: (step: number) => boolean;
+  /** The chosen daycare service's row uuid — what an add-on names. */
+  serviceRowId?: string | null;
   extraServices: Array<{ serviceId: string; quantity: number; petId: number }>;
   setExtraServices: (
     services: Array<{ serviceId: string; quantity: number; petId: number }>,
@@ -988,25 +992,15 @@ function DaycareAddOnsSubStep({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isStepAccessible, selectedPets.length]);
 
-  // The facility's own extras, from `facility_settings`. This file carried its
-  // own copy of a localStorage loader — one of thirteen — so what a booking
-  // could be upsold depended on the browser it was taken in.
-  const { addOns: facilityAddOns } = useServiceAddOns();
-
-  const daycareAddOns = facilityAddOns.filter((a) => {
-    if (!a.isActive || !a.applicableServices.includes("daycare")) return false;
-    // Pet eligibility filter
-    if (a.petTypeFilter && selectedPets.length > 0) {
-      const pf = a.petTypeFilter;
-      const allMatch = selectedPets.every((pet) => {
-        if (pf.types?.length && !pf.types.includes(pet.type)) return false;
-        if (pf.weightMin != null && pet.weight < pf.weightMin) return false;
-        if (pf.weightMax != null && pet.weight > pf.weightMax) return false;
-        return true;
-      });
-      if (!allMatch) return false;
-    }
-    return true;
+  // The add-ons this day may be offered: active, at this location, for the
+  // chosen daycare service, and for every pet on it — the add-on rules
+  // (lib/add-ons/use-offered-add-ons.ts), priced at this location. This used
+  // to check the care type, the species by exact spelling and a weight
+  // range, and nothing about the service, breed, coat or location.
+  const daycareAddOns = useOfferedAddOns({
+    careType: "daycare",
+    serviceId: serviceRowId,
+    pets: selectedPets,
   });
 
   return (

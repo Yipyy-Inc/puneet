@@ -18,6 +18,11 @@ import {
 // never the staff helpers, which answer a customer with the DEMO facility
 // (check:customer-routes). The table's policy then shows a client live add-ons
 // only: an inactive or deleted one never leaves the database.
+//
+// `locationId` is where the client's booking will land — the primary location,
+// the same query `facilityContextForClient` makes — so the wizard prices an
+// add-on at the location the server re-prices it at (a location may override
+// the price).
 // ============================================================================
 
 export const dynamic = "force-dynamic";
@@ -40,7 +45,7 @@ export async function GET() {
     return NextResponse.json({ error: "No facility." }, { status: 404 });
   }
 
-  const [addOns, categories] = await Promise.all([
+  const [addOns, categories, location] = await Promise.all([
     supabase
       .from("service_add_ons")
       .select(ADD_ON_SELECT)
@@ -55,6 +60,12 @@ export async function GET() {
       .eq("facility_id", client.facility_id)
       .order("display_order", { ascending: true })
       .order("name", { ascending: true }),
+    supabase
+      .from("locations")
+      .select("id")
+      .eq("facility_id", client.facility_id)
+      .eq("is_primary", true)
+      .maybeSingle(),
   ]);
 
   if (addOns.error || categories.error) {
@@ -69,5 +80,6 @@ export async function GET() {
     categories: (categories.data as unknown as AddOnCategoryRow[]).map(
       rowToAddOnCategory,
     ),
+    locationId: location.data?.id ?? null,
   });
 }

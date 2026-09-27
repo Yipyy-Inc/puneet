@@ -33,6 +33,7 @@ import {
   TRANSACTION_COUNT_NOTE,
   withRetainedMappings,
 } from "@/lib/quickbooks/yipyy-catalog";
+import { useServiceAddOns } from "@/lib/api/facility-settings";
 
 import { QuickBooksMappingGroup } from "./QuickBooksMappingGroup";
 
@@ -71,16 +72,17 @@ export function QuickBooksMappingScreen({
         : [],
     [settings.trackByLocation, data.plan, scope.facilityId],
   );
+  const { addOns } = useServiceAddOns();
   // Deleted-but-mapped items are folded back in: their mapping is still in
   // force for historical transactions, so it stays visible and editable.
   const groups = useMemo(
     () =>
       withRetainedMappings(
-        buildMappableGroups({ locations }),
+        buildMappableGroups({ locations, addOns }),
         mappedItemIds(mappings),
         mappedItemNames(mappings),
       ),
-    [mappings, locations],
+    [mappings, locations, addOns],
   );
   const [expanded, setExpanded] = useState<Set<string>>(
     () => new Set(initialExpanded ?? []),

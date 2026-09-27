@@ -1,0 +1,87 @@
+"use client";
+
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+
+import type { GroomingAddOnOption } from "@/app/api/grooming/add-ons/route";
+import { addOnPetFacts, offeredForPets } from "@/lib/add-ons/availability";
+import { useBookingLocationId } from "@/lib/add-ons/use-offered-add-ons";
+import { breedQueries } from "@/lib/api/breeds";
+import { useServiceAddOns } from "@/lib/api/facility-settings";
+import { useGroomingMenu } from "@/lib/api/grooming-catalogue";
+
+// ============================================================================
+// THE GROOMING ADD-ONS A BOOKING MAY OFFER (2026-09-26).
+//
+// Grooming offered add-ons from two lists once they were one table: the
+// groom's own list (`grooming_add_ons`, now a view over `service_add_ons`)
+// and every add-on for "grooming" from `useServiceAddOns`, per pet. An add-on
+// for all services sat in both and could be charged twice, and only the first
+// reaches `create_booking`, the ready-time trigger and the server's price.
+// So the groom has ONE list — that one — decided by the same rules as every
+// other service: active, at this location, for the chosen grooming service,
+// and for every pet on the booking.
+//
+// Each add-on is quoted at ITS OWN price and minutes, not a location's
+// override: `create_booking` records a grooming add-on at its own price, and
+// the wizard must quote what the bill will say. Overrides reach grooming when
+// add-ons become bill lines (the plan's Phase 4).
+//
+// The booking screen and its details step both call this with the same pets
+// and service, so the list priced is the list offered.
+// ============================================================================
+
+/** A grooming add-on as offered, with what the owner is shown about it. */
+export interface GroomingAddOnOffer extends GroomingAddOnOption {
+  description: string;
+  imageUrl: string | null;
+}
+
+const NO_BREEDS: { name: string; species: string }[] = [];
+const NO_OFFERS: GroomingAddOnOffer[] = [];
+
+export function useGroomingAddOnOffer({
+  packageId,
+  pets,
+  asCustomer = false,
+}: {
+  /** The chosen grooming service's id as the menu names it (legacy or uuid). */
+  packageId?: string | null;
+  pets: readonly {
+    type?: string | null;
+    breed?: string | null;
+    weight?: number | null;
+    coatType?: string | null;
+  }[];
+  asCustomer?: boolean;
+}): GroomingAddOnOffer[] {
+  const { catalogue } = useServiceAddOns();
+  const locationId = useBookingLocationId();
+  // The same menu query the booking screen and the details step already
+  // hold, so this costs no request. Only the row's uuid is read from it.
+  const { data: menu } = useGroomingMenu({ asCustomer });
+  const { data: breeds = NO_BREEDS } = useQuery(breedQueries.all());
+
+  // A service reference names the row's uuid; the menu's id may be a legacy
+  // one. Nothing chosen yet means any grooming service counts.
+  const serviceId = packageId
+    ? (menu?.find((p) => p.id === packageId)?.rowId ?? null)
+    : null;
+
+  return useMemo(() => {
+    const offered = offeredForPets(
+      catalogue,
+      { careType: "grooming", serviceId, locationId, breeds },
+      pets.map(addOnPetFacts),
+    );
+    if (offered.length === 0) return NO_OFFERS;
+    return offered.map(({ addOn }) => ({
+      id: addOn.legacyId ?? addOn.id,
+      name: addOn.name,
+      price: addOn.price,
+      duration: addOn.durationMin,
+      description: addOn.description,
+      imageUrl: addOn.imageUrl,
+    }));
+  }, [catalogue, serviceId, locationId, breeds, pets]);
+}

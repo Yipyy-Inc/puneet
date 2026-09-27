@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   Flame,
   Sparkles,
-  Lock,
   Sparkle,
   Building2,
   Truck,
@@ -32,15 +31,13 @@ import { useGroomingStations } from "@/hooks/use-grooming-stations";
 import {
   groomingCatalogueQueries,
   useGroomingMenu,
-  useGroomingAddOns,
 } from "@/lib/api/grooming-catalogue";
-import { useServiceAddOns } from "@/lib/api/facility-settings";
+import { useGroomingAddOnOffer } from "@/lib/add-ons/use-grooming-add-on-offer";
 import { SERVICE_ACCENTS } from "../constants";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -77,15 +74,11 @@ const SIZE_WORD_KEY: Record<string, string> = {
   giant: "sizeWord_giant",
 };
 import type { Pet } from "@/types/pet";
-import type { GroomingAddOnOption } from "@/app/api/grooming/add-ons/route";
 import type { Client } from "@/types/client";
 import { coatTypeEnum, type AppointmentStage } from "@/types/grooming";
 import type { GroomingStationPetSize } from "@/types/rooms";
-import type { ServiceAddOn } from "@/types/facility";
 import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
 import { formatDateLong, formatDuration, formatMoney } from "@/lib/i18n/format";
-
-const NO_GROOMING_ADD_ONS: GroomingAddOnOption[] = [];
 
 const formatDateString = (date: Date): string => {
   const y = date.getFullYear();
@@ -111,16 +104,6 @@ interface GroomingDetailsProps {
   applyEligibilityFilter?: boolean;
   /** True when a pet owner is booking for themselves, not staff at the desk. */
   isCustomerMode?: boolean;
-  /** Add-on selection for the grooming sub-step. Per-pet rows in the
-   *  parent — for grooming we apply the same set to every selected pet. */
-  extraServices?: Array<{
-    serviceId: string;
-    quantity: number;
-    petId: number;
-  }>;
-  setExtraServices?: (
-    services: Array<{ serviceId: string; quantity: number; petId: number }>,
-  ) => void;
   /** Mobile/Salon mode for the schedule sub-step. Drives the segmented
    *  control, calendar coverage filter, and arrival-window vs exact-time
    *  picker. */
@@ -168,8 +151,6 @@ export function GroomingDetails({
   setCheckOutTime,
   selectedPets,
   applyEligibilityFilter,
-  extraServices,
-  setExtraServices,
   isMobile,
   setIsMobile,
   selectedClient,
@@ -218,8 +199,6 @@ export function GroomingDetails({
       <GroomingAddOns
         isCustomerMode={isCustomerMode}
         selectedPets={selectedPets ?? []}
-        extraServices={extraServices ?? []}
-        setExtraServices={setExtraServices ?? (() => {})}
         packageId={serviceType}
         selectedGroomingAddOnIds={selectedGroomingAddOnIds}
         setSelectedGroomingAddOnIds={setSelectedGroomingAddOnIds}
@@ -244,6 +223,7 @@ export function GroomingDetails({
       packageId={serviceType}
       stylistId={stylistId}
       manualDuration={manualDuration}
+      selectedGroomingAddOnIds={selectedGroomingAddOnIds}
     />
   );
 }
@@ -1179,6 +1159,7 @@ function GroomingSchedule({
   packageId,
   stylistId,
   manualDuration,
+  selectedGroomingAddOnIds,
   isCustomerMode = false,
 }: {
   startDate: string;
@@ -1196,6 +1177,8 @@ function GroomingSchedule({
   stylistId: string;
   /** Manual duration override (minutes) — flows into slot sizing. */
   manualDuration: number | undefined;
+  /** The add-ons chosen on the step before — their minutes join the groom's. */
+  selectedGroomingAddOnIds: string[];
   /** True when a pet owner is booking for themselves. */
   isCustomerMode?: boolean;
 }) {
@@ -1227,7 +1210,23 @@ function GroomingSchedule({
     stylistsData.find((s) => s.id === stylistId)?.calendarColor ?? "#ec4899";
 
   const selectedPkg = menu.find((p) => p.id === packageId);
-  const serviceDurationForSlots = manualDuration ?? selectedPkg?.duration ?? 0;
+  // The appointment runs the service's minutes PLUS its add-ons' — "duration,
+  // added to the appointment's total", in the reference's words. Both the slot
+  // grid and the end time read this, so a groom with a 15-minute add-on is not
+  // fitted into a slot 15 minutes short. (Only the ready time at check-in
+  // counted them before.) A manual duration overrides the service's minutes,
+  // not the add-ons', which the appointment still carries.
+  const addOnOffer = useGroomingAddOnOffer({
+    packageId,
+    pets: selectedPets,
+    asCustomer: isCustomerMode,
+  });
+  const addOnMinutes = addOnOffer
+    .filter((ao) => selectedGroomingAddOnIds.includes(ao.id))
+    .reduce((sum, ao) => sum + ao.duration, 0);
+  const baseDuration = manualDuration ?? selectedPkg?.duration ?? 0;
+  const serviceDurationForSlots =
+    baseDuration > 0 ? baseDuration + addOnMinutes : 0;
 
   // Density dot for each calendar day — null = closed / off-day.
   const getDensityForDate = useCallback(
@@ -1450,7 +1449,7 @@ function GroomingSchedule({
   };
 
   const packageDuration =
-    serviceDurationForSlots || selectedPkg?.duration || 60;
+    serviceDurationForSlots || (selectedPkg?.duration || 60) + addOnMinutes;
 
   return (
     <div className="space-y-5">
@@ -1730,11 +1729,9 @@ function formatClockLabel(hhmm: string) {
     : `${hour12}:${String(m).padStart(2, "0")} ${period}`;
 }
 
-// ─── Step 1: Add-ons (auto-attach + per-pet toggles) ────────────────────────
+// ─── Step 1: Add-ons (auto-attach + the groom's one list) ───────────────────
 function GroomingAddOns({
   selectedPets,
-  extraServices,
-  setExtraServices,
   packageId,
   selectedGroomingAddOnIds,
   setSelectedGroomingAddOnIds,
@@ -1743,10 +1740,6 @@ function GroomingAddOns({
   isCustomerMode = false,
 }: {
   selectedPets: Pet[];
-  extraServices: Array<{ serviceId: string; quantity: number; petId: number }>;
-  setExtraServices: (
-    s: Array<{ serviceId: string; quantity: number; petId: number }>,
-  ) => void;
   packageId: string;
   selectedGroomingAddOnIds: string[];
   setSelectedGroomingAddOnIds: (ids: string[]) => void;
@@ -1822,58 +1815,19 @@ function GroomingAddOns({
     }
   }
 
-  // The facility's grooming add-ons, from `grooming_add_ons` — the list the
-  // booking is checked against. This offered the sample-data catalogue, so an
-  // add-on picked here was one the facility might not have at all, and the
-  // booking was refused over it.
-  const { data: groomingAddOnCatalog = NO_GROOMING_ADD_ONS } =
-    useGroomingAddOns();
-  const groomingAddOnSubtotal = selectedGroomingAddOnIds.reduce((sum, id) => {
-    const ao = groomingAddOnCatalog.find((a) => a.id === id);
+  // The groom's add-ons: ONE list, decided by the add-on rules for this
+  // service, this location and every pet on the booking — the list the
+  // booking screen prices and `create_booking` records. A second, per-pet list
+  // of the same add-ons used to sit under it, and an add-on for all services
+  // could be charged twice (lib/add-ons/use-grooming-add-on-offer.ts).
+  const offer = useGroomingAddOnOffer({
+    packageId,
+    pets: selectedPets,
+    asCustomer: isCustomerMode,
+  });
+  const subtotal = selectedGroomingAddOnIds.reduce((sum, id) => {
+    const ao = offer.find((a) => a.id === id);
     return sum + (ao?.price ?? 0);
-  }, 0);
-  // The facility's own catalogue, from `facility_settings`. The comment this
-  // replaces said "the facility may have customized" it — which was true of
-  // THIS BROWSER only: boarding and daycare carried the same loader, and the
-  // pattern it named was the bug rather than the convention.
-  const catalog = useServiceAddOns().addOns;
-  // Available add-ons for this service. Hidden when inactive or when the
-  // pet-type filter excludes the only selected pet species.
-  const available: ServiceAddOn[] = catalog.filter(
-    (a) =>
-      a.isActive &&
-      (a.applicableServices?.includes("grooming") ||
-        (a.applicableServices?.length ?? 0) === 0),
-  );
-
-  // For each pet, do we have this add-on in extraServices?
-  const hasFor = (addonId: string, petId: number) =>
-    extraServices.some((es) => es.serviceId === addonId && es.petId === petId);
-
-  const toggle = (addon: ServiceAddOn, petId: number, on: boolean) => {
-    if (addon.isRequired) return; // Locked — required add-ons can't be removed.
-    if (on) {
-      setExtraServices([
-        ...extraServices,
-        { serviceId: addon.id, quantity: 1, petId },
-      ]);
-    } else {
-      setExtraServices(
-        extraServices.filter(
-          (es) => !(es.serviceId === addon.id && es.petId === petId),
-        ),
-      );
-    }
-  };
-
-  // Running subtotal across all selected pets and toggled add-ons. Reflects
-  // the same flat per-unit price model the BookingModal price calc uses for
-  // grooming add-ons (no size modifiers applied here — that's a final-price
-  // step on the facility side).
-  const subtotal = extraServices.reduce((sum, es) => {
-    const addon = available.find((a) => a.id === es.serviceId);
-    if (!addon) return sum;
-    return sum + addon.price * es.quantity;
   }, 0);
 
   if (selectedPets.length === 0) {
@@ -1883,7 +1837,7 @@ function GroomingAddOns({
       </div>
     );
   }
-  if (available.length === 0) {
+  if (offer.length === 0) {
     return (
       <div className="text-muted-foreground rounded-2xl border border-dashed p-6 text-center text-sm">
         {t("noGroomingAddOns")}
@@ -1908,157 +1862,75 @@ function GroomingAddOns({
         </div>
       </div>
 
-      {/* Package-driven grooming add-ons (auto-attached + manual). Rendered
-          when a package is chosen — these come from grooming_add_ons and the
-          package's defaultAddOnRules. */}
-      {selectedPackage && (
-        <div className="space-y-2">
+      <div className="space-y-2">
+        {selectedPackage && (
           <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
             {t("forThisPackage").replace("{package}", selectedPackage.name)}
           </p>
-          <div className="space-y-1.5">
-            {groomingAddOnCatalog.map((ao) => {
-              const checked = selectedGroomingAddOnIds.includes(ao.id);
-              const isAuto = autoAttachedAddOnIds.includes(ao.id);
-              return (
-                <div
-                  key={ao.id}
-                  className={cn(
-                    "bg-card flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5",
-                    checked && accent.border,
-                    isAuto && "bg-pink-50/40 dark:bg-pink-950/10",
+        )}
+        <div className="space-y-1.5">
+          {offer.map((ao) => {
+            const checked = selectedGroomingAddOnIds.includes(ao.id);
+            const isAuto = autoAttachedAddOnIds.includes(ao.id);
+            return (
+              <div
+                key={ao.id}
+                className={cn(
+                  "bg-card flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5",
+                  checked && accent.border,
+                  isAuto && "bg-pink-50/40 dark:bg-pink-950/10",
+                )}
+              >
+                {/* The picture and the description are what a client is
+                    shown when booking — the reference's own words for both. */}
+                {ao.imageUrl && (
+                  <Image
+                    src={ao.imageUrl}
+                    alt=""
+                    width={40}
+                    height={40}
+                    unoptimized
+                    className="size-10 shrink-0 rounded-lg object-cover"
+                  />
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <p className="truncate text-sm font-medium">{ao.name}</p>
+                    {isAuto && (
+                      <span className="inline-flex items-center gap-0.5 rounded-full bg-pink-600 px-1.5 py-0.5 text-[9px] font-semibold text-white uppercase">
+                        <Sparkles className="size-2.5" />
+                        {t("autoAttached")}
+                      </span>
+                    )}
+                  </div>
+                  {ao.description && (
+                    <p className="text-muted-foreground line-clamp-2 text-[11px]">
+                      {ao.description}
+                    </p>
                   )}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <p className="truncate text-sm font-medium">{ao.name}</p>
-                      {isAuto && (
-                        <span className="inline-flex items-center gap-0.5 rounded-full bg-pink-600 px-1.5 py-0.5 text-[9px] font-semibold text-white uppercase">
-                          <Sparkles className="size-2.5" />
-                          {t("autoAttached")}
-                        </span>
+                  {ao.duration > 0 && (
+                    <p className="text-muted-foreground line-clamp-1 text-[11px]">
+                      {t("addsDuration").replace(
+                        "{duration}",
+                        formatDuration(ao.duration, locale),
                       )}
-                    </div>
-                    {ao.duration > 0 && (
-                      <p className="text-muted-foreground line-clamp-1 text-[11px]">
-                        +{formatDuration(ao.duration, locale)}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex shrink-0 items-center gap-3">
-                    <span className={cn("text-xs font-semibold", accent.price)}>
-                      +{formatMoney(ao.price, locale)}
-                    </span>
-                    <Switch
-                      checked={checked}
-                      onCheckedChange={() => toggleGroomingAddOn(ao.id)}
-                      aria-label={`${ao.name}`}
-                    />
-                  </div>
+                    </p>
+                  )}
                 </div>
-              );
-            })}
-          </div>
-          {groomingAddOnSubtotal > 0 && (
-            <div className="bg-muted/40 flex items-center justify-between rounded-xl border px-4 py-2">
-              <span className="text-xs font-medium">
-                {t("packageAddOnsSubtotal")}
-              </span>
-              <span className="text-sm font-bold tabular-nums">
-                {formatMoney(groomingAddOnSubtotal, locale)}
-              </span>
-            </div>
-          )}
+                <div className="flex shrink-0 items-center gap-3">
+                  <span className={cn("text-xs font-semibold", accent.price)}>
+                    +{formatMoney(ao.price, locale)}
+                  </span>
+                  <Switch
+                    checked={checked}
+                    onCheckedChange={() => toggleGroomingAddOn(ao.id)}
+                    aria-label={ao.name}
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
-      )}
-
-      {selectedPackage && available.length > 0 && <Separator />}
-
-      <div className="space-y-3">
-        {selectedPets.map((pet) => (
-          <div key={pet.id} className="space-y-2">
-            {selectedPets.length > 1 && (
-              <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
-                {t("forPet").replace("{pet}", pet.name)}
-              </p>
-            )}
-            <div className="space-y-1.5">
-              {available.map((addon) => {
-                const checked = addon.isRequired || hasFor(addon.id, pet.id);
-                return (
-                  <div
-                    key={`${pet.id}-${addon.id}`}
-                    className={cn(
-                      "bg-card flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5",
-                      checked && !addon.isRequired && accent.border,
-                      addon.isRequired && "border-emerald-300 bg-emerald-50/50",
-                    )}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <p className="truncate text-sm font-medium">
-                          {addon.name}
-                        </p>
-                        {/* Three distinct states — replaces the ambiguous "Default":
-                            • Included: mandatory AND no extra cost (part of the
-                              service price)
-                            • Required: mandatory but adds to the price
-                            • Pre-selected: optional but checked by service config */}
-                        {addon.isRequired && addon.price === 0 && (
-                          <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[9px] font-semibold text-white uppercase">
-                            <Lock className="size-2.5" />
-                            {t("included")}
-                          </span>
-                        )}
-                        {addon.isRequired && addon.price > 0 && (
-                          <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[9px] font-semibold text-white uppercase">
-                            <Lock className="size-2.5" />
-                            {t("required")}
-                          </span>
-                        )}
-                        {addon.isDefault && !addon.isRequired && (
-                          <span className="inline-flex items-center rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-semibold text-blue-700 uppercase">
-                            Pre-selected
-                          </span>
-                        )}
-                      </div>
-                      {addon.description && (
-                        <p className="text-muted-foreground line-clamp-1 text-[11px]">
-                          {addon.description}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex shrink-0 items-center gap-3">
-                      <div className="flex flex-col items-end">
-                        <span
-                          className={cn("text-xs font-semibold", accent.price)}
-                        >
-                          +{formatMoney(addon.price, locale)}
-                        </span>
-                        {addon.duration && addon.duration > 0 && (
-                          <span className="text-muted-foreground text-[10px] tabular-nums">
-                            {t("addsDuration").replace(
-                              "{duration}",
-                              formatDuration(addon.duration, locale),
-                            )}
-                          </span>
-                        )}
-                      </div>
-                      <Switch
-                        checked={checked}
-                        disabled={addon.isRequired}
-                        onCheckedChange={(v) => toggle(addon, pet.id, v)}
-                        aria-label={t("addOnForPet")
-                          .replace("{addOn}", addon.name)
-                          .replace("{pet}", pet.name)}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
       </div>
 
       <div className="bg-muted/40 flex items-center justify-between rounded-xl border px-4 py-2.5">
