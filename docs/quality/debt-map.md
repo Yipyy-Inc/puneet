@@ -21434,6 +21434,15 @@ cancelled them through `/api/payments` on the re-run.
    `supabase/tests/boarding-services.sql`. What is still open is the product
    side: a new kennel class has no service that can book it, and the rooms
    screen still asks for a price the service now owns.
+   **2026-09-26: daycare's twin, T0 in `daycare-services.sql`, failed the same
+   way** — a facility rebuilt its daycare menu in the editor and deleted both
+   services moved from its rates, which the API deletes outright. T0 was
+   scoped rather than retired (the user's call): a facility with a service
+   built in the editor (no `legacy_id`) is skipped and counted in the detail.
+   The gap is the one S0's note predicts — a facility that deletes a moved
+   service WITHOUT building one fails it again, and holds every deploy until
+   somebody reads it. A new "migration carried everything" assertion belongs
+   at apply time, not in the recurring suite.
 3. **The two money clients are mostly debris, and it is permanent by design.**
    Alice (client 15) holds 1,496 bookings, 1,471 of them earlier runs; Bob (16)
    902, 899. 1,241 of Alice's cancelled test bookings carry payment rows, and
