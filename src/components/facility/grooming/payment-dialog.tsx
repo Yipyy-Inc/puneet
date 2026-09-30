@@ -210,7 +210,14 @@ export function PaymentDialog({
     ? { lines: [], totalCents: 0 }
     : computeTax(
         taxableOwedForBooking(
-          { totalCost: apt.totalPrice, extrasTotal, taxable: apt.taxable },
+          {
+            totalCost: apt.totalPrice,
+            extrasTotal,
+            // A tax-free add-on line is an extra that is NOT taxed; without
+            // this every extra was (2026-09-30).
+            taxableExtrasTotal: apt.taxableExtrasTotal,
+            taxable: apt.taxable,
+          },
           Math.round(
             Math.max(
               0,

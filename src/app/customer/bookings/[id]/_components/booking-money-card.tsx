@@ -38,7 +38,11 @@ export function BookingMoneyCard({ booking }: { booking: Booking }) {
   });
 
   if (awaiting) {
-    const quoted = booking.requestedQuote?.totalCost;
+    // The quote is the SERVICE; the add-ons the request asked for are already
+    // lines, written at the facility's prices when it was sent (2026-09-30).
+    // Both were in the one figure the form showed.
+    const service = booking.requestedQuote?.totalCost;
+    const quoted = service ? service + (booking.addOnsTotal ?? 0) : service;
     return (
       <section className="bg-card border-line shadow-card rounded-3xl border p-5">
         <h2 className="text-heading text-[17px] font-bold">

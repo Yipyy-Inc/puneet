@@ -523,7 +523,12 @@ export function AppointmentDetailPage({ id }: { id: string }) {
   const replacedByFee =
     (currentStatus === "cancelled" || currentStatus === "no-show") &&
     feeOverride !== null;
-  const subtotal = replacedByFee ? feeOverride : apt.totalPrice;
+  // The groom and its add-ons: they are bill lines since 2026-09-30, not part
+  // of `totalPrice` (an older groom still carries them inside it).
+  const addOnLinesTotal = apt.addOnsTotal ?? 0;
+  const subtotal = replacedByFee
+    ? feeOverride
+    : apt.totalPrice + addOnLinesTotal;
   const TAX_RATE = 0.15; // demo
   const tax = Math.round(subtotal * TAX_RATE * 100) / 100;
   const total = Math.round((subtotal + tax) * 100) / 100;
@@ -1406,7 +1411,9 @@ export function AppointmentDetailPage({ id }: { id: string }) {
                 Add-ons ({apt.addOns.length})
               </span>
               <span className="tabular-nums">
-                +${Math.max(0, apt.totalPrice - apt.basePrice - priceAdjTotal)}
+                +$
+                {Math.max(0, apt.totalPrice - apt.basePrice - priceAdjTotal) +
+                  addOnLinesTotal}
               </span>
             </div>
           )}

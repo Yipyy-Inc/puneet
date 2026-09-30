@@ -141,8 +141,21 @@ export interface AppointmentRow {
   total_cost: number;
   amount_due: number | string | null;
   extras_total: number | string | null;
+  /** The taxed part of extras_total (20260923200000). */
+  taxable_extras_total: number | string | null;
+  /** The booking's own add-on lines, inside extras_total (2026-09-30). */
+  add_ons_total: number | string | null;
   taxable: boolean | null;
   amount_paid: number | string | null;
+  /** Its bill lines; the `add_on` ones are its add-ons since 2026-09-30. */
+  lines:
+    | {
+        name: string;
+        kind: string;
+        quantity: number;
+        duration_min: number | null;
+      }[]
+    | null;
   tip_amount: number | null;
   special_requests: string | null;
   created_at: string;
@@ -335,7 +348,14 @@ export function rowToGroomingAppointment(
 
     packageId: ext?.service?.legacy_id ?? "",
     packageName: ext?.service_name ?? row.status,
-    addOns: (ext?.grooming_appointment_add_ons ?? []).map((a) => a.name),
+    // The old table for a groom booked before 2026-09-30; the booking's
+    // `add_on` lines since — both, so neither generation loses its extras.
+    addOns: [
+      ...(ext?.grooming_appointment_add_ons ?? []).map((a) => a.name),
+      ...(row.lines ?? [])
+        .filter((line) => line.kind === "add_on")
+        .map((line) => line.name),
+    ],
 
     basePrice: Number(ext?.service_price ?? row.base_price),
     // The reasons ARE the app's own enum now — 20260805210000 replaced the set
@@ -373,6 +393,11 @@ export function rowToGroomingAppointment(
     // deposit already taken, or a bag of food added at the counter.
     amountDue: Number(row.amount_due ?? row.total_cost),
     extrasTotal: Number(row.extras_total ?? 0),
+    // Absent means "all of the extras are taxed" — service-tax.ts.
+    ...(row.taxable_extras_total != null
+      ? { taxableExtrasTotal: Number(row.taxable_extras_total) }
+      : {}),
+    addOnsTotal: Number(row.add_ons_total ?? 0),
     taxable: row.taxable !== false,
     amountPaid: Number(row.amount_paid ?? 0),
     ...(row.tip_amount != null ? { tipAmount: Number(row.tip_amount) } : {}),
@@ -492,8 +517,9 @@ export function rowToGroomingAppointment(
  *  drift — a column added here without a field there fails to compile. */
 export const APPOINTMENT_SELECT = `
   id, ref, status, start_at, end_at, payment_status, base_price, total_cost,
-  extras_total, taxable,
+  extras_total, taxable_extras_total, add_ons_total, taxable,
   amount_due, amount_paid,
+  lines:booking_line_items ( name, kind, quantity, duration_min ),
   tip_amount, special_requests, created_at,
   assigned_staff_id, assigned_staff_name,
   staff:assigned_staff_id ( legacy_id ),

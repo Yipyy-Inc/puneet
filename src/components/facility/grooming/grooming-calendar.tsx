@@ -64,6 +64,7 @@ import { useModuleDayTasks } from "@/lib/tasks/use-module-day-tasks";
 import { taskTemplateQueries } from "@/lib/api/task-templates";
 import { useSettings } from "@/hooks/use-settings";
 import { computeSupplyAlerts } from "@/lib/grooming-supply-alerts";
+import { appointmentValue } from "@/lib/grooming/appointment-value";
 import {
   findStylistTimeConflict,
   getBookedStationIdsInWindow,
@@ -466,8 +467,14 @@ function GroomingSidebar({
     const collected = counting.filter(
       (a) => a.paymentStatus === "paid" || a.status === "completed",
     );
-    const earnedRevenue = collected.reduce((s, a) => s + a.totalPrice, 0);
-    const expectedRevenue = counting.reduce((s, a) => s + a.totalPrice, 0);
+    const earnedRevenue = collected.reduce(
+      (s, a) => s + appointmentValue(a),
+      0,
+    );
+    const expectedRevenue = counting.reduce(
+      (s, a) => s + appointmentValue(a),
+      0,
+    );
     const distinctPets = new Set(counting.map((a) => a.petId));
     return {
       appointments: counting.length,
@@ -517,7 +524,7 @@ function GroomingSidebar({
         map[svc] = { count: 0, color: colorForService(svc), revenue: 0 };
       }
       map[svc].count++;
-      map[svc].revenue += a.totalPrice;
+      map[svc].revenue += appointmentValue(a);
     }
     return Object.entries(map)
       .sort((a, b) => b[1].count - a[1].count)

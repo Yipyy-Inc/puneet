@@ -55,6 +55,8 @@ interface Promotable {
   details: Record<string, unknown> | null;
   /** The branch, where the facility has more than one. */
   location_id: string | null;
+  /** The request's own add-on lines, written when it was made. */
+  add_ons_total: number | string | null;
 }
 
 /**
@@ -104,7 +106,7 @@ export async function autoConfirmCustomerBookings(
     const { data } = await admin
       .from("bookings")
       .select(
-        "id, facility_id, service, status, start_at, end_at, details, location_id",
+        "id, facility_id, service, status, start_at, end_at, details, location_id, add_ons_total",
       )
       .in("id", bookingIds);
 
@@ -252,13 +254,17 @@ export async function autoConfirmCustomerBookings(
       });
       if (!priced.ok) continue;
 
+      // The deposit is of the service AND its own add-ons, as when both were
+      // one figure: the add-ons are bill lines now (2026-09-30), already on
+      // this booking, and `priced.total` is the service alone.
+      const depositBase = priced.total + Number(row.add_ons_total ?? 0);
       const rule = findApplicableDepositRule(
         row.service!,
-        priced.total,
+        depositBase,
         deposits.get(row.facility_id) ?? [],
       );
       const depositRequired = rule
-        ? computeDepositAmount(rule, priced.total)
+        ? computeDepositAmount(rule, depositBase)
         : 0;
 
       const { error } = await admin

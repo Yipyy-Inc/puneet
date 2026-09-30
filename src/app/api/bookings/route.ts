@@ -36,6 +36,7 @@ import type { NewBooking } from "@/types/booking";
 import { autoConfirmCustomerBookings } from "@/lib/bookings/auto-confirm";
 import { stampBookingTaxable } from "@/lib/payments/booking-service-tax";
 import { applyBookingServiceCharges } from "@/lib/payments/booking-service-charges";
+import { requestAddOnLines } from "@/lib/pricing/add-on-lines";
 import {
   FORM_OVERRIDE_REASON_REQUIRED,
   DAYCARE_EVALUATION_REQUIRED,
@@ -347,6 +348,17 @@ export async function POST(request: NextRequest) {
       };
     },
   );
+
+  // THE REQUEST'S ADD-ONS, ONCE (2026-09-30). They are `add_on` lines now,
+  // not money inside `total_cost`, and a request split into days or rooms
+  // copies `extraServices` onto every part — so they travel on the FIRST item
+  // only, and `create_bookings` places them after every part exists: a pet's
+  // add-on on the part that holds it, the rest on the first. Priced by the
+  // server from the catalogue; nothing here says what they cost.
+  const addOns = requestAddOnLines(input, refsOf(input)[0]);
+  if (addOns.length > 0 && items.length > 0) {
+    items[0] = { ...items[0], addOns } as (typeof items)[number];
+  }
 
   // THE BOOKING, ITS PETS AND — PER MODULE — ITS APPOINTMENT OR ITS KENNEL,
   // IN ONE TRANSACTION.
@@ -661,7 +673,10 @@ function groomingFor(booking: NewBooking) {
   return booking.service === "grooming"
     ? {
         serviceId: booking.serviceType ?? null,
-        addOnIds: booking.groomingAddOns ?? [],
+        // The groom's add-ons are `add_on` lines since 2026-09-30, sent with
+        // the request's `addOns` (below the item map) — not rows in
+        // `grooming_appointment_add_ons`, which now holds history only.
+        addOnIds: [],
         stationId: booking.stationAssignment ?? null,
         durationOverrideMin: booking.groomingDurationOverrideMin ?? null,
       }
@@ -710,19 +725,6 @@ async function recordDeposit(
     bookings: { id: string; totalCost: number }[];
   },
 ): Promise<{ recorded: number; problem?: string }> {
-  const { shares, left } = allocateDeposit(
-    deposit.amount,
-    deposit.bookings.map((b) => b.totalCost),
-  );
-  // More than the bookings cost stays on the first: the money was taken, and
-  // an overpaid booking is visible where a dropped payment is not.
-  if (left > 0 && shares.length > 0) shares[0] += left;
-
-  const taxConfig = await facilityTaxConfig(
-    supabase as unknown as SupabaseClient,
-    deposit.sessionFacilityId,
-  );
-
   // ── A DEPOSIT ON A TAX-FREE SERVICE CARRIES NO TAX ──────────────────────
   //
   // Read back rather than taken from the request: `stampBookingTaxable` has
@@ -731,7 +733,9 @@ async function recordDeposit(
   // customer sees before anything else.
   const { data: billRows } = await supabase
     .from("bookings")
-    .select("id, total_cost, extras_total, taxable_extras_total, taxable")
+    .select(
+      "id, total_cost, extras_total, taxable_extras_total, taxable, add_ons_total",
+    )
     .in(
       "id",
       deposit.bookings.map((b) => b.id),
@@ -742,9 +746,30 @@ async function recordDeposit(
   // added to it alongside 20260923200000 rather than cast around — a generated
   // file that is allowed to fall behind makes every select on the table lie.
   const billById = new Map(
-    ((billRows ?? []) as unknown as Array<BookingBill & { id: string }>).map(
-      (b) => [b.id, b],
+    (
+      (billRows ?? []) as unknown as Array<
+        BookingBill & { id: string; add_ons_total?: number | string | null }
+      >
+    ).map((b) => [b.id, b]),
+  );
+
+  // What each booking costs is its service AND its own add-ons. The add-ons
+  // are bill lines since 2026-09-30, written on the part that holds the pet
+  // they are for, so the planned total no longer says where they landed —
+  // the row does.
+  const { shares, left } = allocateDeposit(
+    deposit.amount,
+    deposit.bookings.map(
+      (b) => b.totalCost + Number(billById.get(b.id)?.add_ons_total ?? 0),
     ),
+  );
+  // More than the bookings cost stays on the first: the money was taken, and
+  // an overpaid booking is visible where a dropped payment is not.
+  if (left > 0 && shares.length > 0) shares[0] += left;
+
+  const taxConfig = await facilityTaxConfig(
+    supabase as unknown as SupabaseClient,
+    deposit.sessionFacilityId,
   );
 
   let recorded = 0;

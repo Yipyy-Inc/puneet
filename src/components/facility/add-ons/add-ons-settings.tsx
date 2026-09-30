@@ -18,7 +18,9 @@ import {
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TableEmptyState } from "@/components/ui/table-empty-state";
+import { billedTermsChanged } from "@/lib/add-ons/billed-terms";
 import {
+  addOnUpcomingBookings,
   useAddOnCategories,
   useAddOns,
   useArchiveAddOn,
@@ -46,6 +48,14 @@ const AddOnDialog = dynamic(
   { ssr: false },
 );
 
+const ApplyToUpcomingDialog = dynamic(
+  () =>
+    import("./apply-to-upcoming-dialog").then(
+      (mod) => mod.ApplyToUpcomingDialog,
+    ),
+  { ssr: false },
+);
+
 /** The uncategorised group's key — never a word, so no category can be it. */
 const UNCATEGORIZED = "__uncategorized__";
 
@@ -63,6 +73,11 @@ export function AddOnsSettings() {
   } | null>(null);
   const [managing, setManaging] = useState(false);
   const [deleting, setDeleting] = useState<AddOn | null>(null);
+  // The edit just saved, when unconfirmed upcoming bookings carry the add-on.
+  const [applying, setApplying] = useState<{
+    addOn: AddOn;
+    bookings: number;
+  } | null>(null);
 
   const list = addOns.data;
   const cats = categories.data;
@@ -102,6 +117,21 @@ export function AddOnsSettings() {
           ? error.message
           : t("couldNotDuplicate").replace("{name}", addOn.name),
       );
+    }
+  }
+
+  // "Apply the changes to all unconfirmed upcoming appointments?" — asked
+  // only when the edit changed something a booking's line carries, and only
+  // when there are such bookings.
+  async function offerToApply(saved: AddOn, before: AddOn | null) {
+    if (!before || !billedTermsChanged(before, saved)) return;
+    try {
+      const bookings = await addOnUpcomingBookings(saved.id);
+      if (bookings > 0) setApplying({ addOn: saved, bookings });
+    } catch {
+      // The add-on IS saved; what could not be read is whether any booking
+      // is waiting on the answer. Said, rather than left looking like "none".
+      toast.warning(t("couldNotCheckUpcoming").replace("{name}", saved.name));
     }
   }
 
@@ -223,6 +253,16 @@ export function AddOnsSettings() {
           }}
           addOn={editing.addOn}
           categories={cats ?? []}
+          onSaved={(saved, before) => void offerToApply(saved, before)}
+        />
+      ) : null}
+
+      {applying ? (
+        <ApplyToUpcomingDialog
+          addOn={applying.addOn}
+          bookings={applying.bookings}
+          onClose={() => setApplying(null)}
+          t={t}
         />
       ) : null}
 

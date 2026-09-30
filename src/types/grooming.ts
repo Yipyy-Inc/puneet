@@ -750,6 +750,17 @@ export const groomingAppointmentSchema = z.object({
    * not know would charge tax on it. Absent means taxed — service-tax.ts.
    */
   extrasTotal: z.number().optional(),
+  /**
+   * The part of `extrasTotal` that is taxed — a tax-free add-on line is in
+   * the extras but not in this. Absent means all of them (service-tax.ts).
+   */
+  taxableExtrasTotal: z.number().optional(),
+  /**
+   * The groom's own add-ons, as bill lines (2026-09-30) — inside
+   * `extrasTotal`, no longer inside `totalPrice`. What the groom is worth is
+   * `totalPrice + addOnsTotal` (`appointmentValue`).
+   */
+  addOnsTotal: z.number().optional(),
   taxable: z.boolean().optional(),
   /** ISO timestamp of payment confirmation. */
   paidAt: z.string().optional(),

@@ -64,6 +64,8 @@ interface BookingRow {
   service: string;
   status: string;
   total_cost: number | string | null;
+  /** The booking's own add-on lines (2026-09-30) — see `serviceTotal` below. */
+  add_ons_total: number | string | null;
   location_id: string | null;
 }
 
@@ -77,7 +79,9 @@ export async function applyBookingServiceCharges(
 
     const { data } = await admin
       .from("bookings")
-      .select("id, facility_id, service, status, total_cost, location_id")
+      .select(
+        "id, facility_id, service, status, total_cost, add_ons_total, location_id",
+      )
       .in("id", bookingIds);
 
     const rows = (data ?? []) as unknown as BookingRow[];
@@ -116,7 +120,11 @@ export async function applyBookingServiceCharges(
       for (const line of serviceChargeLines(fees, {
         serviceId: row.service,
         petCount: petCounts.get(row.id) ?? 1,
-        serviceTotal: Number(row.total_cost ?? 0),
+        // The service AND its own add-ons: a percentage fee was taken of both
+        // when the add-ons sat inside total_cost, and the wizard's preview
+        // still is (`basePrice + addOnsTotal`).
+        serviceTotal:
+          Number(row.total_cost ?? 0) + Number(row.add_ons_total ?? 0),
         // A fee narrowed to some branches is not charged at the others.
         locationId: row.location_id,
       })) {

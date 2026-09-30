@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { appointmentValue } from "@/lib/grooming/appointment-value";
 import { useRecordPayment } from "@/lib/api/grooming-appointments";
 import {
   Phone,
@@ -755,7 +756,7 @@ export function AppointmentPanel({
                 {priceAdjTotal > 0 && <Separator className="my-1" />}
                 <div className="flex justify-between pt-0.5 text-base font-semibold">
                   <span>Total</span>
-                  <span>${appointment.totalPrice}</span>
+                  <span>${appointmentValue(appointment)}</span>
                 </div>
               </div>
             </div>

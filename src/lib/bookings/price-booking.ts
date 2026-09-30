@@ -12,7 +12,6 @@ import { resolveDaycareService } from "@/lib/pricing/daycare-service-choice";
 import { isBuiltinService } from "@/lib/service-registry";
 import {
   addOnLinesFrom,
-  computeAddOnsTotal,
   missingRequiredLine,
 } from "@/lib/pricing/add-on-lines";
 import {
@@ -446,17 +445,19 @@ async function liveAddOns(
 }
 
 /**
- * The booking's price plus its add-ons, as the wizard adds them.
+ * The booking's price — its SERVICE — once its add-ons are known to be right.
  *
- * Until 2026-09-25 the server priced boarding's BASE only, so any add-on on a
- * customer's request made its quote disagree and the booking stayed a
- * request — including, once services could attach them, the add-ons the
- * service itself insists on. Daycare and custom modules stayed that way until
- * 2026-09-26: an add-on on a daycare request was never priced here, and every
- * one of those bookings silently became a request. The lines are merged and
- * totalled by the SAME functions the wizard uses (`lib/pricing/add-on-lines.ts`),
- * from the add-ons for this type of service at this location's prices, and a
- * booking missing one of its service's defaults is not confirmed at all.
+ * Since 2026-09-30 a booking's add-ons are `add_on` lines the server wrote at
+ * the catalogue's price when the booking was made (`place_add_on_lines`), not
+ * money inside `total_cost`. So they are no longer part of what the customer's
+ * quote is compared with: the wizard's `totalCost` leaves them out too
+ * (`splitBookingMoney`), and neither side can price them differently from the
+ * other. (Before that, a multi-day daycare request with an add-on could never
+ * be confirmed: every day was priced with all of the request's add-ons.)
+ *
+ * What stays: a booking missing one of its service's default add-ons is not
+ * confirmed at all — the lines it carries are checked against the service's
+ * rules, from the add-ons for this type of service at this location.
  */
 async function withAddOns(
   input: PriceRequest,
@@ -464,13 +465,11 @@ async function withAddOns(
   defaults: readonly BoardingDefaultAddOn[],
   nights: number,
 ): Promise<ServerQuote> {
-  const lines = addOnLinesFrom(input.extraServices);
-  if (lines.length === 0 && defaults.length === 0) {
+  if (defaults.length === 0) {
     return { ok: true, basePrice: base, total: base };
   }
-  // The one add-ons list (20260926223644), read in the SAME shape and by the
-  // SAME rule the wizard's total uses (`usePricedAddOns`) — so the ids both
-  // sides key on and the prices both sides add cannot drift apart.
+  const lines = addOnLinesFrom(input.extraServices);
+  // The one add-ons list, by the rule the wizard uses (`usePricedAddOns`).
   const catalogue = await liveAddOns(
     input.facilityId,
     input.service,
@@ -485,11 +484,7 @@ async function withAddOns(
   if (missingRequiredLine(lines, required)) {
     return { ok: false, reason: "missing_add_on" };
   }
-  const addOns = computeAddOnsTotal(
-    lines,
-    new Map(catalogue.map((addOn) => [addOn.id, addOn])),
-  );
-  return { ok: true, basePrice: base, total: base + addOns };
+  return { ok: true, basePrice: base, total: base };
 }
 
 /** Days × the price of the service the booking names. */
@@ -599,42 +594,9 @@ async function priceGrooming(input: PriceRequest): Promise<ServerQuote> {
     return { ok: false, reason: "no_rate" };
   }
 
-  // Add-ons: the appointment says which, the catalogue says what they cost.
-  // The stored `price` on the appointment's own add-on rows is zeroed for a
-  // customer by the same branch that zeroes the service, so it is not read.
-  const { data: chosen } = await admin
-    .from("grooming_appointment_add_ons")
-    .select("add_on_id")
-    .eq("booking_id", input.bookingId);
-
-  const addOnIds = ((chosen ?? []) as Array<{ add_on_id: string | null }>)
-    .map((row) => row.add_on_id)
-    .filter((id): id is string => Boolean(id));
-
-  let addOns = 0;
-  if (addOnIds.length > 0) {
-    const { data: catalogue } = await admin
-      .from("grooming_add_ons")
-      .select("id, price")
-      .in("id", addOnIds);
-    const byId = new Map(
-      ((catalogue ?? []) as Array<{ id: string; price: number | string }>).map(
-        (row) => [row.id, Number(row.price)],
-      ),
-    );
-    for (const id of addOnIds) {
-      const each = byId.get(id);
-      // An add-on the catalogue no longer holds cannot be priced, and
-      // confirming without it would undercharge the facility.
-      if (each === undefined || !Number.isFinite(each)) {
-        return { ok: false, reason: "no_rate" };
-      }
-      addOns += each;
-    }
-  }
-
-  const total = price + addOns;
-  return { ok: true, basePrice: total, total };
+  // The groom's add-ons are `add_on` lines the server wrote at the catalogue's
+  // price (2026-09-30), not part of this quote — see `withAddOns`.
+  return { ok: true, basePrice: price, total: price };
 }
 
 /**

@@ -252,6 +252,8 @@ export interface BookingMoneyLite {
   startDate?: string;
   date?: string;
   totalCost?: number;
+  /** The booking's own add-on lines (2026-09-30); absent on an older read. */
+  addOnsTotal?: number;
 }
 
 export interface LedgerProgramPerformance extends ProgramPerformance {
@@ -310,7 +312,9 @@ export function computeProgramPerformanceFromLedger(input: {
   const bookingTotalByRef = new Map<number, number>();
   for (const b of input.bookings) {
     if (typeof b.totalCost === "number" && Number.isFinite(b.totalCost)) {
-      bookingTotalByRef.set(b.id, b.totalCost);
+      // The service and its own add-ons: what a percentage reward was taken
+      // of when both were one figure.
+      bookingTotalByRef.set(b.id, b.totalCost + (b.addOnsTotal ?? 0));
     }
   }
 

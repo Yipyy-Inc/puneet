@@ -21,6 +21,7 @@ import { AdditionalContactsManager } from "@/components/clients/AdditionalContac
 import { ClientServicePreferences } from "@/components/clients/ClientServicePreferences";
 import { NewAppointmentDialog } from "@/components/facility/grooming/new-appointment-dialog";
 import { cn } from "@/lib/utils";
+import { bookingValue } from "@/lib/bookings/booking-value";
 import { toast } from "sonner";
 import { useClientStoreCredit } from "@/lib/api/store-credit";
 import { giftCardQueries } from "@/lib/api/gift-cards";
@@ -387,7 +388,7 @@ export default function ClientDetailPage({
   const totalBookings = clientBookings.length;
   const totalSpent = clientBookings
     .filter((b) => b.paymentStatus === "paid")
-    .reduce((sum, b) => sum + b.totalCost, 0);
+    .reduce((sum, b) => sum + bookingValue(b), 0);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {

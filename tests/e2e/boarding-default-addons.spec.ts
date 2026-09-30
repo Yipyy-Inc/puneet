@@ -19,7 +19,9 @@ import { cancelBookingsMarked } from "./_sweep";
 // D2  The customer's menu carries them, because they are part of the price
 //     the customer is quoted (20260925173458).
 // D3  A stay booked with the service carries them as add-on lines, counted
-//     by the stay: one night is two days, so "every day" is two walks.
+//     by the stay: one night is two days, so "every day" is two walks — and
+//     they are on the BILL as a line at the facility's price, beside the
+//     stay's own, not inside it (2026-09-30).
 //
 // ── IT WRITES, AND PUTS BACK ──────────────────────────────────────────────
 //
@@ -32,6 +34,9 @@ const MARKER = "[e2e boarding-defaults]";
 const ADD_ON = "e2e-boarding-defaults-walk";
 const ADD_ON_NAME = `${MARKER} Walk`;
 const SERVICE_NAME = `${MARKER} Stay with walks`;
+/** What the service charges a night, and what one walk costs. */
+const NIGHT_PRICE = 50;
+const WALK_PRICE = 7;
 const SERVICES = "/api/boarding/services";
 const BUDDY = 1; // Alice's dog — Alice is ACCOUNTS.customer, client 15.
 const ALICE = 15;
@@ -123,7 +128,7 @@ test.beforeAll(async ({ browser }) => {
     legacy_id: ADD_ON,
     name: ADD_ON_NAME,
     description: "Twenty minutes around the block",
-    price: 7,
+    price: WALK_PRICE,
     is_active: true,
   });
   expect(writeError?.message ?? null).toBeNull();
@@ -160,7 +165,7 @@ test("D1 a service's default add-ons are saved, replaced and cleared", async ({
   const made = await page.request.post(SERVICES, {
     data: {
       name: SERVICE_NAME,
-      price: 50,
+      price: NIGHT_PRICE,
       unit: "night",
       lodgingTypeIds: [],
       isActive: true,
@@ -287,6 +292,8 @@ test("D3 a stay booked with the service carries them, counted by the stay", asyn
   expect(res.ok(), await res.text()).toBe(true);
   const [saved] = (await res.json()) as Array<{
     id: number;
+    totalCost: number;
+    addOnsTotal?: number;
     extraServices?: Array<{
       serviceId: string;
       quantity: number;
@@ -298,4 +305,34 @@ test("D3 a stay booked with the service carries them, counted by the stay", asyn
     saved?.extraServices,
     "every day of a one-night stay is two walks, on Buddy",
   ).toContainEqual({ serviceId: ADD_ON, quantity: 2, petId: BUDDY });
+
+  // ── AND ON THE BILL, ONCE (2026-09-30) ──────────────────────────────────
+  //
+  // The walks are a line the server wrote at the facility's price; the
+  // booking's own price is the stay alone. The form's total was the two
+  // together — sent as one figure AND billed as a line, they were charged
+  // twice.
+  const bill = await page.request.get(`/api/bookings/${ref}/line-items`);
+  expect(bill.ok(), await bill.text()).toBe(true);
+  const addOnLines = (
+    (await bill.json()) as Array<{
+      kind: string;
+      name: string;
+      quantity: number;
+      unitPrice: number;
+      price: number;
+    }>
+  ).filter((line) => line.kind === "add_on");
+  expect(addOnLines).toEqual([
+    expect.objectContaining({
+      name: ADD_ON_NAME,
+      quantity: 2,
+      unitPrice: WALK_PRICE,
+      price: 2 * WALK_PRICE,
+    }),
+  ]);
+  expect(saved?.addOnsTotal).toBe(2 * WALK_PRICE);
+  expect(saved?.totalCost, "one night of the stay, and no walks in it").toBe(
+    NIGHT_PRICE,
+  );
 });

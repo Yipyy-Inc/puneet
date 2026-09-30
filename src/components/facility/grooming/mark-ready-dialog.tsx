@@ -179,7 +179,14 @@ export function MarkReadyDialog({
     ? { lines: [], totalCents: 0 }
     : computeTax(
         taxableOwedForBooking(
-          { totalCost: apt.totalPrice, extrasTotal: 0, taxable: apt.taxable },
+          {
+            totalCost: apt.totalPrice,
+            // The lines already on the bill — the groom's add-ons among them
+            // since 2026-09-30 — each taxed by its own flag, not the service's.
+            extrasTotal: apt.extrasTotal ?? 0,
+            taxableExtrasTotal: apt.taxableExtrasTotal,
+            taxable: apt.taxable,
+          },
           Math.round((preTaxSubtotal - finalChargesTotal) * 100),
         ) + Math.round(finalChargesTotal * 100),
         taxConfig,

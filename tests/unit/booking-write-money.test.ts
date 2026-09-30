@@ -40,13 +40,18 @@ function adj(
  * `greatest(0, total_cost + extras_total - coalesce(discount, 0))`.
  *
  * `extras_total` is the sum of the `booking_line_items` the server writes for
- * the custom fees — which is exactly `serviceChargeTotal`.
+ * the custom fees — which is exactly `serviceChargeTotal` — and, since
+ * 2026-09-30, for the booking's own add-ons.
  */
-function amountDue(money: BookingMoney): number {
+function amountDue(money: BookingMoney, addOnLines = 0): number {
   return Math.max(
     0,
     Math.round(
-      (money.serviceTotal + money.serviceChargeTotal - money.discount) * 100,
+      (money.serviceTotal +
+        money.serviceChargeTotal +
+        addOnLines -
+        money.discount) *
+        100,
     ) / 100,
   );
 }
@@ -90,6 +95,32 @@ describe("what the booking is written with", () => {
     expect(money.serviceTotal, "the service alone").toBe(200);
     expect(money.serviceChargeTotal).toBe(15);
     expect(amountDue(money)).toBe(215);
+  });
+
+  test("the booking's add-ons leave total_cost and come back as lines", () => {
+    // $120 of daycare and $30 of add-ons. The server writes the add-ons as
+    // `add_on` lines at the catalogue's price, so the booking's price is the
+    // service alone — or the customer owes the add-ons twice.
+    const money = splitBookingMoney({
+      adjustments: [],
+      discountTotal: 0,
+      addOnsTotal: 30,
+      total: 150,
+    });
+    expect(money.serviceTotal, "the service alone").toBe(120);
+    expect(amountDue(money, 30), "the customer owes the quote").toBe(150);
+  });
+
+  test("add-ons, a fee and a discount together: 200 + 15 + 30 − 30", () => {
+    const money = splitBookingMoney({
+      adjustments: [adj("custom_fee", 15), adj("multi_pet", -30)],
+      discountTotal: 30,
+      addOnsTotal: 30,
+      total: 215,
+    });
+    expect(money.serviceTotal).toBe(200);
+    expect(money.discount).toBe(30);
+    expect(amountDue(money, 30)).toBe(215);
   });
 
   test("a discount and a service charge on one booking: 200 + 15 − 30", () => {

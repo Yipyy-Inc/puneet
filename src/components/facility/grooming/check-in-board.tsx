@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useGroomingVisitWrites } from "@/hooks/use-grooming-visit-writes";
 import { groomingQueries, getEffectiveAlertNotes } from "@/lib/api/grooming";
 import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
+import { appointmentValue } from "@/lib/grooming/appointment-value";
 import type { GroomingAppointment, GroomingStatus } from "@/types/grooming";
 import {
   applyCheckInResult,
@@ -149,10 +150,10 @@ export function CheckInBoard() {
       ready: by("ready-for-pickup"),
       completed: by("completed"),
       noShows: by("no-show"),
-      expectedRevenue: active.reduce((s, a) => s + a.totalPrice, 0),
+      expectedRevenue: active.reduce((s, a) => s + appointmentValue(a), 0),
       collectedRevenue: todayAppointments
         .filter((a) => a.status === "completed")
-        .reduce((s, a) => s + a.totalPrice, 0),
+        .reduce((s, a) => s + appointmentValue(a), 0),
     };
   }, [todayAppointments]);
 

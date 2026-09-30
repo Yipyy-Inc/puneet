@@ -77,7 +77,7 @@ import {
 } from "lucide-react";
 import type { AdditionalPet, AppointmentStage } from "@/types/grooming";
 import type { PetSize } from "@/types/base";
-import { useGroomingAddOns } from "@/lib/api/grooming-catalogue";
+import { useGroomingAddOnOffer } from "@/lib/add-ons/use-grooming-add-on-offer";
 import { bookingMutations } from "@/lib/api/booking";
 import { useCreateClient, useCreatePet } from "@/lib/api/client";
 import { useLocationContext } from "@/hooks/use-location-context";
@@ -229,11 +229,26 @@ export function NewAppointmentDialog({
   const queryClient = useQueryClient();
   const { t: tBook, fill: fillBook } = useStaffText("groomingAppointment");
   const { mutate: redeemPass } = useRedeemPackagePass();
-  // The facility's grooming add-ons. This offered GROOMING_ADD_ONS from
-  // `@/data/grooming-add-ons`, eight invented extras — and the booking RPC
-  // refuses an add-on the facility does not sell.
-  const { data: addOnData } = useGroomingAddOns();
-  const ADD_ONS = (addOnData ?? NO_ITEMS) as GroomingAddOnOption[];
+  // The add-ons THIS groom may have: for the chosen service and this pet, at
+  // this location's price and minutes — the list the booking form offers, and
+  // what the server writes as the bill's lines (2026-09-30). It was every
+  // grooming add-on at its own price, which a location's override and the
+  // add-on's own limits could both disagree with.
+  const offerPets = useMemo(
+    () => [
+      {
+        type: form.petType,
+        breed: form.petBreed,
+        weight: prefillFrom?.petWeight,
+        coatType: form.coatType,
+      },
+    ],
+    [form.petType, form.petBreed, form.coatType, prefillFrom?.petWeight],
+  );
+  const ADD_ONS: GroomingAddOnOption[] = useGroomingAddOnOffer({
+    packageId: form.packageId || null,
+    pets: offerPets,
+  });
   const createClientMutation = useCreateClient();
   const createPetMutation = useCreatePet();
   const { currentLocationId } = useLocationContext();
@@ -1193,13 +1208,17 @@ export function NewAppointmentDialog({
         isMobile: form.isMobile || undefined,
       });
 
+      // The groom's price is its SERVICE. Its add-ons are sent as a list and
+      // written by the server as bill lines at the catalogue's price
+      // (2026-09-30); adding them here as well would charge them twice.
       const primaryLine = petLines[0];
-      const primaryPrice = (primaryLine?.price ?? 0) + addOnTotal;
+      const offeredAddOns = selectedAddOns.filter((id) =>
+        ADD_ONS.some((a) => a.id === id),
+      );
       const created = await bookingMutations.create(
         {
-          ...base(primaryPet, form.packageId, primaryPrice),
-          groomingAddOns:
-            selectedAddOns.length > 0 ? selectedAddOns : undefined,
+          ...base(primaryPet, form.packageId, primaryLine?.price ?? 0),
+          groomingAddOns: offeredAddOns.length > 0 ? offeredAddOns : undefined,
           groomingDurationOverrideMin: manualDurationOverride,
         },
         currentLocationId,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, use, useMemo, useEffect } from "react";
+import { bookingValue } from "@/lib/bookings/booking-value";
 import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
@@ -863,7 +864,7 @@ export default function CustomerPetDetailPage({
     {
       key: "totalCost",
       label: t("colTotal"),
-      render: (booking) => formatMoney(booking.totalCost, locale),
+      render: (booking) => formatMoney(bookingValue(booking), locale),
     },
   ];
 

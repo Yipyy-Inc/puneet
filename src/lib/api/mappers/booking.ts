@@ -85,6 +85,10 @@ export function rowToBooking(row: BookingRow): BookingWithRowId {
             (row as { taxable_extras_total?: number | string })
               .taxable_extras_total,
           ),
+    // The booking's own add-on lines (2026-09-30); 0 on a row read before.
+    addOnsTotal: Number(
+      (row as { add_ons_total?: number | string | null }).add_ons_total ?? 0,
+    ),
     // Absent on a row read before the column existed, which is not a decision
     // to stop charging tax.
     taxable: (row as { taxable?: boolean | null }).taxable !== false,
@@ -148,6 +152,7 @@ const COLUMN_FIELDS = [
   "amountPaid",
   "extrasTotal",
   "taxableExtrasTotal",
+  "addOnsTotal",
   "amountDue",
   // Listed so it is not swept into `details`. Only ever WRITTEN by the server
   // (lib/payments/booking-service-tax.ts) — a PATCH sends only the columns it

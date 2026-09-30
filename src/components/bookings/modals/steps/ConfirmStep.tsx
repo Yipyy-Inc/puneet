@@ -51,6 +51,7 @@ import { useBookingApproval, useCareFees } from "@/lib/api/facility-settings";
 import { responseHoursFor } from "@/lib/settings/booking-approval";
 import { offeredMedicationAids } from "@/lib/settings/care-fees";
 import { staffQueries } from "@/lib/api/staff";
+import { AddOnStaffSelect } from "./AddOnStaffSelect";
 
 /**
  * The unit an add-on is priced by — `/day`, `/hr`, `% of booking`.
@@ -117,7 +118,22 @@ interface ConfirmStepProps {
   roomAssignments: Array<{ petId: number; roomId: string }>;
   feedingSchedule: FeedingScheduleItem[];
   medications: MedicationItem[];
-  extraServices: Array<{ serviceId: string; quantity: number; petId: number }>;
+  extraServices: Array<{
+    serviceId: string;
+    quantity: number;
+    petId: number;
+    /** Who an add-on that needs somebody is assigned to. */
+    staffId?: string;
+  }>;
+  /**
+   * Assigns an add-on line to a member of staff, or to nobody. Staff only —
+   * a customer's booking leaves it for the facility to decide.
+   */
+  onAddOnStaffChange?: (
+    serviceId: string,
+    petId: number,
+    staffId: string | null,
+  ) => void;
   addOnsCatalog?: ServiceAddOn[];
   calculatePrice: {
     basePrice: number;
@@ -271,6 +287,7 @@ export function ConfirmStep({
   feedingSchedule,
   medications,
   extraServices,
+  onAddOnStaffChange,
   addOnsCatalog,
   calculatePrice,
   notificationEmail,
@@ -326,6 +343,13 @@ export function ConfirmStep({
   const { fees: careFees } = useCareFees();
   const { data: staffProfiles } = useQuery(staffQueries.profiles());
   const locale = useShellLocale();
+  // Who an add-on may be given to: everybody working here now, and whoever
+  // the line already names even if they no longer are — a name that vanished
+  // from the control would read as "nobody".
+  const addOnStaffOptions = (current?: string) =>
+    (staffProfiles ?? [])
+      .filter((s) => s.status === "active" || s.id === current)
+      .map((s) => ({ id: s.id, name: `${s.firstName} ${s.lastName}`.trim() }));
 
   // The facility's waivers that apply here, less what this client has
   // validly signed — see use-booking-waivers for what this replaced.
@@ -925,42 +949,70 @@ export function ConfirmStep({
                   );
                   const unitPrice = addon?.price ?? 0;
                   const lineTotal = unitPrice * es.quantity;
+                  // "Does this add-on require staff?" — asked of staff, for
+                  // the add-ons set up that way; a customer's request leaves
+                  // it to the facility.
+                  const asksForStaff =
+                    !isCustomerMode &&
+                    Boolean(onAddOnStaffChange) &&
+                    addon?.requiresStaff === true;
                   return (
                     <div
                       key={`${es.serviceId}-${es.petId}`}
-                      className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2"
+                      className="space-y-2 rounded-lg bg-slate-50 px-3 py-2"
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="bg-primary/10 text-primary flex size-5 items-center justify-center rounded-full text-[9px] font-bold">
-                          {pet?.name[0]}
-                        </span>
-                        <div>
-                          <span className="text-xs font-medium">
-                            {addon?.name ?? es.serviceId.replace(/-/g, " ")}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="bg-primary/10 text-primary flex size-5 items-center justify-center rounded-full text-[9px] font-bold">
+                            {pet?.name[0]}
                           </span>
-                          <span className="text-muted-foreground ml-1.5 text-[10px]">
-                            {pet?.name}
+                          <div>
+                            <span className="text-xs font-medium">
+                              {addon?.name ?? es.serviceId.replace(/-/g, " ")}
+                            </span>
+                            <span className="text-muted-foreground ml-1.5 text-[10px]">
+                              {pet?.name}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-muted-foreground">
+                            {formatMoney(unitPrice, locale)}
+                            {formatAddonUnit(
+                              addon ??
+                                ({
+                                  pricingType: "flat",
+                                  price: 0,
+                                  unitLabel: "",
+                                } as ServiceAddOn),
+                              t,
+                            )}{" "}
+                            × {es.quantity}
+                          </span>
+                          <span className="font-semibold tabular-nums">
+                            {formatMoney(lineTotal, locale)}
                           </span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="text-muted-foreground">
-                          {formatMoney(unitPrice, locale)}
-                          {formatAddonUnit(
-                            addon ??
-                              ({
-                                pricingType: "flat",
-                                price: 0,
-                                unitLabel: "",
-                              } as ServiceAddOn),
-                            t,
-                          )}{" "}
-                          × {es.quantity}
-                        </span>
-                        <span className="font-semibold tabular-nums">
-                          {formatMoney(lineTotal, locale)}
-                        </span>
-                      </div>
+                      {asksForStaff && (
+                        <AddOnStaffSelect
+                          label={t("addOnAssignedTo")}
+                          ariaLabel={t("addOnStaffFor").replace(
+                            "{name}",
+                            addon?.name ?? es.serviceId,
+                          )}
+                          nobodyLabel={t("addOnNotAssigned")}
+                          staff={addOnStaffOptions(es.staffId)}
+                          value={es.staffId ?? null}
+                          onChange={(staffId) =>
+                            onAddOnStaffChange?.(
+                              es.serviceId,
+                              es.petId,
+                              staffId,
+                            )
+                          }
+                        />
+                      )}
                     </div>
                   );
                 })}

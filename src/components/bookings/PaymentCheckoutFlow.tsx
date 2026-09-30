@@ -106,7 +106,13 @@ interface PaymentCheckoutFlowProps {
    * 2026-09-21, and an optional prop would let a caller that was never updated
    * go on charging tax on it with nothing to notice. See service-tax.ts.
    */
-  taxableBill: { totalCost?: number; extrasTotal?: number; taxable?: boolean };
+  taxableBill: {
+    totalCost?: number;
+    extrasTotal?: number;
+    /** The taxed part of the extras; absent means all of them. */
+    taxableExtrasTotal?: number;
+    taxable?: boolean;
+  };
   depositPaid: number;
   invoiceTotal: number;
   /**

@@ -116,6 +116,31 @@ export function useArchiveAddOn() {
   });
 }
 
+const upcoming = (id: string) =>
+  `${BASE}/${encodeURIComponent(id)}/apply-to-upcoming`;
+
+/**
+ * How many unconfirmed bookings that have not started carry this add-on —
+ * what "apply the changes to upcoming appointments?" would change. Asked
+ * once, after an edit; not a query, because nothing keeps it on screen.
+ */
+export async function addOnUpcomingBookings(id: string): Promise<number> {
+  return (await json<{ bookings: number }>(upcoming(id))).bookings;
+}
+
+/** Bring those bookings' lines to the add-on as it is now. */
+export function useApplyAddOnToUpcoming() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      json<{ applied: number }>(upcoming(id), { method: "POST" }),
+    // A booking's bill moved: its lines, and the totals derived from them.
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["bookings"] });
+    },
+  });
+}
+
 export function useSaveAddOnCategory() {
   const queryClient = useQueryClient();
   return useMutation({

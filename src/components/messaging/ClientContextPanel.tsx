@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { bookingValue } from "@/lib/bookings/booking-value";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -358,7 +359,7 @@ export function ClientContextPanel({
         new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
     );
   const completed = scopedBookings.filter((b) => b.status === "completed");
-  const totalSpend = scopedBookings.reduce((s, b) => s + b.totalCost, 0);
+  const totalSpend = scopedBookings.reduce((s, b) => s + bookingValue(b), 0);
   const nextUpcomingBooking = upcoming[0] ?? null;
   const nextAppointmentHref = nextUpcomingBooking
     ? isCustomerMode
@@ -854,7 +855,7 @@ export function ClientContextPanel({
                     {nextUpcomingBooking.service}
                   </Badge>
                   <span className="text-xs font-bold text-slate-700 tabular-nums">
-                    ${nextUpcomingBooking.totalCost}
+                    ${bookingValue(nextUpcomingBooking)}
                   </span>
                 </div>
                 <p className="mt-1.5 text-xs text-slate-500">

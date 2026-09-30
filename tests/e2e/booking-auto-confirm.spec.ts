@@ -446,14 +446,20 @@ test.describe("a facility decides which services need its approval", () => {
 //
 // The server priced boarding's BASE only, so any add-on on a customer's
 // request — including one the service attaches by itself, by length of stay —
-// made the quote disagree and the booking stayed a request. It prices them
-// now, from the facility's own catalogue, and refuses a booking that dropped
-// one of its service's defaults.
+// made the quote disagree and the booking stayed a request. It priced them
+// from the facility's own catalogue, and refused a booking that dropped one
+// of its service's defaults.
 //
-// B1  The stay plus its service's default add-on, quoted right → confirmed,
-//     at that total.
+// Since 2026-09-30 an add-on is a LINE ON THE BILL, written by the server at
+// the catalogue's price when the booking is made. So the quote a customer's
+// form sends — and the price the server compares it with — is the SERVICE;
+// the add-ons are beside it, and what is owed is the two together.
+//
+// B1  The stay and its service's default add-on, quoted right → confirmed at
+//     the SERVICE's price, the add-on a line of its own, both owed.
 // B2  The default taken off → still a request.
-// B3  The right lines and the wrong total → still a request.
+// B3  The right lines, and a total that counts them as well — what the form
+//     sent before 2026-09-30 → still a request, not a booking charged twice.
 // ============================================================================
 
 const BOARD_MARKER = `${MARKER} boarding`;
@@ -484,6 +490,21 @@ async function archiveMarkedAddOns(page: Page): Promise<void> {
       await page.request.delete(`/api/add-ons/${addOn.id}`);
     }
   }
+}
+
+interface BillLine {
+  kind: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  price: number;
+}
+
+/** The lines on a booking's bill, as whoever is signed in may read them. */
+async function billOf(page: Page, ref: number): Promise<BillLine[]> {
+  const res = await page.request.get(`/api/bookings/${ref}/line-items`);
+  expect(res.ok(), await res.text()).toBe(true);
+  return (await res.json()) as BillLine[];
 }
 
 /** The staff menu, or nothing — never a throw inside a teardown. */
@@ -592,16 +613,30 @@ test.describe("boarding confirms with the add-ons its service attaches", () => {
     page,
   }) => {
     await signIn(page, ACCOUNTS.customer);
-    const res = await book(page, NIGHT + 2 * WALK, twoWalks());
+    const res = await book(page, NIGHT, twoWalks());
     expect(res.ok(), await res.text()).toBe(true);
     const booking = (await res.json()) as {
       id: number;
       status: string;
       totalCost?: number;
+      amountDue?: number;
     };
     made.push(booking.id);
     expect(booking.status).toBe("confirmed");
-    expect(booking.totalCost).toBe(NIGHT + 2 * WALK);
+    expect(booking.totalCost, "the service alone").toBe(NIGHT);
+    expect(booking.amountDue, "and the walks beside it").toBe(NIGHT + 2 * WALK);
+
+    // The walks are a line the customer can read on their own bill, at the
+    // facility's price — nothing in the request said what they cost.
+    const bill = await billOf(page, booking.id);
+    expect(bill).toHaveLength(1);
+    expect(bill[0]).toMatchObject({
+      kind: "add_on",
+      name: `${MARKER} Walk`,
+      quantity: 2,
+      unitPrice: WALK,
+      price: 2 * WALK,
+    });
 
     // And it is in a kennel. A customer's booking arrives with none — a
     // request must not hold one — and confirming it now gives one of its
@@ -625,11 +660,11 @@ test.describe("boarding confirms with the add-ons its service attaches", () => {
     expect(booking.status).toBe("request_submitted");
   });
 
-  test("B3 the right lines and the wrong total: still a request", async ({
+  test("B3 the right lines and a total that counts them too: still a request", async ({
     page,
   }) => {
     await signIn(page, ACCOUNTS.customer);
-    const res = await book(page, NIGHT + 2 * WALK - 5, twoWalks());
+    const res = await book(page, NIGHT + 2 * WALK, twoWalks());
     expect(res.ok(), await res.text()).toBe(true);
     const booking = (await res.json()) as { id: number; status: string };
     made.push(booking.id);
@@ -642,17 +677,25 @@ test.describe("boarding confirms with the add-ons its service attaches", () => {
 //
 // The server priced a daycare booking's BASE only, so an add-on on a
 // customer's daycare request made the quote disagree and every one of those
-// bookings stayed a request — silently, with auto-confirm switched on. It
-// prices them now, by the rule the wizard's total uses: every live add-on for
-// THIS type of service, at the booking location's price.
+// bookings stayed a request — silently, with auto-confirm switched on.
 //
-// D1  A day plus an add-on for every service, quoted right → confirmed, at
-//     that total. Failed before: the server total left the add-on out.
-// D2  The same line, and a quote that leaves the add-on out → still a request.
-// D3  A line for an add-on the facility set up for TRAINING only → still a
-//     request: the server does not price an add-on that is not for daycare.
-// G1  A groom plus the add-on for every service — which the groom's one list
-//     now carries — quoted right → confirmed.
+// Since 2026-09-30 the add-on is a line on the bill, written by the server at
+// the catalogue's price — by the rule the wizard's total uses: every live
+// add-on for THIS type of service, at the booking location's price. The quote
+// and the server's price are both the service alone.
+//
+// D1  A day and an add-on for every service, quoted right → confirmed at the
+//     day's price, the add-on a line, both owed.
+// D2  The same line, and a quote that counts the add-on as well → a request.
+// D3  An add-on the facility set up for TRAINING only → refused outright, by
+//     name: a request must not carry an add-on the facility does not sell on
+//     it.
+// D4  Two days and one add-on → both days confirmed, the add-on billed ONCE,
+//     on the first. Before, every day was priced with all of the request's
+//     add-ons and a multi-day request with one could never confirm.
+// G1  A groom and the add-on for every service — which the groom's one list
+//     carries — quoted right → confirmed at the groom's price, the add-on a
+//     line.
 // ============================================================================
 
 const EXTRA_MARKER = `${MARKER} extras`;
@@ -729,40 +772,115 @@ test.describe("daycare and grooming confirm with the add-ons chosen", () => {
     page,
   }) => {
     await signIn(page, ACCOUNTS.customer);
-    const res = await bookDay(page, FULL_DAY + TREAT, treatId);
+    const res = await bookDay(page, FULL_DAY, treatId);
     expect(res.ok(), await res.text()).toBe(true);
     const booking = (await res.json()) as {
       id: number;
       status: string;
       totalCost?: number;
+      amountDue?: number;
     };
     made.push(booking.id);
-    expect(booking.status, "the server priced the add-on too").toBe(
-      "confirmed",
+    expect(
+      booking.status,
+      "the day's price is all the quote has to match",
+    ).toBe("confirmed");
+    expect(booking.totalCost).toBe(FULL_DAY);
+    expect(booking.amountDue).toBe(FULL_DAY + TREAT);
+    expect(await billOf(page, booking.id)).toEqual([
+      expect.objectContaining({
+        kind: "add_on",
+        name: `${MARKER} Treat`,
+        quantity: 1,
+        unitPrice: TREAT,
+      }),
+    ]);
+  });
+
+  test("D2 the add-on counted in the quote as well: a request", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.customer);
+    const res = await bookDay(page, FULL_DAY + TREAT, treatId);
+    expect(res.ok(), await res.text()).toBe(true);
+    const booking = (await res.json()) as { id: number; status: string };
+    made.push(booking.id);
+    expect(booking.status).toBe("request_submitted");
+  });
+
+  test("D3 an add-on set up for training only, on a day: refused by name", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.customer);
+    const res = await bookDay(page, FULL_DAY, trainingOnlyId);
+    expect(res.status(), await res.text()).toBe(422);
+    const body = (await res.json()) as { error?: string };
+    expect(body.error).toContain(`${MARKER} Training only`);
+  });
+
+  test("D4 two days and one add-on: both confirmed, the add-on billed once", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.customer);
+    const days = [day(18), day(19)];
+    const res = await page.request.post("/api/bookings", {
+      data: {
+        clientId: ALICE.client,
+        petId: ALICE.pet,
+        service: "daycare",
+        startDate: days[0],
+        endDate: days[0],
+        checkInTime: "08:00",
+        checkOutTime: "17:00",
+        status: "confirmed",
+        basePrice: 2 * FULL_DAY,
+        discount: 0,
+        totalCost: 2 * FULL_DAY,
+        specialRequests: EXTRA_MARKER,
+        daycareSelectedDates: days,
+        extraServices: [{ serviceId: treatId, quantity: 1, petId: ALICE.pet }],
+        // One booking per day, as the form splits a request.
+        parts: days.map((date) => ({
+          petIds: [ALICE.pet],
+          startDate: date,
+          endDate: date,
+          basePrice: FULL_DAY,
+          discount: 0,
+          totalCost: FULL_DAY,
+        })),
+      },
+    });
+    expect(res.ok(), await res.text()).toBe(true);
+    const first = (await res.json()) as {
+      id: number;
+      status: string;
+      groupRefs?: number[];
+    };
+    const refs = first.groupRefs ?? [first.id];
+    made.push(...refs);
+    expect(refs).toHaveLength(2);
+
+    const bills = await Promise.all(refs.map((ref) => billOf(page, ref)));
+    expect(
+      bills.map((bill) => bill.length),
+      "the add-on is on the first day and nowhere else",
+    ).toEqual([1, 0]);
+
+    const both = await Promise.all(
+      refs.map(async (ref) => {
+        const read = await page.request.get(`/api/bookings?ref=${ref}`);
+        expect(read.ok(), await read.text()).toBe(true);
+        const [row] = (await read.json()) as Array<{
+          status: string;
+          totalCost: number;
+          amountDue?: number;
+        }>;
+        return row;
+      }),
     );
-    expect(booking.totalCost).toBe(FULL_DAY + TREAT);
-  });
-
-  test("D2 the add-on on the booking but not in the quote: a request", async ({
-    page,
-  }) => {
-    await signIn(page, ACCOUNTS.customer);
-    const res = await bookDay(page, FULL_DAY, treatId);
-    expect(res.ok(), await res.text()).toBe(true);
-    const booking = (await res.json()) as { id: number; status: string };
-    made.push(booking.id);
-    expect(booking.status).toBe("request_submitted");
-  });
-
-  test("D3 an add-on set up for training only, on a day: a request", async ({
-    page,
-  }) => {
-    await signIn(page, ACCOUNTS.customer);
-    const res = await bookDay(page, FULL_DAY + TRAINING_ONLY, trainingOnlyId);
-    expect(res.ok(), await res.text()).toBe(true);
-    const booking = (await res.json()) as { id: number; status: string };
-    made.push(booking.id);
-    expect(booking.status).toBe("request_submitted");
+    expect(both.map((b) => b?.status)).toEqual(["confirmed", "confirmed"]);
+    expect(both.map((b) => b?.totalCost)).toEqual([FULL_DAY, FULL_DAY]);
+    expect(both.map((b) => b?.amountDue)).toEqual([FULL_DAY + TREAT, FULL_DAY]);
   });
 
   test("G1 a groom and an add-on for every service, quoted right: confirmed", async ({
@@ -779,9 +897,9 @@ test.describe("daycare and grooming confirm with the add-ons chosen", () => {
         checkInTime: "13:00",
         checkOutTime: "14:00",
         status: "confirmed",
-        basePrice: GROOM_MEDIUM + TREAT,
+        basePrice: GROOM_MEDIUM,
         discount: 0,
-        totalCost: GROOM_MEDIUM + TREAT,
+        totalCost: GROOM_MEDIUM,
         specialRequests: EXTRA_MARKER,
         serviceType: GROOM_SERVICE,
         groomingAddOns: [treatId],
@@ -792,9 +910,19 @@ test.describe("daycare and grooming confirm with the add-ons chosen", () => {
       id: number;
       status: string;
       totalCost?: number;
+      amountDue?: number;
     };
     made.push(booking.id);
     expect(booking.status).toBe("confirmed");
-    expect(booking.totalCost).toBe(GROOM_MEDIUM + TREAT);
+    expect(booking.totalCost).toBe(GROOM_MEDIUM);
+    expect(booking.amountDue).toBe(GROOM_MEDIUM + TREAT);
+    expect(await billOf(page, booking.id)).toEqual([
+      expect.objectContaining({
+        kind: "add_on",
+        name: `${MARKER} Treat`,
+        quantity: 1,
+        unitPrice: TREAT,
+      }),
+    ]);
   });
 });

@@ -229,14 +229,22 @@ export function BookingPaymentBreakdown({
                   key={item.id}
                   label={item.name}
                   hint={
-                    item.quantity > 1
-                      ? fill("quantityTimes", {
-                          n: item.quantity,
-                          price: formatMoney(item.unitPrice, locale),
-                        })
-                      : item.kind === "fee"
-                        ? t("feeHint")
-                        : undefined
+                    [
+                      item.quantity > 1
+                        ? fill("quantityTimes", {
+                            n: item.quantity,
+                            price: formatMoney(item.unitPrice, locale),
+                          })
+                        : item.kind === "fee"
+                          ? t("feeHint")
+                          : undefined,
+                      // Who an add-on that needs somebody is assigned to.
+                      item.staffName
+                        ? fill("withStaff", { name: item.staffName })
+                        : undefined,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ") || undefined
                   }
                   value={item.price}
                 />

@@ -87,6 +87,12 @@ export const daycareCheckInSchema = z
      */
     extrasTotal: z.number().optional(),
     taxable: z.boolean().optional(),
+    /**
+     * The taxed PART of those extras, and the booking's own add-ons inside
+     * them (2026-09-30) — see the boarding arrival, which carries the same.
+     */
+    taxableExtrasTotal: z.number().optional(),
+    addOnsTotal: z.number().optional(),
     includesEvaluation: z.boolean().optional(),
     evaluationStatus: z
       .enum(["pending", "in_progress", "completed", "skipped"])

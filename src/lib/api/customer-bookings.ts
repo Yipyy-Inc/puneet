@@ -93,7 +93,7 @@ export const customerBookingQueries = {
       readJson<
         Array<{
           id: string;
-          kind: "item" | "fee";
+          kind: "item" | "fee" | "add_on";
           name: string;
           quantity: number;
           price: number;

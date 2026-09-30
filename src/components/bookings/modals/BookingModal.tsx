@@ -867,6 +867,14 @@ export function BookingModal({
   const [extraServices, setExtraServices] = useState<ExtraService[]>(
     preSelectedExtraServices ?? [],
   );
+  // Who each chosen add-on that needs somebody is assigned to, by line
+  // (`serviceId::petId`), as the confirm step sets it. Kept BESIDE the lines
+  // rather than on them: the lines a service attaches by itself are derived,
+  // not state, and would have nowhere to keep it. `null` is "nobody", said
+  // on purpose; a line not in here keeps what it arrived with.
+  const [addOnStaff, setAddOnStaff] = useState<Record<string, string | null>>(
+    {},
+  );
   // What the owner asked for, in their words. There was no field for it, and
   // what a customer typed into an online request was dropped when staff
   // scheduled it, because nothing read `preSelectedSpecialRequests`.
@@ -2005,10 +2013,16 @@ export function BookingModal({
     //
     // So `serviceTotal` is what the booking is created with, and every
     // displayed figure keeps using `total`.
+    //
+    // The booking's own add-ons are the same kind of addition since
+    // 2026-09-30: the server writes them as `add_on` lines at the catalogue's
+    // price — the chosen ones, the service's defaults and a groom's — so they
+    // come out of `total_cost` too.
     const { discount, serviceChargeTotal, serviceTotal } = splitBookingMoney({
       adjustments,
       discountTotal: pricingComputation.discountTotal,
       packagePassDiscount,
+      addOnsTotal: pricingComputation.addOnsTotal + groomingAddOnsTotal,
       total,
     });
 
@@ -2105,6 +2119,24 @@ export function BookingModal({
     groomingSelectedAddOnIds,
     groomingAddOnCatalog,
   ]);
+
+  // The add-on lines as the booking is sent and the confirm step shows them:
+  // the priced lines, each with whoever the confirm step assigned it to.
+  const billedAddOnLines = useMemo(
+    () =>
+      calculatePrice.effectiveExtraServices.map((line) => {
+        const key = `${line.serviceId}::${line.petId}`;
+        if (!(key in addOnStaff)) return line;
+        const chosen = addOnStaff[key];
+        return {
+          serviceId: line.serviceId,
+          quantity: line.quantity,
+          petId: line.petId,
+          ...(chosen ? { staffId: chosen } : {}),
+        };
+      }),
+    [calculatePrice.effectiveExtraServices, addOnStaff],
+  );
 
   // Check if service requires evaluation
   const serviceRequiresEvaluation = useMemo(() => {
@@ -2823,10 +2855,7 @@ export function BookingModal({
       feedingSchedule: feedingSchedule || undefined,
       walkSchedule: walkSchedule || undefined,
       medications: medications || undefined,
-      extraServices:
-        calculatePrice.effectiveExtraServices.length > 0
-          ? calculatePrice.effectiveExtraServices
-          : undefined,
+      extraServices: billedAddOnLines.length > 0 ? billedAddOnLines : undefined,
       notificationEmail: notificationEmail,
       notificationSMS: notificationSMS,
       assignedStaff: (() => {
@@ -3302,6 +3331,7 @@ export function BookingModal({
     setWalkSchedule("");
     setMedications([]);
     setExtraServices([]);
+    setAddOnStaff({});
     setNotificationEmail(true);
     setNotificationSMS(false);
     setIncludesEvaluation(false);
@@ -4847,7 +4877,13 @@ export function BookingModal({
                         roomAssignments={roomAssignments}
                         feedingSchedule={feedingSchedule}
                         medications={medications}
-                        extraServices={calculatePrice.effectiveExtraServices}
+                        extraServices={billedAddOnLines}
+                        onAddOnStaffChange={(serviceId, petId, staffId) =>
+                          setAddOnStaff((chosen) => ({
+                            ...chosen,
+                            [`${serviceId}::${petId}`]: staffId,
+                          }))
+                        }
                         addOnsCatalog={storedAddOns}
                         calculatePrice={calculatePrice}
                         facilityTaxes={facilityTaxConfig?.taxes

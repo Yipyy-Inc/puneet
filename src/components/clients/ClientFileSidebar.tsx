@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { bookingValue } from "@/lib/bookings/booking-value";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -440,7 +441,7 @@ export function ClientFileSidebar({
                       </p>
                     </div>
                     <span className="text-sm font-medium tabular-nums">
-                      {maskAmount(`$${b.totalCost}`, "booking_financials")}
+                      {maskAmount(`$${bookingValue(b)}`, "booking_financials")}
                     </span>
                   </Link>
                 );

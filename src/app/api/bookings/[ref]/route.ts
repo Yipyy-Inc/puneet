@@ -21,6 +21,8 @@ import {
 } from "@/lib/bookings/booking-lifecycle";
 import type { BookingStatus } from "@/types/base";
 import type { NewBooking } from "@/types/booking";
+import type { Json } from "@/types/database";
+import { requestAddOnLines } from "@/lib/pricing/add-on-lines";
 import { requireForms } from "@/lib/forms/require-forms";
 import { approvalRefusal } from "@/lib/bookings/request-decision";
 
@@ -274,6 +276,66 @@ export async function PATCH(
       { error: "Not allowed to edit this booking." },
       { status: 403 },
     );
+  }
+
+  // ── THE BOOKING'S OWN ADD-ONS FOLLOW THE EDIT (2026-09-30) ──────────────
+  //
+  // They are `add_on` lines, not money in `total_cost`. A new SELECTION
+  // brings them to it, across the request: a line still chosen is kept as it
+  // was sold, a new one is priced from the catalogue, one no longer chosen is
+  // removed. A new TOTAL without a new selection writes them only if the
+  // request has none of its own — a booking made before the lines existed,
+  // whose add-on money the wizard's service-only total no longer holds —
+  // because a booking that has them keeps them at the price it was sold at.
+  //
+  // After the booking's own write, so RLS has already said whether this
+  // caller may edit it; and if the add-ons cannot be written (a newly chosen
+  // one is not offered on this booking), the booking is put back rather than
+  // left with a total that leaves them out.
+  const selectionChanged = changes.extraServices !== undefined;
+  if (selectionChanged || row.total_cost !== undefined) {
+    const lines = requestAddOnLines(
+      {
+        service: merged.service ?? existing.service,
+        extraServices: merged.extraServices,
+      },
+      undefined,
+    );
+    if (selectionChanged || lines.length > 0) {
+      const { error: addOnError } = await supabase.rpc("set_booking_add_ons", {
+        p_booking_id: stored.id,
+        p_lines: lines as unknown as Json,
+        p_only_if_missing: !selectionChanged,
+      });
+      if (addOnError) {
+        const restore = Object.fromEntries(
+          Object.keys(row).map((key) => [
+            key,
+            (before as Record<string, unknown>)[key],
+          ]),
+        );
+        const { data: restored, error: restoreError } = await supabase
+          .from("bookings")
+          .update(restore as never)
+          .eq("ref", bookingRef)
+          .select("id");
+        // The undo is a write like any other, and one that did not land
+        // leaves the booking changed while this answers "refused". Say which
+        // of the two happened rather than the tidier one.
+        if (restoreError || !restored || restored.length === 0) {
+          return NextResponse.json(
+            {
+              error: `The booking was saved, but its add-ons were not: ${addOnError.message} Open the booking and check its bill.`,
+            },
+            { status: 500 },
+          );
+        }
+        return writeFailure(addOnError, {
+          denied: "Not allowed to change this booking's add-ons.",
+          duplicate: "That change conflicts with another booking.",
+        });
+      }
+    }
   }
 
   const { data: updated } = await supabase

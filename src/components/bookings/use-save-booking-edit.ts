@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { bookingMutations } from "@/lib/api/booking";
 import { useAssignBoardingRoom } from "@/lib/api/boarding-rooms";
+import { sameAddOnSelection } from "@/lib/pricing/add-on-lines";
 import type { Booking, NewBooking } from "@/types/booking";
 
 /**
@@ -20,6 +21,15 @@ import type { Booking, NewBooking } from "@/types/booking";
  *
  * Dates are among them: `sync_boarding_stay` moves a boarding stay with its
  * booking, and refuses a move onto an occupied kennel.
+ *
+ * ── THE ADD-ONS ARE COMPARED AS A SELECTION ───────────────────────────────
+ *
+ * They are bill lines since 2026-09-30, and sending the selection is what
+ * moves them. Two things follow. The form sends an EMPTIED selection as no
+ * list at all, which the rule above reads as "unchanged" — so the last add-on
+ * could be taken off in the form and stay on the bill; it is sent as an empty
+ * list. And the same add-ons in another order are not a change: sending them
+ * would re-write lines the booking already holds.
  */
 const EDITABLE: (keyof NewBooking)[] = [
   "startDate",
@@ -47,10 +57,14 @@ export function editablePatch(
 ): Partial<NewBooking> {
   const patch: Partial<NewBooking> = {};
   for (const key of EDITABLE) {
+    if (key === "extraServices") continue;
     const next = edited[key];
     if (next === undefined) continue;
     if (JSON.stringify(next) === JSON.stringify(current[key])) continue;
     (patch as Record<string, unknown>)[key] = next;
+  }
+  if (!sameAddOnSelection(current.extraServices, edited.extraServices)) {
+    patch.extraServices = edited.extraServices ?? [];
   }
   return patch;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { bookingValue } from "@/lib/bookings/booking-value";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -69,7 +70,7 @@ export function BookingCard({ booking, pet, clientId }: BookingCardProps) {
   const { maskAmount } = useFieldMask();
   const sc = statusConfig(booking.status);
   const nights = nightsBetween(booking.startDate, booking.endDate);
-  const total = booking.invoice?.total ?? booking.totalCost;
+  const total = booking.invoice?.total ?? bookingValue(booking);
   const cId = clientId ?? booking.clientId;
   const duration = nights > 0 ? `${nights}n` : "day";
   // Incidents filed against this booking. One query for every card on the

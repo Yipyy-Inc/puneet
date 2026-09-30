@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 
 import { ACCOUNTS, signIn } from "./_auth";
+import { cancelBookingsMarked } from "./_sweep";
 
 // ============================================================================
 // THE ONE ADD-ONS LIST, OVER HTTP (2026-09-26, 20260926223644).
@@ -19,13 +20,19 @@ import { ACCOUNTS, signIn } from "./_auth";
 //   3. a pet owner reads the LIVE add-ons of their own facility, and cannot
 //      write one;
 //   4. a groomer (no manage_services) cannot add or change one, and a
-//      signed-out caller reads nothing.
+//      signed-out caller reads nothing;
+//   5. "apply the changes to all unconfirmed upcoming appointments?" — after
+//      an edit, the bookings not yet confirmed are counted and, on yes, take
+//      the new price; a confirmed one keeps what it was sold at; a pet owner
+//      and a signed-out caller can do neither (2026-09-30).
 //
 // ── EVERYTHING MADE HERE IS DELETED ────────────────────────────────────────
 //
 // Add-ons and categories carry MARKER in their names and are HARD-deleted by
 // the service role before and after — the API's own delete archives, which is
-// right for a facility and would leave an inert row behind here.
+// right for a facility and would leave an inert row behind here. The two
+// bookings of case 5 carry MARKER in their notes and are cancelled by it,
+// before and after.
 // ============================================================================
 
 const MARKER = "[e2e add-ons]";
@@ -102,8 +109,14 @@ async function create(page: Page, data: Record<string, unknown>) {
 
 test.describe.configure({ mode: "serial" });
 
-test.beforeAll(sweep);
-test.afterAll(sweep);
+test.beforeAll(async ({ browser }) => {
+  await cancelBookingsMarked(browser, MARKER, "before");
+  await sweep();
+});
+test.afterAll(async ({ browser }) => {
+  await cancelBookingsMarked(browser, MARKER, "after");
+  await sweep();
+});
 
 test.describe("the one add-ons list", () => {
   test("a manager builds it: a category, an add-on with an override, and an order", async ({
@@ -288,5 +301,135 @@ test.describe("the one add-ons list", () => {
     } finally {
       await context.close();
     }
+  });
+});
+
+// ============================================================================
+// "APPLY THE CHANGES TO ALL UNCONFIRMED UPCOMING APPOINTMENTS?" (2026-09-30)
+//
+// An add-on on a booking is a bill line carrying its own price, so an edit to
+// the add-on does not reach the bookings that already hold it. The facility
+// is asked, and "yes" reaches the bookings that are not confirmed yet — and
+// no others.
+// ============================================================================
+
+/** Alice and her dog — Alice is ACCOUNTS.customer. */
+const ALICE = { client: 15, pet: 1 };
+/** What the e2e facility's daycare rate card charges for a full day. */
+const FULL_DAY = 38;
+
+function day(offset: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+interface BillLine {
+  kind: string;
+  name: string;
+  unitPrice: number;
+}
+
+test.describe("an edit and the bookings that already hold the add-on", () => {
+  test("the unconfirmed upcoming booking takes the new price; the confirmed one keeps its own", async ({
+    page,
+    browser,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+    const { addOn } = await create(page, {
+      name: `${MARKER} Apply walk`,
+      price: 5,
+    });
+    const upcoming = `${ADD_ONS}/${addOn.id}/apply-to-upcoming`;
+
+    const book = async (status: string, offset: number) => {
+      const res = await page.request.post("/api/bookings", {
+        data: {
+          clientId: ALICE.client,
+          petId: ALICE.pet,
+          service: "daycare",
+          startDate: day(offset),
+          endDate: day(offset),
+          checkInTime: "08:00",
+          checkOutTime: "17:00",
+          status,
+          basePrice: FULL_DAY,
+          discount: 0,
+          totalCost: FULL_DAY,
+          specialRequests: `${MARKER} apply`,
+          extraServices: [
+            { serviceId: addOn.id, quantity: 1, petId: ALICE.pet },
+          ],
+        },
+      });
+      expect(res.status(), await res.text()).toBe(201);
+      return ((await res.json()) as { id: number }).id;
+    };
+    const walkOn = async (ref: number) => {
+      const res = await page.request.get(`/api/bookings/${ref}/line-items`);
+      expect(res.ok(), await res.text()).toBe(true);
+      return ((await res.json()) as BillLine[]).filter(
+        (line) => line.kind === "add_on",
+      );
+    };
+
+    const pending = await book("pending", 23);
+    const confirmed = await book("confirmed", 24);
+    expect(await walkOn(pending)).toEqual([
+      expect.objectContaining({ name: addOn.name, unitPrice: 5 }),
+    ]);
+
+    // The price moves, and nothing on a booking moves with it.
+    const edited = await page.request.patch(`${ADD_ONS}/${addOn.id}`, {
+      data: { price: 9 },
+    });
+    expect(edited.ok(), await edited.text()).toBe(true);
+    expect((await walkOn(pending))[0]?.unitPrice).toBe(5);
+
+    // One booking is waiting on the answer: the pending one.
+    const count = await page.request.get(upcoming);
+    expect(count.ok(), await count.text()).toBe(true);
+    expect(await count.json()).toEqual({ bookings: 1 });
+
+    // A pet owner may neither ask nor answer — nor may nobody.
+    const owner = await browser.newContext();
+    try {
+      const theirs = await owner.newPage();
+      await signIn(theirs, ACCOUNTS.customer);
+      expect((await theirs.request.get(upcoming)).status()).toBe(403);
+      expect((await theirs.request.post(upcoming)).status()).toBe(403);
+    } finally {
+      await owner.close();
+    }
+    const nobody = await browser.newContext();
+    try {
+      const anon = await nobody.newPage();
+      expect((await anon.request.get(upcoming)).status()).toBe(401);
+      expect((await anon.request.post(upcoming)).status()).toBe(401);
+    } finally {
+      await nobody.close();
+    }
+    expect(
+      (await walkOn(pending))[0]?.unitPrice,
+      "a refused caller changed nothing",
+    ).toBe(5);
+
+    // Yes.
+    const applied = await page.request.post(upcoming);
+    expect(applied.ok(), await applied.text()).toBe(true);
+    expect(await applied.json()).toEqual({ applied: 1 });
+
+    expect((await walkOn(pending))[0]?.unitPrice).toBe(9);
+    expect(
+      (await walkOn(confirmed))[0]?.unitPrice,
+      "a confirmed booking keeps what was agreed",
+    ).toBe(5);
+
+    // And the bill followed the line: the day, and the walk at its new price.
+    const read = await page.request.get(`/api/bookings?ref=${pending}`);
+    expect(read.ok(), await read.text()).toBe(true);
+    const [row] = (await read.json()) as Array<{ amountDue?: number }>;
+    expect(row?.amountDue).toBe(FULL_DAY + 9);
   });
 });

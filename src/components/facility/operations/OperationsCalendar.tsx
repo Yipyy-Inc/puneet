@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { bookingValue } from "@/lib/bookings/booking-value";
 import { usePathname, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -1064,7 +1065,7 @@ export function OperationsCalendar() {
         expected += invoice.total;
         collected += Math.max(0, invoice.total - invoice.remainingDue);
       } else {
-        const amount = booking.totalCost || booking.basePrice || 0;
+        const amount = bookingValue(booking) || booking.basePrice || 0;
         expected += amount;
         collected += booking.paymentStatus === "paid" ? amount : 0;
       }

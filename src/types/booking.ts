@@ -118,6 +118,11 @@ export const extraServiceSchema = z.object({
   serviceId: z.string(),
   quantity: z.number(),
   petId: z.number(),
+  /**
+   * The member of staff assigned to an add-on that requires one — stored on
+   * its `add_on` line (2026-09-30). Absent: nobody assigned yet.
+   */
+  staffId: z.string().optional(),
 });
 
 export type ExtraService = z.infer<typeof extraServiceSchema>;
@@ -870,6 +875,13 @@ export const bookingSchema = newBookingSchema.extend({
    * field must behave exactly as it did before the column existed.
    */
   taxableExtrasTotal: z.number().optional(),
+  /**
+   * The booking's own add-ons — its `add_on` lines, inside `extrasTotal`.
+   * DERIVED (2026-09-30). They sat inside `totalCost` before that, so
+   * anything that measured "the service and its add-ons" (a percentage fee, a
+   * deposit) reads `totalCost + addOnsTotal`. Absent on an older read: 0.
+   */
+  addOnsTotal: z.number().optional(),
   /**
    * Whether this booking's OWN service price is taxed.
    *

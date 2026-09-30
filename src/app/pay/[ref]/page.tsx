@@ -69,6 +69,12 @@ interface BookingRow {
   /** The split between the service and what was added — see BookingBill. */
   total_cost: number | null;
   extras_total: number | null;
+  /**
+   * The taxed part of the extras. Left out of this read until 2026-09-30, so
+   * an add-on the facility does not tax was shown with tax the card route
+   * then did not charge.
+   */
+  taxable_extras_total: number | null;
   taxable: boolean | null;
   /** The tip the booking carries: the owner's pledge, or one added when booking. */
   tip_amount: number | string | null;
@@ -105,7 +111,7 @@ export default async function PayBookingPage({
   const { data } = await supabase
     .from("bookings")
     .select(
-      "id, ref, facility_id, client_id, service, service_type, start_at, status, amount_due, amount_paid, total_cost, extras_total, taxable, tip_amount, facilities ( name, timezone )",
+      "id, ref, facility_id, client_id, service, service_type, start_at, status, amount_due, amount_paid, total_cost, extras_total, taxable_extras_total, taxable, tip_amount, facilities ( name, timezone )",
     )
     .eq("ref", bookingRef)
     .maybeSingle();

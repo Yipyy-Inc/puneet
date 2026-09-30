@@ -22,8 +22,11 @@ import type { PricingRuleAdjustment } from "@/lib/pricing-rules";
  * The database computes what is owed. This computes what to store so that the
  * database's answer is the figure on screen:
  *
- *     amount_due = (total − fees + discount) + fees − discount = total
- *                   └────── serviceTotal ──────┘  └ extras ┘  └ discount ┘
+ *     amount_due = (total − fees − addOns + discount) + (fees + addOns) − discount
+ *                   └─────────── serviceTotal ──────────┘  └── extras ──┘
+ *                = total
+ *
+ * (The add-ons joined the fees as lines on 2026-09-30.)
  *
  * So the three outputs are not independent — they are one sentence, and
  * `tests/unit/booking-write-money.test.ts` asserts the whole sentence rather than
@@ -61,6 +64,13 @@ export interface BookingMoneyInput {
    * nothing else at booking time, so it is added rather than filtered out.
    */
   packagePassDiscount?: number;
+  /**
+   * The booking's own add-ons (the chosen ones, a service's defaults, a
+   * groom's), as `total` counts them. They are `booking_line_items` of kind
+   * `add_on` since 2026-09-30, written by the server at the catalogue's price,
+   * so — like the service charges — they come out of `total_cost`.
+   */
+  addOnsTotal?: number;
   /** What the customer is quoted: the figure on screen, tax included. */
   total: number;
 }
@@ -82,6 +92,7 @@ export function splitBookingMoney({
   adjustments,
   discountTotal,
   packagePassDiscount = 0,
+  addOnsTotal = 0,
   total,
 }: BookingMoneyInput): BookingMoney {
   // A custom fee can be authored as a discount, in which case it is already a
@@ -105,8 +116,11 @@ export function splitBookingMoney({
   return {
     discount,
     serviceChargeTotal,
-    // The fees come out (they are billed as lines) and the discount goes back
-    // in (the database subtracts it itself). Both, or the bill is wrong twice.
-    serviceTotal: round2(total - serviceChargeTotal + discount),
+    // The fees and the add-ons come out (they are billed as lines) and the
+    // discount goes back in (the database subtracts it itself). All three, or
+    // the bill is wrong.
+    serviceTotal: round2(
+      total - serviceChargeTotal - (addOnsTotal || 0) + discount,
+    ),
   };
 }

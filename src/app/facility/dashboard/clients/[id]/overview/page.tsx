@@ -60,6 +60,7 @@ import {
   CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { bookingValue } from "@/lib/bookings/booking-value";
 import { toast } from "sonner";
 import {
   getPetAgeDisplay,
@@ -175,7 +176,7 @@ export default function ClientOverviewPage({
   );
   const totalSpent = clientBookings
     .filter((b) => b.paymentStatus === "paid")
-    .reduce((s, b) => s + b.totalCost, 0);
+    .reduce((s, b) => s + bookingValue(b), 0);
   const avgSpent =
     completedBookings.length > 0 ? totalSpent / completedBookings.length : 0;
 
@@ -447,7 +448,7 @@ export default function ClientOverviewPage({
                             {b.status}
                           </Badge>
                           <p className="mt-0.5 text-sm font-medium tabular-nums">
-                            ${b.totalCost}
+                            ${bookingValue(b)}
                           </p>
                         </div>
                       </Link>
@@ -1030,7 +1031,7 @@ export default function ClientOverviewPage({
             service: b.service,
             date: b.startDate,
             petName: bPet?.name ?? "Pet",
-            total: b.totalCost,
+            total: bookingValue(b),
             // From the ledger. These fell back to `depositCollected ?? 0` and
             // `remainingDue ?? totalCost` — the PRICE — so every part-paid
             // booking listed the wrong figure on both lines.

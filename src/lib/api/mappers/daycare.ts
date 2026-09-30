@@ -74,6 +74,8 @@ export interface DaycareBookingRow {
   total_cost: number | string;
   amount_due: number | string | null;
   extras_total: number | string | null;
+  taxable_extras_total: number | string | null;
+  add_ons_total: number | string | null;
   taxable: boolean | null;
   amount_paid: number | string | null;
   clients: { ref: number; name: string; phone: string | null } | null;
@@ -93,7 +95,8 @@ export interface DaycareBookingRow {
 
 export const DAYCARE_BOOKING_SELECT = `
   id, ref, start_at, end_at, status, service_type,
-  total_cost, amount_due, amount_paid, extras_total, taxable,
+  total_cost, amount_due, amount_paid, extras_total, taxable_extras_total,
+  add_ons_total, taxable,
   clients ( ref, name, phone ),
   booking_pets ( pets ( ref, name, breed, weight, image_url ) ),
   daycare_attendance ( booking_id, checked_in_at, checked_out_at, status,
@@ -150,6 +153,10 @@ export function rowToDaycareCheckIn(
     totalCost: Number(row.total_cost),
     amountDue: Number(row.amount_due ?? row.total_cost),
     extrasTotal: Number(row.extras_total ?? 0),
+    ...(row.taxable_extras_total == null
+      ? {}
+      : { taxableExtrasTotal: Number(row.taxable_extras_total) }),
+    addOnsTotal: Number(row.add_ons_total ?? 0),
     taxable: row.taxable !== false,
     amountPaid: Number(row.amount_paid ?? 0),
     notes: attendance?.notes ?? "",

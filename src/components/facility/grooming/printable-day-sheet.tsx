@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { GroomingAppointment } from "@/types/grooming";
 import { getEffectiveAlertNotes } from "@/lib/api/grooming";
+import { appointmentValue } from "@/lib/grooming/appointment-value";
 import { useGroomingStations } from "@/hooks/use-grooming-stations";
 import type { TimeBlock } from "./time-block-dialog";
 
@@ -88,7 +89,10 @@ export function PrintableDaySheet({
   // Summary totals — appointments, distinct pets, expected revenue.
   const totals = useMemo(() => {
     const distinctPetIds = new Set(dayAppointments.map((a) => a.petId));
-    const revenue = dayAppointments.reduce((s, a) => s + a.totalPrice, 0);
+    const revenue = dayAppointments.reduce(
+      (s, a) => s + appointmentValue(a),
+      0,
+    );
     return {
       appointments: dayAppointments.length,
       pets: distinctPetIds.size,
@@ -171,7 +175,7 @@ export function PrintableDaySheet({
                   a.addOns && a.addOns.length > 0 ? a.addOns.join(", ") : "—",
                 ownerName: a.ownerName,
                 ownerPhone: a.ownerPhone,
-                price: a.totalPrice,
+                price: appointmentValue(a),
                 station: a.stationId
                   ? (stationNameById[a.stationId] ?? a.stationId)
                   : "Auto",

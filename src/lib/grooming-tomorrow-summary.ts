@@ -12,6 +12,7 @@
 
 import type { GroomingAppointment } from "@/types/grooming";
 import { getEffectiveAlertNotes } from "@/lib/api/grooming";
+import { appointmentValue } from "@/lib/grooming/appointment-value";
 
 // Default evening send time (Table 77) — configurable per facility. Kept here
 // so the preview header matches what a real scheduled send would stamp.
@@ -123,9 +124,9 @@ export function buildTomorrowSummary(
     .filter((a) => a.stylistId === stylistId)
     .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
-  const groomerEarnings = mine.reduce((sum, a) => sum + (a.totalPrice ?? 0), 0);
+  const groomerEarnings = mine.reduce((sum, a) => sum + appointmentValue(a), 0);
   const facilityTotal = dayAppts.reduce(
-    (sum, a) => sum + (a.totalPrice ?? 0),
+    (sum, a) => sum + appointmentValue(a),
     0,
   );
 
@@ -138,7 +139,7 @@ export function buildTomorrowSummary(
     ownerName: a.ownerName,
     ownerPhone: a.ownerPhone,
     addOns: a.addOns ?? [],
-    price: a.totalPrice ?? 0,
+    price: appointmentValue(a),
     // Table 80 — pull effective alerts (own + carried-forward) per appointment.
     alerts: getEffectiveAlertNotes(a, appointments).map((n) => n.text),
   }));

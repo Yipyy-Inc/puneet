@@ -152,7 +152,9 @@ export function BookingCard({
     release: releaseLoyaltyDiscount,
   } = useActiveLoyaltyDiscount({
     clientRef: booking.ownerId ?? undefined,
-    subtotal: booking.price ?? 0,
+    // The service AND its own add-ons, as the booking page measures it: the
+    // add-ons are bill lines since 2026-09-30 and no longer inside `price`.
+    subtotal: (booking.price ?? 0) + (booking.addOnsTotal ?? 0),
     serviceType: booking.serviceKey,
   });
   const [checkInOpen, setCheckInOpen] = useState(false);
@@ -304,7 +306,7 @@ export function BookingCard({
       serviceId: booking.serviceKey,
       timeZone: facilityTimeZone,
       petCount: 1, // a board row is one pet: `petId` is a number, not a list
-      perUnitBase: booking.price ?? 0,
+      perUnitBase: (booking.price ?? 0) + (booking.addOnsTotal ?? 0),
       scheduledCheckInTime: booking.scheduledStart,
       scheduledCheckOutTime: booking.scheduledEnd,
       actualCheckInTime: booking.actualStart ?? booking.scheduledStart,
@@ -603,6 +605,7 @@ export function BookingCard({
                   taxableBill={{
                     totalCost: booking.price,
                     extrasTotal: booking.extrasTotal,
+                    taxableExtrasTotal: booking.taxableExtrasTotal,
                     taxable: booking.taxable,
                   }}
                   depositPaid={booking.amountPaid ?? 0}

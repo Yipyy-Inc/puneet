@@ -72,6 +72,14 @@ export interface BoardingArrival {
    */
   extrasTotal?: number;
   taxable?: boolean;
+  /**
+   * The taxed PART of those extras, and the booking's own add-ons inside
+   * them (2026-09-30). An add-on the facility does not tax is a line now, so
+   * a till that taxed every extra would tax it; and what the booking is worth
+   * — a percentage fee's base — is the price AND those add-ons.
+   */
+  taxableExtrasTotal?: number;
+  addOnsTotal?: number;
   nights: number;
   isArrivingToday: boolean;
   isDepartingToday: boolean;
@@ -109,6 +117,8 @@ export interface BoardingArrivalRow {
   total_cost: number | string;
   amount_due: number | string | null;
   extras_total: number | string | null;
+  taxable_extras_total: number | string | null;
+  add_ons_total: number | string | null;
   taxable: boolean | null;
   amount_paid: number | string | null;
   clients: { ref: number; name: string; phone: string | null } | null;
@@ -131,7 +141,8 @@ export interface BoardingArrivalRow {
 
 export const BOARDING_ARRIVAL_SELECT = `
   id, ref, start_at, end_at, status,
-  total_cost, amount_due, amount_paid, extras_total, taxable,
+  total_cost, amount_due, amount_paid, extras_total, taxable_extras_total,
+  add_ons_total, taxable,
   clients ( ref, name, phone ),
   booking_pets ( pets ( ref, name, breed, species ) ),
   boarding_stays ( room_id, checked_in_at, checked_out_at, status, released_at,
@@ -207,6 +218,10 @@ export function rowToBoardingArrival(
     totalCost: Number(row.total_cost),
     amountDue: Number(row.amount_due ?? row.total_cost),
     extrasTotal: Number(row.extras_total ?? 0),
+    ...(row.taxable_extras_total == null
+      ? {}
+      : { taxableExtrasTotal: Number(row.taxable_extras_total) }),
+    addOnsTotal: Number(row.add_ons_total ?? 0),
     taxable: row.taxable !== false,
     amountPaid: Number(row.amount_paid ?? 0),
     nights,

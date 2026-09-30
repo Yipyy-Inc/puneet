@@ -22,10 +22,12 @@ import { useGroomingMenu } from "@/lib/api/grooming-catalogue";
 // other service: active, at this location, for the chosen grooming service,
 // and for every pet on the booking.
 //
-// Each add-on is quoted at ITS OWN price and minutes, not a location's
-// override: `create_booking` records a grooming add-on at its own price, and
-// the wizard must quote what the bill will say. Overrides reach grooming when
-// add-ons become bill lines (the plan's Phase 4).
+// Each add-on is quoted at the booking LOCATION'S price and minutes, as on
+// every other service, since 2026-09-30: a groom's add-on is now a bill line
+// the database prices from the catalogue at the booking's location
+// (`private.add_on_for_booking`), and the wizard must quote what the bill
+// will say. Until then `create_booking` recorded it at its own price, so the
+// override was left out here on purpose.
 //
 // The booking screen and its details step both call this with the same pets
 // and service, so the list priced is the list offered.
@@ -75,11 +77,11 @@ export function useGroomingAddOnOffer({
       pets.map(addOnPetFacts),
     );
     if (offered.length === 0) return NO_OFFERS;
-    return offered.map(({ addOn }) => ({
+    return offered.map(({ addOn, terms }) => ({
       id: addOn.legacyId ?? addOn.id,
       name: addOn.name,
-      price: addOn.price,
-      duration: addOn.durationMin,
+      price: terms.price,
+      duration: terms.durationMin,
       description: addOn.description,
       imageUrl: addOn.imageUrl,
     }));

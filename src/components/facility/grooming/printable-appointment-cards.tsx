@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { QRCodeSVG } from "qrcode.react";
 import type { GroomingAppointment } from "@/types/grooming";
+import { appointmentValue } from "@/lib/grooming/appointment-value";
 import { getEffectiveAlertNotes, groomingQueries } from "@/lib/api/grooming";
 import { useClientRecord } from "@/lib/api/client";
 import { usePetVaccinations } from "@/lib/api/vaccinations";
@@ -374,7 +375,7 @@ function AppointmentCard({
               Total
             </p>
             <p className="text-lg font-bold tabular-nums">
-              ${appointment.totalPrice}
+              ${appointmentValue(appointment)}
             </p>
           </div>
         </div>

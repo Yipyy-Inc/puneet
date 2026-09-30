@@ -590,6 +590,10 @@ export type Database = {
           taxable: boolean;
           unit_price: number;
           updated_at: string;
+          add_on_id: string | null;
+          duration_min: number | null;
+          pet_id: string | null;
+          staff_id: string | null;
         };
         Insert: {
           author_name?: string;
@@ -607,6 +611,10 @@ export type Database = {
           taxable?: boolean;
           unit_price: number;
           updated_at?: string;
+          add_on_id?: string | null;
+          duration_min?: number | null;
+          pet_id?: string | null;
+          staff_id?: string | null;
         };
         Update: {
           author_name?: string;
@@ -624,8 +632,26 @@ export type Database = {
           taxable?: boolean;
           unit_price?: number;
           updated_at?: string;
+          add_on_id?: string | null;
+          duration_min?: number | null;
+          pet_id?: string | null;
+          staff_id?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: "booking_line_items_add_on_id_fkey";
+            columns: ["add_on_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_add_ons";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "booking_line_items_add_on_id_fkey";
+            columns: ["add_on_id"];
+            isOneToOne: false;
+            referencedRelation: "service_add_ons";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "booking_line_items_booking_id_fkey";
             columns: ["booking_id"];
@@ -652,6 +678,27 @@ export type Database = {
             columns: ["facility_id"];
             isOneToOne: false;
             referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "booking_line_items_pet_id_fkey";
+            columns: ["pet_id"];
+            isOneToOne: false;
+            referencedRelation: "pets";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "booking_line_items_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
+          },
+          {
+            foreignKeyName: "booking_line_items_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
             referencedColumns: ["id"];
           },
         ];
@@ -796,6 +843,7 @@ export type Database = {
       };
       bookings: {
         Row: {
+          add_ons_total: number;
           amount_due: number | null;
           amount_paid: number;
           assigned_staff_id: string | null;
@@ -825,6 +873,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          add_ons_total?: number;
           amount_due?: number | null;
           amount_paid?: number;
           assigned_staff_id?: string | null;
@@ -854,6 +903,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          add_ons_total?: number;
           amount_due?: number | null;
           amount_paid?: number;
           assigned_staff_id?: string | null;
@@ -13714,6 +13764,10 @@ export type Database = {
           title: string;
         }[];
       };
+      add_on_upcoming_bookings: {
+        Args: { p_add_on: string };
+        Returns: number;
+      };
       add_owner_booking_note: {
         Args: { p_content: string; p_kind: string; p_ref: number };
         Returns: string;
@@ -13791,6 +13845,10 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      apply_add_on_to_upcoming: {
+        Args: { p_add_on: string };
+        Returns: number;
       };
       apply_schedule_template: {
         Args: { p_template_id: string; p_week_start: string };
@@ -15397,6 +15455,14 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      set_booking_add_ons: {
+        Args: {
+          p_booking_id: string;
+          p_lines: Json;
+          p_only_if_missing?: boolean;
+        };
+        Returns: number;
       };
       set_booking_tip_split: {
         Args: { p_allocations: Json; p_booking_ref: number; p_method: string };

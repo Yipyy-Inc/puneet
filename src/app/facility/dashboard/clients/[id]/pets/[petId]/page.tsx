@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, use } from "react";
+import { bookingValue } from "@/lib/bookings/booking-value";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -1113,7 +1114,7 @@ export default function PetDetailPage({
                               {booking.status}
                             </Badge>
                             <p className="mt-1 text-sm font-medium">
-                              ${booking.totalCost}
+                              ${bookingValue(booking)}
                             </p>
                           </div>
                         </Link>

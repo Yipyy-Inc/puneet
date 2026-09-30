@@ -33,6 +33,7 @@ export function normalizeExtraServices(
     const existing = map.get(key);
     if (existing) {
       existing.quantity += quantity;
+      existing.staffId ??= service.staffId;
       continue;
     }
 
@@ -40,10 +41,65 @@ export function normalizeExtraServices(
       serviceId: service.serviceId,
       petId: service.petId,
       quantity,
+      ...(service.staffId ? { staffId: service.staffId } : {}),
     });
   }
 
   return Array.from(map.values());
+}
+
+/**
+ * A request's add-ons as the server writes them — `add_on` lines, placed ONCE
+ * on the request however many bookings it splits into (2026-09-30): the
+ * chosen lines and, for a groom, its package add-ons, one each for the pet
+ * being groomed. No price travels; the server reads the catalogue's.
+ */
+export function requestAddOnLines(
+  input: {
+    service: string;
+    /** Bare strings are an old shape with no quantity or pet; not lines. */
+    extraServices?: readonly (ExtraService | string)[];
+    groomingAddOns?: readonly string[];
+  },
+  groomedPetRef: number | undefined,
+): ExtraService[] {
+  const chosen = (input.extraServices ?? []).filter(
+    (line): line is ExtraService => typeof line === "object" && line !== null,
+  );
+  const groom =
+    input.service === "grooming" && groomedPetRef != null
+      ? (input.groomingAddOns ?? []).map((serviceId) => ({
+          serviceId,
+          quantity: 1,
+          petId: groomedPetRef,
+        }))
+      : [];
+  return normalizeExtraServices([...chosen, ...groom]);
+}
+
+/**
+ * Whether two selections are the same add-ons — whatever order the lines
+ * come in, however many rows one add-on is split over, and whether "none" is
+ * an empty list or no list at all.
+ *
+ * An edit asks this before it sends the selection (2026-09-30): a changed one
+ * replaces the booking's add-on lines at today's prices, so one that only
+ * LOOKS different must not, and one that was emptied — which the form sends
+ * as no list — must.
+ */
+export function sameAddOnSelection(
+  a: readonly (ExtraService | string)[] | undefined,
+  b: readonly (ExtraService | string)[] | undefined,
+): boolean {
+  const key = (lines: readonly (ExtraService | string)[] | undefined) =>
+    requestAddOnLines({ service: "", extraServices: lines }, undefined)
+      .map(
+        (line) =>
+          `${line.serviceId}::${line.petId}::${line.quantity}::${line.staffId ?? ""}`,
+      )
+      .sort()
+      .join("\n");
+  return key(a) === key(b);
 }
 
 /**

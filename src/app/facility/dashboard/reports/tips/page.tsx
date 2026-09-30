@@ -56,6 +56,7 @@ interface PaymentRow {
     ref: number;
     service: string | null;
     total_cost: number | string | null;
+    add_ons_total: number | string | null;
     clients: { name: string | null } | null;
     booking_pets: { pets: { name: string | null } | null }[] | null;
   } | null;
@@ -87,7 +88,7 @@ export default async function TipsReportPage() {
     .from("payments")
     .select(
       "id, tip, method, processor, entry_method, created_at, booking_id, " +
-        "bookings!inner(ref, service, total_cost, clients(name), booking_pets(pets(name)))",
+        "bookings!inner(ref, service, total_cost, add_ons_total, clients(name), booking_pets(pets(name)))",
     )
     .eq("facility_id", active.facility.id)
     .neq("tip", 0)
@@ -144,7 +145,11 @@ export default async function TipsReportPage() {
           .filter(Boolean)[0] ?? null,
       service: p.bookings?.service ?? null,
       tip: Number(p.tip),
-      bookingTotal: Number(p.bookings?.total_cost ?? 0),
+      // The service and its own add-ons — what `total_cost` alone held
+      // until the add-ons became bill lines (2026-09-30).
+      bookingTotal:
+        Number(p.bookings?.total_cost ?? 0) +
+        Number(p.bookings?.add_ons_total ?? 0),
       source:
         channel === "in_person"
           ? "Terminal"

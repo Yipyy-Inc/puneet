@@ -141,6 +141,7 @@ import {
   type Tender,
 } from "@/lib/api/booking-money";
 import { useAddLineItems } from "@/lib/api/booking-line-items";
+import { bookingValue } from "@/lib/bookings/booking-value";
 import { useBookingCheckout } from "@/hooks/use-booking-checkout";
 import { useBookingTips, useSetTipSplit } from "@/lib/api/booking-tips";
 import { tipStillToCollect } from "@/lib/payments/pledged-tip";
@@ -323,7 +324,7 @@ export default function ClientBookingDetailPage({
     release: releaseLoyaltyDiscount,
   } = useActiveLoyaltyDiscount({
     clientRef: clientId,
-    subtotal: booking?.totalCost ?? 0,
+    subtotal: booking ? bookingValue(booking) : 0,
     serviceType: booking?.service?.toLowerCase(),
   });
   const [pendingTimeFees, setPendingTimeFees] = useState<TimeFeeResult[]>([]);
@@ -610,7 +611,7 @@ export default function ClientBookingDetailPage({
         clientMembershipRows ?? [],
         membershipPlanRows ?? [],
         String(booking.service ?? ""),
-        booking.totalCost ?? 0,
+        bookingValue(booking),
         booking.startDate,
       )
     : null;
@@ -679,7 +680,7 @@ export default function ClientBookingDetailPage({
       !depositRulesPending &&
       findApplicableDepositRule(
         booking.service,
-        booking.totalCost,
+        bookingValue(booking),
         depositRules,
       ),
     ),
@@ -1160,7 +1161,8 @@ export default function ClientBookingDetailPage({
         {
           serviceId: booking.service.toLowerCase(),
           petCount,
-          serviceTotal: booking.totalCost ?? 0,
+          // The service and its own add-ons (2026-09-30: add-ons are lines).
+          serviceTotal: bookingValue(booking),
           locationId: booking.locationId,
         },
       ).filter((line) => !alreadyChargedFeeIds.has(line.feeId)),
@@ -1168,7 +1170,7 @@ export default function ClientBookingDetailPage({
     setCheckoutOpen(true);
   };
 
-  const bookingTotalForDeposit = invoice?.total ?? booking.totalCost;
+  const bookingTotalForDeposit = invoice?.total ?? bookingValue(booking);
   const depositRule = depositRulesPending
     ? null
     : findApplicableDepositRule(
@@ -1901,7 +1903,7 @@ export default function ClientBookingDetailPage({
         <RefundModal
           open={refundOpen}
           onOpenChange={setRefundOpen}
-          invoiceTotal={invoice?.total ?? booking.totalCost}
+          invoiceTotal={invoice?.total ?? bookingValue(booking)}
           // What was actually taken, from the ledger. It used to fall back to
           // the full price, which caps a refund at the amount the customer was
           // BILLED rather than the amount they handed over.
@@ -2003,10 +2005,11 @@ export default function ClientBookingDetailPage({
           onOpenChange={setServiceChargeOpen}
           serviceId={String(booking.service ?? "")}
           petCount={Array.isArray(booking.petId) ? booking.petId.length : 1}
-          // The SERVICE's price, which is what `total_cost` now holds — a
-          // percentage fee is a percentage of that, never of the running
-          // total, or two of them would compound into each other.
-          serviceTotal={booking.totalCost ?? 0}
+          // The SERVICE's price and its own add-ons (`total_cost` +
+          // `add_ons_total` since 2026-09-30) — a percentage fee is a
+          // percentage of that, never of the running total, or two of them
+          // would compound into each other.
+          serviceTotal={bookingValue(booking)}
           locationId={booking.locationId}
           appliedFeeIds={[...alreadyChargedFeeIds]}
           // `ifAbsent` is NOT set: a duplicate here is a mistake worth seeing,

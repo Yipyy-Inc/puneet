@@ -134,6 +134,14 @@ export interface UnifiedBooking {
    */
   extrasTotal?: number;
   taxable?: boolean;
+  /**
+   * The taxed PART of those extras, and the booking's own add-ons inside
+   * them (2026-09-30). An add-on the facility does not tax is a line now, so
+   * a till that taxed every extra would tax it; and what the booking is worth
+   * — a percentage fee's base — is the price AND those add-ons.
+   */
+  taxableExtrasTotal?: number;
+  addOnsTotal?: number;
   totalNights?: number;
   groupNote?: string;
 }
@@ -277,6 +285,8 @@ function normalizeBoarding(g: BoardingArrival): UnifiedBooking {
     amountPaid: g.amountPaid,
     extrasTotal: g.extrasTotal,
     taxable: g.taxable,
+    taxableExtrasTotal: g.taxableExtrasTotal,
+    addOnsTotal: g.addOnsTotal,
     totalNights: g.nights,
   };
 }
@@ -324,6 +334,10 @@ function normalizeDaycare(d: DaycareCheckIn): UnifiedBooking {
     ...(d.amountPaid !== undefined ? { amountPaid: d.amountPaid } : {}),
     ...(d.extrasTotal !== undefined ? { extrasTotal: d.extrasTotal } : {}),
     ...(d.taxable !== undefined ? { taxable: d.taxable } : {}),
+    ...(d.taxableExtrasTotal !== undefined
+      ? { taxableExtrasTotal: d.taxableExtrasTotal }
+      : {}),
+    ...(d.addOnsTotal !== undefined ? { addOnsTotal: d.addOnsTotal } : {}),
   };
 }
 
@@ -353,6 +367,8 @@ interface MinimalGroomingAppt {
    */
   extrasTotal?: number;
   taxable?: boolean;
+  taxableExtrasTotal?: number;
+  addOnsTotal?: number;
   checkInTime: string | null;
   checkOutTime: string | null;
   notes: string;
@@ -398,6 +414,8 @@ function normalizeGrooming(a: MinimalGroomingAppt): UnifiedBooking {
     amountPaid: a.amountPaid ?? 0,
     extrasTotal: a.extrasTotal,
     taxable: a.taxable,
+    taxableExtrasTotal: a.taxableExtrasTotal,
+    addOnsTotal: a.addOnsTotal,
   };
 }
 

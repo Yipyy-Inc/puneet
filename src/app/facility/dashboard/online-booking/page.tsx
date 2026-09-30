@@ -96,6 +96,10 @@ function toRequest(
   const quotes = days
     .map((day) => quotedTotal(day))
     .filter((q): q is number => q !== null);
+  // The quote is the SERVICE. The add-ons the request asked for are already
+  // lines on its bookings, at the catalogue's price (2026-09-30) — part of
+  // the one figure the customer's form showed.
+  const addOns = days.reduce((sum, day) => sum + (day.addOnsTotal ?? 0), 0);
   const client = clientsByRef.get(b.clientId);
   const petRef = Array.isArray(b.petId) ? b.petId[0] : b.petId;
   const pet = client?.pets?.find((p) => p.id === petRef);
@@ -126,7 +130,8 @@ function toRequest(
     medications: b.medications,
     refs: days.map((day) => day.id),
     dayDates: days.map((day) => day.startDate),
-    quote: quotes.length > 0 ? quotes.reduce((a, q) => a + q, 0) : null,
+    quote:
+      quotes.length > 0 ? quotes.reduce((a, q) => a + q, 0) + addOns : null,
   };
 }
 
@@ -767,6 +772,13 @@ export default function OnlineBookingPage() {
           preSelectedRoomId={scheduling.unitAssignment ?? undefined}
           preSelectedDaycareSectionId={scheduling.sectionId ?? undefined}
           preSelectedDaycareDates={scheduling.daycareSelectedDates}
+          // The add-ons the customer asked for. Without them the form opened
+          // with none — and saving it would now read as "taken off".
+          preSelectedExtraServices={
+            scheduling.extraServices?.filter(
+              (x): x is ExtraService => typeof x !== "string",
+            ) ?? []
+          }
           preSelectedFeedingSchedule={scheduling.feedingSchedule}
           preSelectedMedications={scheduling.medications}
           preSelectedSpecialRequests={scheduling.specialRequests}

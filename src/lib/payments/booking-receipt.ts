@@ -31,6 +31,8 @@ export interface ReceiptBookingRow {
    */
   totalCost?: number;
   extrasTotal?: number;
+  /** The taxed part of the extras; absent means all of them. */
+  taxableExtrasTotal?: number;
   taxable?: boolean;
   clientName: string | null;
   petNames: string[];
@@ -140,6 +142,7 @@ export function bookingReceiptInput(input: {
       {
         totalCost: booking.totalCost,
         extrasTotal: booking.extrasTotal,
+        taxableExtrasTotal: booking.taxableExtrasTotal,
         taxable: booking.taxable,
       },
       taxConfig.pricesIncludeTax ? subtotalCents + taxCents : subtotalCents,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { bookingValue } from "@/lib/bookings/booking-value";
 import Image from "next/image";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useHydrated } from "@/hooks/use-hydrated";
@@ -1396,7 +1397,7 @@ export default function CustomerDashboardPage() {
                       </p>
                     </div>
                     <div className="text-primary text-sm font-semibold tabular-nums">
-                      {formatMoney(booking.totalCost, locale)}
+                      {formatMoney(bookingValue(booking), locale)}
                     </div>
                   </Link>
                 );

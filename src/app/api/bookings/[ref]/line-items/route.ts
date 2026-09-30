@@ -49,7 +49,12 @@ async function resolveBooking(
 
 export interface BookingLineItem {
   id: string;
-  kind: "item" | "fee";
+  /**
+   * "add_on" is one of the booking's OWN add-ons, written by the server at
+   * the catalogue's price when the booking was made or edited (2026-09-30).
+   * It is read here and never posted: see POST.
+   */
+  kind: "item" | "fee" | "add_on";
   name: string;
   unitPrice: number;
   quantity: number;
@@ -63,6 +68,11 @@ export interface BookingLineItem {
    * disabled, rather than letting staff find out by getting a 409 back.
    */
   feeId?: string;
+  /**
+   * Who an add-on is assigned to, when it needs somebody. Absent for a
+   * customer reading their own bill: the staff list is not theirs to read.
+   */
+  staffName?: string;
 }
 
 /**
@@ -95,7 +105,7 @@ export async function GET(
   const { data, error } = await supabase
     .from("booking_line_items")
     .select(
-      "id, kind, name, unit_price, quantity, price, author_name, created_at, fee_id",
+      "id, kind, name, unit_price, quantity, price, author_name, created_at, fee_id, staff ( first_name, last_name )",
     )
     .eq("booking_id", booking.id)
     .order("created_at", { ascending: true });
@@ -104,9 +114,9 @@ export async function GET(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const rows = (data ?? []) as {
+  const rows = (data ?? []) as unknown as {
     id: string;
-    kind: "item" | "fee";
+    kind: "item" | "fee" | "add_on";
     name: string;
     unit_price: number | string;
     quantity: number;
@@ -114,6 +124,7 @@ export async function GET(
     author_name: string;
     created_at: string;
     fee_id: string | null;
+    staff: { first_name: string | null; last_name: string | null } | null;
   }[];
 
   return NextResponse.json(
@@ -130,8 +141,18 @@ export async function GET(
       authorName: r.author_name,
       createdAt: r.created_at,
       ...(r.fee_id ? { feeId: r.fee_id } : {}),
+      ...(staffNameOf(r.staff) ? { staffName: staffNameOf(r.staff) } : {}),
     })) satisfies BookingLineItem[],
   );
+}
+
+function staffNameOf(
+  staff: { first_name: string | null; last_name: string | null } | null,
+): string {
+  return [staff?.first_name, staff?.last_name]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(" ");
 }
 
 export async function POST(
@@ -155,6 +176,18 @@ export async function POST(
   }
 
   for (const item of items) {
+    // An add-on line is the server's to write, at the catalogue's price
+    // (`place_add_on_lines`); the database refuses one from here as well.
+    if (
+      item.kind !== undefined &&
+      item.kind !== "item" &&
+      item.kind !== "fee"
+    ) {
+      return NextResponse.json(
+        { error: "A line added here is an item or a fee." },
+        { status: 422 },
+      );
+    }
     if (!item.name?.trim()) {
       return NextResponse.json(
         { error: "Every line needs a name." },
