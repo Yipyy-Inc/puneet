@@ -323,6 +323,8 @@ export async function POST(request: NextRequest) {
     ({
       initialDeposit: _deposit,
       formOverrideReason: _reason,
+      // Read below, for staff, and never filed in `details`.
+      serviceChargesIncluded: _chargesIncluded,
       // Made in the same transaction by create_bookings, not filed in
       // `details`, where a copy would go stale the first time a move changed.
       kennelMoves,
@@ -507,7 +509,16 @@ export async function POST(request: NextRequest) {
   // would turn a $15 cleaning fee into $75 on a five-day block.
   //
   // Never fails the booking, same contract as the tax stamp above.
-  await applyBookingServiceCharges([created[0].booking_id]);
+  //
+  // NOT when staff say the price already holds every charge: an estimate's
+  // conversion, whose accepted lines include the fees it quoted. A customer
+  // saying so is not heard.
+  const chargesIncluded =
+    input.serviceChargesIncluded === true &&
+    Boolean(viewer && viewer.memberships.length > 0);
+  if (!chargesIncluded) {
+    await applyBookingServiceCharges([created[0].booking_id]);
+  }
 
   const { data: full } = await supabase
     .from("bookings")

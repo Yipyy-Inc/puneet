@@ -207,6 +207,10 @@ export const lineItemSchema = z.object({
    * `taxable` in the app. See lib/payments/service-tax.ts.
    */
   taxable: z.boolean().optional(),
+  /** The add-on this line sells, as a booking names it. See EstimateLineItem. */
+  addOnRef: z.string().trim().min(1).max(200).optional(),
+  /** Which pet the add-on is for, by the pet's number. */
+  petRef: z.number().int().positive().optional(),
 });
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);

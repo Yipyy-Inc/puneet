@@ -405,6 +405,14 @@ export const newBookingSchema = z.object({
   walkSchedule: z.string().optional(),
   medications: z.array(medicationItemSchema).optional(),
   extraServices: z.array(z.union([extraServiceSchema, z.string()])).optional(),
+  /**
+   * The price already holds every charge there is: an estimate's conversion
+   * says so, because the estimate listed its fees and the customer accepted
+   * those. The facility's automatic service charges are then not added on top
+   * (they were, twice, until 2026-09-30). Read for STAFF alone — a customer
+   * cannot talk their way out of a fee with it.
+   */
+  serviceChargesIncluded: z.boolean().optional(),
   initialDeposit: z
     .object({
       amount: z.number(),
@@ -605,6 +613,14 @@ export const estimateLineItemSchema = z.object({
    * `taxable` in the app. See lib/payments/service-tax.ts.
    */
   taxable: z.boolean().optional(),
+  /**
+   * The add-on this line sells, named as a booking names it (`addOnRef`).
+   * A booking made from the estimate bills it as an add-on line of its own
+   * (2026-09-30), where it was money folded into the booking's price.
+   */
+  addOnRef: z.string().optional(),
+  /** Which pet the add-on is for, by the pet's number. Absent: the first. */
+  petRef: z.number().optional(),
 });
 export type EstimateLineItem = z.infer<typeof estimateLineItemSchema>;
 

@@ -68,6 +68,7 @@ import {
   useServiceAddOns,
 } from "@/lib/api/facility-settings";
 import { addOnsForCareType } from "@/lib/add-ons/availability";
+import { addOnRef } from "@/lib/add-ons/bookable";
 import type { AddOn } from "@/types/add-on";
 import { GuestContactForm } from "./GuestContactForm";
 import { SERVICE_CATEGORIES } from "@/components/bookings/modals/constants";
@@ -558,6 +559,8 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
       // lines (`estimateTotals`), and absent already means taxed — so writing
       // `true` on every line would store a field to say what its absence says.
       ...(li.taxable === false ? { taxable: false } : {}),
+      ...(li.addOnRef ? { addOnRef: li.addOnRef } : {}),
+      ...(li.petRef ? { petRef: li.petRef } : {}),
     })),
     discount: discountAmount,
     discountReason: discountType
@@ -697,6 +700,9 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
         amount: addon.price,
         quantity: 1,
         total: addon.price,
+        // What a booking names it by: the booking made from this estimate
+        // bills it as an add-on line, for the first pet on the estimate.
+        addOnRef: addOnRef(addon),
       },
     ]);
     setAddonSearch("");

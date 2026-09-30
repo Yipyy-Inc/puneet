@@ -196,11 +196,16 @@ export function estimateToBody(estimate: Estimate): EstimateCreate {
     checkInTime: estimate.checkInTime,
     checkOutTime: estimate.checkOutTime,
     roomType: estimate.roomType,
+    // Every field a line carries: a revision that dropped the add-on a line
+    // sells, or its tax, would quote the same money and convert differently.
     lineItems: estimate.lineItems.map((l) => ({
       label: l.label,
       description: l.description,
       amount: l.amount,
       quantity: l.quantity,
+      ...(l.taxable === false ? { taxable: false } : {}),
+      ...(l.addOnRef ? { addOnRef: l.addOnRef } : {}),
+      ...(l.petRef ? { petRef: l.petRef } : {}),
     })),
     discount: estimate.discount,
     discountReason: estimate.discountReason,

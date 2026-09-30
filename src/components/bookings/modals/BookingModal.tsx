@@ -108,6 +108,7 @@ import {
 import { planKennels, type KennelChange } from "@/lib/boarding/kennel-changes";
 import { lodgingTypesServing } from "@/lib/pricing/boarding-service-choice";
 import { defaultAddOnLines } from "@/lib/pricing/boarding-default-addons";
+import { estimateAddOnLines } from "@/lib/estimates/add-on-lines";
 import { toast } from "sonner";
 import { useEstimateMutations, type EstimateCreate } from "@/lib/api/estimates";
 import {
@@ -2506,15 +2507,28 @@ export function BookingModal({
     const lines: EstimateCreate["lineItems"] = [
       { label: serviceLabel, amount: cents(price.basePrice), quantity: 1 },
     ];
-    const addOnsTotal = price.addOnsTotal + price.groomingAddOnsTotal;
-    if (addOnsTotal > 0) {
-      lines.push({
-        label: t("estimateLineAddOns"),
-        amount: cents(addOnsTotal),
-        quantity: 1,
-      });
-    }
-    const rest = cents(gross - price.basePrice - addOnsTotal);
+    // One line per add-on, named as a booking names it, so a booking made
+    // from the estimate bills each as an add-on line of its own. They were
+    // one "Add-ons" line, which converted into money inside the booking's
+    // price (lib/estimates/add-on-lines.ts).
+    const firstPet = pricingSelectedPetIds[0];
+    const addOnLines = estimateAddOnLines({
+      lines: price.effectiveExtraServices,
+      catalogue: storedAddOns,
+      groom:
+        selectedService === "grooming" && firstPet != null
+          ? {
+              addOnIds: groomingSelectedAddOnIds,
+              petRef: firstPet,
+              offers: groomingAddOnCatalog,
+            }
+          : undefined,
+    });
+    lines.push(...addOnLines);
+    const addOnMoney = cents(
+      addOnLines.reduce((sum, line) => sum + line.amount * line.quantity, 0),
+    );
+    const rest = cents(gross - price.basePrice - addOnMoney);
     if (Math.abs(rest) >= 0.01) {
       lines.push({ label: t("estimateLineFees"), amount: rest, quantity: 1 });
     }

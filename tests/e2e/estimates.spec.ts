@@ -1,6 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 
+import { buildBookingDataFromEstimate } from "@/lib/estimates/convert-estimate";
+import type { Estimate } from "@/types/booking";
+
 import { ACCOUNTS, signIn } from "./_auth";
 
 // ============================================================================
@@ -18,6 +21,8 @@ import { ACCOUNTS, signIn } from "./_auth";
 //   - send, accept on behalf, decline and delete are each a write, and a sent
 //     estimate cannot be deleted
 //   - converting creates a real booking and points the estimate at it
+//   - an estimate's add-on converts to an add-on line of the booking, and the
+//     facility's automatic fees are not added on top of the ones it listed
 //   - the list screen shows what the route holds
 //   - a caretaker, who has no view_estimates, reads none
 //
@@ -98,6 +103,7 @@ async function createEstimate(
 }
 
 let bookingRef = 0;
+let addOnBookingRef = 0;
 
 test.describe.configure({ mode: "serial" });
 
@@ -117,12 +123,17 @@ test.afterAll(async () => {
     .delete({ count: "exact" })
     .eq("email", GUEST_EMAIL);
   console.log(`cleanup: ${guests ?? 0} guest client(s) deleted`);
-  if (bookingRef) {
+  for (const ref of [bookingRef, addOnBookingRef].filter(Boolean)) {
     await db
       .from("bookings")
       .update({ status: "cancelled", special_requests: MARKER })
-      .eq("ref", bookingRef);
+      .eq("ref", ref);
   }
+  const { count: addOns } = await db
+    .from("service_add_ons")
+    .delete({ count: "exact" })
+    .like("name", `${MARKER}%`);
+  console.log(`cleanup: ${addOns ?? 0} add-on(s) deleted`);
   console.log(`cleanup: ${count ?? 0} estimate(s) deleted`);
 });
 
@@ -283,6 +294,119 @@ test.describe("estimates", () => {
     const body = (await converted.json()) as EstimatePayload;
     expect(body.status).toBe("converted");
     expect(body.convertedBookingId).toBe(bookingRef);
+  });
+
+  test("an estimate's add-on is a line of the booking, and no fee is added twice", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+    const client = await aClientWithAPet(page);
+    const pet = client.pets[0].id;
+
+    const madeAddOn = await page.request.post("/api/add-ons", {
+      data: { name: `${MARKER} Nail trim`, price: 12 },
+    });
+    expect(madeAddOn.status(), await madeAddOn.text()).toBe(201);
+    const nailTrim = ((await madeAddOn.json()) as { addOn: { id: string } })
+      .addOn.id;
+
+    // An automatic fee the estimate did not list: converting must not add it.
+    const settings = await page.request.get("/api/facility/settings");
+    const rules = (
+      (await settings.json()) as Record<string, { value?: unknown } | undefined>
+    ).pricing_rules?.value;
+    const writeRules = (value: unknown) =>
+      page.request.patch("/api/facility/settings", {
+        data: { domain: "pricing_rules", value },
+      });
+    const withFee = await writeRules({
+      ...((rules as Record<string, unknown>) ?? {}),
+      customFees: [
+        {
+          id: "e2e-estimates-fee",
+          name: `${MARKER} Cleaning fee`,
+          amount: 15,
+          feeType: "flat",
+          scope: "per_booking",
+          autoApply: "at_checkout",
+          applicableServices: ["all"],
+          isActive: true,
+        },
+      ],
+    });
+    expect(withFee.ok(), await withFee.text()).toBe(true);
+
+    try {
+      const created = await page.request.post("/api/estimates", {
+        data: {
+          clientRef: client.id,
+          petRefs: [pet],
+          service: "daycare",
+          startDate: "2027-03-09",
+          endDate: "2027-03-09",
+          lineItems: [
+            { label: "Daycare", amount: 38, quantity: 1 },
+            {
+              label: "Nail trim",
+              amount: 12,
+              quantity: 2,
+              addOnRef: nailTrim,
+              petRef: pet,
+            },
+          ],
+          discount: 0,
+          taxRate: 0,
+          internalNote: MARKER,
+          send: true,
+        },
+      });
+      expect(created.status(), await created.text()).toBe(201);
+      const id = ((await created.json()) as { id: string }).id;
+      const estimate = (await (
+        await page.request.get(`/api/estimates/${id}`)
+      ).json()) as Estimate;
+      expect(estimate.lineItems[1]?.addOnRef, "the line keeps its add-on").toBe(
+        nailTrim,
+      );
+
+      // Converted the way the review dialog converts it.
+      const booked = await page.request.post("/api/bookings", {
+        data: {
+          ...buildBookingDataFromEstimate(estimate),
+          checkInTime: "08:00",
+          checkOutTime: "17:00",
+          specialRequests: MARKER,
+        },
+      });
+      expect(booked.status(), await booked.text()).toBe(201);
+      addOnBookingRef = ((await booked.json()) as { id: number }).id;
+
+      const bill = (await (
+        await page.request.get(`/api/bookings/${addOnBookingRef}/line-items`)
+      ).json()) as Array<{
+        kind: string;
+        name: string;
+        quantity: number;
+        price: number;
+      }>;
+      const addOnLine = bill.find((l) => l.kind === "add_on");
+      expect(addOnLine?.quantity).toBe(2);
+      expect(addOnLine?.price).toBe(24);
+      expect(
+        bill.filter((l) => l.name.includes("Cleaning fee")),
+        "the estimate is the whole bill it states",
+      ).toHaveLength(0);
+
+      const [row] = (await (
+        await page.request.get(`/api/bookings?ref=${addOnBookingRef}`)
+      ).json()) as Array<{ totalCost?: number; amountDue?: number }>;
+      // The day alone; the nail trims are their own line.
+      expect(row.totalCost).toBe(38);
+      expect(row.amountDue).toBe(62);
+    } finally {
+      const restored = await writeRules(rules ?? {});
+      expect(restored.ok(), await restored.text()).toBe(true);
+    }
   });
 
   test("the list screen shows what the route holds", async ({ page }) => {
