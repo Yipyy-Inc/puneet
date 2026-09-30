@@ -2156,7 +2156,6 @@ CREATE OR REPLACE FUNCTION "private"."customer_visible_setting_domains"() RETURN
     'pricing_rules',
     'deposit_rules',
     'cancellation_policies',
-    'service_addons',
     'care_fees',
     'booking_approval',
     'evaluation_config',
@@ -3430,7 +3429,7 @@ declare
   v_add_on_facility uuid;
 begin
   select facility_id into v_add_on_facility
-    from public.grooming_add_ons where id = new.add_on_id;
+    from public.service_add_ons where id = new.add_on_id;
 
   if v_add_on_facility is distinct from new.facility_id then
     raise exception 'That add-on belongs to a different facility.'
@@ -6465,17 +6464,11 @@ begin
   end if;
 
   if new.status = 'checked_in' and v_apt.check_in_at is null then
-    -- The add-ons' minutes: the old table for bookings made before
-    -- 2026-09-30, the booking's `add_on` lines since.
-    select coalesce(sum(duration_min), 0) into v_add_mins
-      from (
-        select duration_min from public.grooming_appointment_add_ons
-         where booking_id = new.id
-        union all
-        select coalesce(li.duration_min, 0) * li.quantity
-          from public.booking_line_items li
-         where li.booking_id = new.id and li.kind = 'add_on'
-      ) minutes;
+    -- The add-ons' minutes, from the booking's `add_on` lines.
+    select coalesce(sum(coalesce(li.duration_min, 0) * li.quantity), 0)
+      into v_add_mins
+      from public.booking_line_items li
+     where li.booking_id = new.id and li.kind = 'add_on';
 
     update public.grooming_appointments
        set check_in_at = now(),
@@ -9267,8 +9260,6 @@ declare
   v_size_dur     integer;
   v_weight       numeric;
   v_station_id   uuid;
-  v_written      integer;
-  v_requested    integer;
   v_room_id      uuid;
   v_override     text;
   v_missing      text;
@@ -9455,24 +9446,14 @@ begin
     greatest(coalesce(v_duration, 60), 1), v_station_id
   );
 
-  if jsonb_typeof(p_grooming->'addOnIds') = 'array' then
-    insert into public.grooming_appointment_add_ons (
-      booking_id, facility_id, add_on_id, name, price, duration_min
-    )
-    select v_booking_id, v_facility_id, a.id, a.name,
-           case when v_is_staff then a.price else 0 end, a.duration_min
-      from jsonb_array_elements_text(p_grooming->'addOnIds') requested
-      join public.grooming_add_ons a
-        on a.facility_id = v_facility_id
-       and (a.legacy_id = requested or a.id::text = requested);
-
-    get diagnostics v_written = row_count;
-    v_requested := jsonb_array_length(p_grooming->'addOnIds');
-
-    if v_written <> v_requested then
-      raise exception 'This facility has % of the % grooming add-ons requested.',
-        v_written, v_requested using errcode = '23503';
-    end if;
+  -- A groom's add-ons are `add_on` lines on the bill, placed by
+  -- `create_bookings` from the request's `addOns` (20260930153912). Ids sent
+  -- here were once written to a table of their own; they are refused rather
+  -- than dropped, so nobody books an add-on no bill carries.
+  if jsonb_typeof(p_grooming->'addOnIds') = 'array'
+     and jsonb_array_length(p_grooming->'addOnIds') > 0 then
+    raise exception 'A groom''s add-ons are sent as the request''s addOns, not as addOnIds.'
+      using errcode = '22023';
   end if;
 
   booking_id := v_booking_id; booking_ref := v_ref; return next;
