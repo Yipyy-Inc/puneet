@@ -19,13 +19,12 @@ import {
   type BoardingDefaultAddOn,
 } from "@/lib/pricing/boarding-default-addons";
 import { addOnFor } from "@/lib/add-ons/availability";
-import { toLegacyServiceAddOn } from "@/lib/add-ons/legacy-shape";
+import { bookable, type BookableAddOn } from "@/lib/add-ons/bookable";
 import {
   ADD_ON_SELECT,
   rowToAddOn,
   type AddOnRow,
 } from "@/lib/api/mappers/add-on";
-import type { ServiceAddOn } from "@/types/facility";
 
 // ============================================================================
 // What a customer's booking costs, decided by the SERVER.
@@ -410,8 +409,8 @@ async function priceBoarding(input: PriceRequest): Promise<ServerQuote> {
 
 /**
  * The facility's live add-ons for this TYPE of service, at this location's
- * price, tax and minutes, in the booking screens' shape — exactly what the
- * wizard's total adds (`usePricedAddOns`, lib/add-ons/use-offered-add-ons.ts),
+ * price, tax and minutes, as a booking reads them — exactly what the wizard's
+ * total adds (`usePricedAddOns`, lib/add-ons/use-offered-add-ons.ts),
  * decided by the same `addOnFor`. An unreadable list is no list: both sides
  * then price no add-ons, and a booking that carries one disagrees and stays a
  * request.
@@ -420,7 +419,7 @@ async function liveAddOns(
   facilityId: string,
   careType: string,
   locationId: string | null,
-): Promise<ServiceAddOn[]> {
+): Promise<BookableAddOn[]> {
   const { data, error } = await createAdminClient()
     .from("service_add_ons")
     .select(ADD_ON_SELECT)
@@ -431,16 +430,7 @@ async function liveAddOns(
   return (data as unknown as AddOnRow[]).flatMap((row) => {
     const addOn = rowToAddOn(row);
     const terms = addOnFor(addOn, { careType, locationId });
-    return terms.unavailable === null
-      ? [
-          {
-            ...toLegacyServiceAddOn(addOn, []),
-            price: terms.price,
-            taxable: terms.taxable,
-            duration: terms.durationMin > 0 ? terms.durationMin : undefined,
-          },
-        ]
-      : [];
+    return terms.unavailable === null ? [bookable(addOn, terms)] : [];
   });
 }
 

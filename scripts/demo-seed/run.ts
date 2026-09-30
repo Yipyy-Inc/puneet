@@ -516,7 +516,6 @@ try {
       const grooming = b.grooming
         ? {
             serviceId: b.grooming.serviceId,
-            addOnIds: [],
             stationId: b.grooming.stationId,
           }
         : null;

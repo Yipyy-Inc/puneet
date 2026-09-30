@@ -4,7 +4,7 @@ import React from "react";
 import { localToday } from "@/lib/vaccinations";
 import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
 import { Button } from "@/components/ui/button";
-import { Check, PawPrint, Bed, X, AlertCircle, Gift, Lock } from "lucide-react";
+import { Check, PawPrint, Bed, X, AlertCircle, Gift } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
@@ -1085,7 +1085,7 @@ function BoardingAddOnsSubStep({
         (() => {
           const subtotal = extraServices.reduce((sum, es) => {
             if (es.quantity <= 0) return sum;
-            const addon = boardingAddOns.find((a) => a.id === es.serviceId);
+            const addon = boardingAddOns.find((a) => a.ref === es.serviceId);
             if (!addon) return sum;
             return sum + addon.price * es.quantity;
           }, 0);
@@ -1107,19 +1107,18 @@ function BoardingAddOnsSubStep({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {boardingAddOns.map((service) => {
             const includedEntries = extraServices.filter(
-              (es) => es.serviceId === service.id && es.quantity === 0,
+              (es) => es.serviceId === service.ref && es.quantity === 0,
             );
             const isIncludedFree = includedEntries.length > 0;
             const totalQuantity = extraServices
-              .filter((es) => es.serviceId === service.id && es.quantity > 0)
+              .filter((es) => es.serviceId === service.ref && es.quantity > 0)
               .reduce((sum, es) => sum + es.quantity, 0);
             const isAdded = isIncludedFree || totalQuantity > 0;
             const priceLabel = addOnPriceLabel(service, t, locale);
-            const hasUnits = service.pricingType !== "flat";
 
             return (
               <div
-                key={service.id}
+                key={service.ref}
                 className={cn(
                   "group flex flex-col overflow-hidden rounded-2xl border-2 transition-all duration-200 select-none",
                   isIncludedFree
@@ -1131,9 +1130,9 @@ function BoardingAddOnsSubStep({
               >
                 {/* Image area */}
                 <div className="relative h-32 w-full overflow-hidden">
-                  {service.image ? (
+                  {service.imageUrl ? (
                     <Image
-                      src={service.image}
+                      src={service.imageUrl}
                       alt={service.name}
                       fill
                       className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -1155,22 +1154,9 @@ function BoardingAddOnsSubStep({
                         {priceLabel}
                       </div>
                     )}
-                    {service.isRequired && !isIncludedFree && (
-                      <div className="flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1 text-xs font-bold text-white">
-                        <Lock className="size-3" />
-                        {t("required")}
-                      </div>
-                    )}
-                    {service.isDefault &&
-                      !service.isRequired &&
-                      !isIncludedFree && (
-                        <div className="rounded-lg bg-blue-600 px-2 py-1 text-xs font-bold text-white">
-                          {t("default")}
-                        </div>
-                      )}
-                    {service.duration && (
+                    {service.durationMin > 0 && (
                       <div className="rounded-lg bg-white/90 px-2 py-1 text-xs font-medium text-slate-700 backdrop-blur-sm">
-                        {formatDuration(service.duration, locale)}
+                        {formatDuration(service.durationMin, locale)}
                       </div>
                     )}
                   </div>
@@ -1209,7 +1195,7 @@ function BoardingAddOnsSubStep({
                       selectedPets.map((pet) => {
                         const petService = extraServices.find(
                           (es) =>
-                            es.serviceId === service.id &&
+                            es.serviceId === service.ref &&
                             es.petId === pet.id &&
                             es.quantity > 0,
                         );
@@ -1229,122 +1215,67 @@ function BoardingAddOnsSubStep({
                               </span>
                             </div>
 
-                            {hasUnits ? (
-                              <div className="flex items-center gap-1.5">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    if (service.isRequired && quantity <= 1)
-                                      return;
-                                    if (quantity > 0) {
-                                      const updated = extraServices
-                                        .map((es) =>
-                                          es.serviceId === service.id &&
-                                          es.petId === pet.id
-                                            ? {
-                                                ...es,
-                                                quantity: es.quantity - 1,
-                                              }
-                                            : es,
-                                        )
-                                        .filter((es) => es.quantity > 0);
-                                      setExtraServices(updated);
-                                    }
-                                  }}
-                                  disabled={
-                                    quantity === 0 ||
-                                    (service.isRequired === true &&
-                                      quantity <= 1)
-                                  }
-                                  className="size-6 p-0 text-xs"
-                                >
-                                  -
-                                </Button>
-                                <span className="min-w-[2ch] text-center text-xs font-semibold tabular-nums">
-                                  {quantity}
-                                </span>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    if (petService) {
-                                      const updated = extraServices.map((es) =>
-                                        es.serviceId === service.id &&
-                                        es.petId === pet.id
-                                          ? {
-                                              ...es,
-                                              quantity: es.quantity + 1,
-                                            }
-                                          : es,
-                                      );
-                                      setExtraServices(updated);
-                                    } else {
-                                      setExtraServices([
-                                        ...extraServices,
-                                        {
-                                          serviceId: service.id,
-                                          quantity: 1,
-                                          petId: pet.id,
-                                        },
-                                      ]);
-                                    }
-                                  }}
-                                  disabled={
-                                    service.maxQuantity !== undefined &&
-                                    quantity >= service.maxQuantity
-                                  }
-                                  className="size-6 p-0 text-xs"
-                                >
-                                  +
-                                </Button>
-                              </div>
-                            ) : service.isRequired ? (
-                              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-1 text-[11px] font-semibold text-emerald-800">
-                                <Lock className="size-3" />
-                                {t("included")}
-                              </span>
-                            ) : (
+                            <div className="flex items-center gap-1.5">
                               <Button
                                 type="button"
-                                variant={quantity > 0 ? "default" : "outline"}
+                                variant="outline"
                                 size="sm"
                                 onClick={() => {
                                   if (quantity > 0) {
-                                    setExtraServices(
-                                      extraServices.filter(
-                                        (es) =>
-                                          !(
-                                            es.serviceId === service.id &&
-                                            es.petId === pet.id
-                                          ),
-                                      ),
+                                    const updated = extraServices
+                                      .map((es) =>
+                                        es.serviceId === service.ref &&
+                                        es.petId === pet.id
+                                          ? {
+                                              ...es,
+                                              quantity: es.quantity - 1,
+                                            }
+                                          : es,
+                                      )
+                                      .filter((es) => es.quantity > 0);
+                                    setExtraServices(updated);
+                                  }
+                                }}
+                                disabled={quantity === 0}
+                                className="size-6 p-0 text-xs"
+                              >
+                                -
+                              </Button>
+                              <span className="min-w-[2ch] text-center text-xs font-semibold tabular-nums">
+                                {quantity}
+                              </span>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  if (petService) {
+                                    const updated = extraServices.map((es) =>
+                                      es.serviceId === service.ref &&
+                                      es.petId === pet.id
+                                        ? {
+                                            ...es,
+                                            quantity: es.quantity + 1,
+                                          }
+                                        : es,
                                     );
+                                    setExtraServices(updated);
                                   } else {
                                     setExtraServices([
                                       ...extraServices,
                                       {
-                                        serviceId: service.id,
+                                        serviceId: service.ref,
                                         quantity: 1,
                                         petId: pet.id,
                                       },
                                     ]);
                                   }
                                 }}
-                                className="h-6 gap-1 px-2.5 text-[11px]"
+                                className="size-6 p-0 text-xs"
                               >
-                                {quantity > 0 ? (
-                                  <>
-                                    <Check className="size-3" />
-                                    {t("added")}
-                                  </>
-                                ) : (
-                                  t("add")
-                                )}
+                                +
                               </Button>
-                            )}
+                            </div>
                           </div>
                         );
                       })

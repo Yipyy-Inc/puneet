@@ -1,4 +1,4 @@
-import type { GroomingAddOn, GroomingPackage } from "@/types/grooming";
+import type { GroomingPackage } from "@/types/grooming";
 import type { PetSize } from "@/types/base";
 
 // ============================================================================
@@ -285,32 +285,4 @@ export function sizePricesToRows(
   return Object.entries(sizePricing)
     .filter(([, price]) => typeof price === "number")
     .map(([size_label, price]) => ({ size_label, price: price as number }));
-}
-
-// ── Add-ons ─────────────────────────────────────────────────────────────────
-
-export const ADD_ON_SELECT = `
-  id, legacy_id, name, description, price, duration_min, is_active, display_order
-` as const;
-
-export interface AddOnRow {
-  id: string;
-  legacy_id: string | null;
-  name: string;
-  description: string;
-  price: number;
-  duration_min: number;
-  is_active: boolean;
-  display_order: number;
-}
-
-export function rowToAddOn(row: AddOnRow): GroomingAddOn {
-  return {
-    id: appId(row),
-    name: row.name,
-    description: row.description,
-    price: Number(row.price),
-    duration: row.duration_min,
-    isActive: row.is_active,
-  };
 }

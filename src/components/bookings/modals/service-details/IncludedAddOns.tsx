@@ -1,5 +1,6 @@
 "use client";
 
+import { bookableLookup } from "@/lib/add-ons/bookable";
 import { usePricedAddOns } from "@/lib/add-ons/use-offered-add-ons";
 import { formatMoney } from "@/lib/i18n/format";
 import { useStaffText } from "@/lib/staff/use-staff-text";
@@ -33,7 +34,7 @@ export function IncludedAddOns({
   const { t, fill, locale } = useStaffText("boardingServices");
   // At the booking location's price — the catalogue the total adds these
   // lines from (lib/add-ons/use-offered-add-ons.ts), so the two agree.
-  const addOns = usePricedAddOns("boarding");
+  const addOns = bookableLookup(usePricedAddOns("boarding"));
 
   if (lines.length === 0) return null;
 
@@ -44,7 +45,7 @@ export function IncludedAddOns({
       </p>
       <ul className="space-y-2">
         {lines.map((line) => {
-          const addOn = addOns.find((a) => a.id === line.serviceId);
+          const addOn = addOns.get(line.serviceId);
           if (!addOn) return null;
           // A pet's name is never put through the locale layer (§5q), and it
           // is only said when there is more than one to tell apart.

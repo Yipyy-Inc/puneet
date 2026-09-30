@@ -9,9 +9,9 @@ import {
   addOnPetFacts,
   offeredForPets,
 } from "@/lib/add-ons/availability";
+import { bookable, type BookableAddOn } from "@/lib/add-ons/bookable";
 import { breedQueries } from "@/lib/api/breeds";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
-import type { ServiceAddOn } from "@/types/facility";
 
 // ============================================================================
 // THE ADD-ONS A BOOKING SCREEN OFFERS, AND THE PRICES IT ADDS (2026-09-26).
@@ -29,8 +29,9 @@ import type { ServiceAddOn } from "@/types/facility";
 //   cannot put it on a line, and a line that should not be there disagrees
 //   with the server and stays a request.
 //
-// Both come back in the old `ServiceAddOn` shape the booking screens render,
-// with the location's price, tax and minutes in place of the add-on's own.
+// Both come back as a booking reads an add-on (`lib/add-ons/bookable.ts`):
+// named by what a booking line holds, at the location's price, tax and
+// minutes in place of the add-on's own.
 // ============================================================================
 
 const NO_BREEDS: { name: string; species: string }[] = [];
@@ -69,53 +70,35 @@ export function useOfferedAddOns({
   /** The chosen service's row uuid; null or absent while none is chosen. */
   serviceId?: string | null;
   pets: readonly PetLike[];
-}): ServiceAddOn[] {
-  const { addOns: legacy, catalogue } = useServiceAddOns();
+}): BookableAddOn[] {
+  const { addOns, categories } = useServiceAddOns();
   const locationId = useBookingLocationId();
   const { data: breeds = NO_BREEDS } = useQuery(breedQueries.all());
 
-  return useMemo(() => {
-    const byId = new Map(legacy.map((addOn) => [addOn.id, addOn]));
-    return offeredForPets(
-      catalogue,
-      { careType, serviceId, locationId, breeds },
-      pets.map(addOnPetFacts),
-    ).flatMap(({ addOn, terms }) => {
-      const old = byId.get(addOn.legacyId ?? addOn.id);
-      return old
-        ? [
-            {
-              ...old,
-              price: terms.price,
-              taxable: terms.taxable,
-              duration: terms.durationMin > 0 ? terms.durationMin : undefined,
-            },
-          ]
-        : [];
-    });
-  }, [legacy, catalogue, careType, serviceId, locationId, breeds, pets]);
+  return useMemo(
+    () =>
+      offeredForPets(
+        addOns,
+        { careType, serviceId, locationId, breeds },
+        pets.map(addOnPetFacts),
+      ).map(({ addOn, terms }) => bookable(addOn, terms, categories)),
+    [addOns, categories, careType, serviceId, locationId, breeds, pets],
+  );
 }
 
 /** What the total adds. See the header. */
-export function usePricedAddOns(careType: string): ServiceAddOn[] {
-  const { addOns: legacy, catalogue } = useServiceAddOns();
+export function usePricedAddOns(careType: string): BookableAddOn[] {
+  const { addOns, categories } = useServiceAddOns();
   const locationId = useBookingLocationId();
 
-  return useMemo(() => {
-    const byId = new Map(legacy.map((addOn) => [addOn.id, addOn]));
-    return catalogue.flatMap((addOn) => {
-      const terms = addOnFor(addOn, { careType, locationId });
-      const old = byId.get(addOn.legacyId ?? addOn.id);
-      return terms.unavailable === null && old
-        ? [
-            {
-              ...old,
-              price: terms.price,
-              taxable: terms.taxable,
-              duration: terms.durationMin > 0 ? terms.durationMin : undefined,
-            },
-          ]
-        : [];
-    });
-  }, [legacy, catalogue, careType, locationId]);
+  return useMemo(
+    () =>
+      addOns.flatMap((addOn) => {
+        const terms = addOnFor(addOn, { careType, locationId });
+        return terms.unavailable === null
+          ? [bookable(addOn, terms, categories)]
+          : [];
+      }),
+    [addOns, categories, careType, locationId],
+  );
 }

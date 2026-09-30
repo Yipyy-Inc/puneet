@@ -13,15 +13,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { addOnsForCareType } from "@/lib/add-ons/availability";
+import { addOnRef, namesAddOn } from "@/lib/add-ons/bookable";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
 import { formatMoney } from "@/lib/i18n/format";
 import {
-  canBeDefault,
   DEFAULT_ADD_ON_WHENS,
   type BoardingDefaultAddOn,
   type DefaultAddOnWhen,
 } from "@/lib/pricing/boarding-default-addons";
-import { addOnsForService } from "@/lib/settings/addons";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 
 // ============================================================================
@@ -34,8 +34,8 @@ import { useStaffText } from "@/lib/staff/use-staff-text";
 // place — `lib/pricing/boarding-default-addons.ts` — for this screen's words,
 // the booking form's total and the customer's quote alike.
 //
-// Only boarding add-ons, and not one priced as a percentage of the booking:
-// a quantity of days multiplied into a percentage is not a price anybody set.
+// Only boarding add-ons. A rule names its add-on the way a booking line
+// does (`addOnRef`), which is what this screen has always written.
 // The remove control is always shown (§6 rule 11: two of three contexts have
 // no hover), and each field has its own label rather than a column heading
 // that stops meaning anything once the row wraps at 599px.
@@ -99,7 +99,7 @@ export function BoardingDefaultAddOnsField({
 }) {
   const { t, fill, locale } = useStaffText("boardingServices");
   const { addOns } = useServiceAddOns();
-  const candidates = addOnsForService(addOns, "boarding").filter(canBeDefault);
+  const candidates = addOnsForCareType(addOns, "boarding");
 
   const update = (index: number, patch: Partial<BoardingDefaultAddOn>) =>
     onChange(value.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -110,13 +110,15 @@ export function BoardingDefaultAddOnsField({
     const next =
       candidates.find(
         (a) =>
-          !value.some((r) => r.addOnId === a.id && r.appliesOn === "every_day"),
+          !value.some(
+            (r) => namesAddOn(r.addOnId, a) && r.appliesOn === "every_day",
+          ),
       ) ?? candidates[0];
     if (!next) return;
     onChange([
       ...value,
       {
-        addOnId: next.id,
+        addOnId: addOnRef(next),
         appliesOn: "every_day",
         quantityPerDay: 1,
         minNights: null,
@@ -135,7 +137,7 @@ export function BoardingDefaultAddOnsField({
   return (
     <div className="space-y-3">
       {value.map((row, index) => {
-        const addOn = addOns.find((a) => a.id === row.addOnId);
+        const addOn = addOns.find((a) => namesAddOn(row.addOnId, a));
         const name = addOn?.name ?? t("defaultsRemovedAddOn");
         const id = `bsv-default-${index}`;
         return (
@@ -157,7 +159,7 @@ export function BoardingDefaultAddOnsField({
                   </SelectTrigger>
                   <SelectContent>
                     {candidates.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
+                      <SelectItem key={a.id} value={addOnRef(a)}>
                         {a.name} · {formatMoney(a.price, locale)}
                       </SelectItem>
                     ))}

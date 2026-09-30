@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Gift, Plus, Trash2 } from "lucide-react";
+import { addOnRef, namesAddOn } from "@/lib/add-ons/bookable";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
 import { usePackageServiceOptions } from "@/lib/api/package-services";
 import type {
@@ -54,7 +55,7 @@ export function StepIncluded({ data, update }: Props) {
     kind === "service"
       ? services
       : kind === "addon"
-        ? facilityAddOns.map((a) => ({ id: a.id, name: a.name }))
+        ? facilityAddOns.map((a) => ({ id: addOnRef(a), name: a.name }))
         : [];
 
   const addItem = () => {
@@ -63,7 +64,7 @@ export function StepIncluded({ data, update }: Props) {
       kind === "service"
         ? (services.find((s) => s.id === refId)?.name ?? refId)
         : kind === "addon"
-          ? (facilityAddOns.find((a) => a.id === refId)?.name ?? refId)
+          ? (facilityAddOns.find((a) => namesAddOn(refId, a))?.name ?? refId)
           : refId;
     const item: MembershipIncludedItem = {
       id: `ii-${Date.now()}`,

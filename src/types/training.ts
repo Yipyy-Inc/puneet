@@ -344,17 +344,3 @@ export const trainingDisciplineSchema = z.object({
   isActive: z.boolean(),
 });
 export type TrainingDiscipline = z.infer<typeof trainingDisciplineSchema>;
-
-// ============================================================================
-// Training Add-On
-// ============================================================================
-
-export const trainingAddOnSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  description: z.string(),
-  price: z.number(),
-  duration: z.number(),
-  isActive: z.boolean(),
-});
-export type TrainingAddOn = z.infer<typeof trainingAddOnSchema>;

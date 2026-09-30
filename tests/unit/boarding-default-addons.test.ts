@@ -5,7 +5,6 @@ import {
   defaultAddOnLines,
   type BoardingDefaultAddOn,
 } from "@/lib/pricing/boarding-default-addons";
-import type { ServiceAddOn } from "@/types/facility";
 
 // ── WHAT THESE PIN ────────────────────────────────────────────────────────
 //
@@ -14,16 +13,17 @@ import type { ServiceAddOn } from "@/types/facility";
 // booking form, the customer's quote and the server's re-price all read, so a
 // day counted differently in one of them is a price the others refuse.
 
-const addOn = (patch: Partial<ServiceAddOn> = {}): ServiceAddOn =>
-  ({
-    id: "walk",
-    name: "Daily walk",
-    price: 8,
-    pricingType: "per_day",
-    isActive: true,
-    applicableServices: ["boarding"],
-    ...patch,
-  }) as ServiceAddOn;
+const WALK_ROW = "11111111-1111-4111-8111-111111111111";
+
+/** An add-on as a booking reads it; `ref` is what a line is written under. */
+const addOn = (
+  patch: Partial<{ ref: string; rowId: string; isActive: boolean }> = {},
+) => ({
+  ref: "walk",
+  rowId: WALK_ROW,
+  isActive: true,
+  ...patch,
+});
 
 const rule = (
   patch: Partial<BoardingDefaultAddOn> = {},
@@ -66,7 +66,7 @@ describe("the add-on lines a stay gets", () => {
 
   test("once the stay is long enough, and not before", () => {
     const defaults = [rule({ appliesOn: "last_day", minNights: 5 })];
-    const catalogue = [addOn({ id: "walk", name: "Bath" })];
+    const catalogue = [addOn()];
     expect(
       defaultAddOnLines({ defaults, nights: 4, petIds: [1], catalogue }),
     ).toEqual([]);
@@ -75,28 +75,37 @@ describe("the add-on lines a stay gets", () => {
     ).toEqual([{ serviceId: "walk", quantity: 1, petId: 1 }]);
   });
 
-  test("a per-booking add-on is attached once, whatever the number of dogs", () => {
+  // A rule may name its add-on by the row's uuid (what the API hands out)
+  // while a booking line names it by its ref — the id it had before the one
+  // list. The line has to be written under the ref, or the same add-on chosen
+  // by hand is a second line and an edit re-prices it.
+  test("a rule that names the row's uuid writes the line under the add-on's ref", () => {
     expect(
       defaultAddOnLines({
-        defaults: [rule({ appliesOn: "last_day" })],
+        defaults: [rule({ addOnId: WALK_ROW, appliesOn: "last_day" })],
         nights: 2,
-        petIds: [1, 2, 3],
-        catalogue: [addOn({ petScope: "per_booking" })],
+        petIds: [1],
+        catalogue: [addOn()],
       }),
     ).toEqual([{ serviceId: "walk", quantity: 1, petId: 1 }]);
   });
 
-  test("an add-on removed, switched off or priced as a percentage attaches nothing", () => {
+  test("an add-on with no old id is named by its row's uuid everywhere", () => {
+    expect(
+      defaultAddOnLines({
+        defaults: [rule({ addOnId: WALK_ROW, appliesOn: "last_day" })],
+        nights: 2,
+        petIds: [1],
+        catalogue: [addOn({ ref: WALK_ROW })],
+      }),
+    ).toEqual([{ serviceId: WALK_ROW, quantity: 1, petId: 1 }]);
+  });
+
+  test("an add-on removed or switched off attaches nothing", () => {
     const input = { defaults: [rule()], nights: 3, petIds: [1] };
     expect(defaultAddOnLines({ ...input, catalogue: [] })).toEqual([]);
     expect(
       defaultAddOnLines({ ...input, catalogue: [addOn({ isActive: false })] }),
-    ).toEqual([]);
-    expect(
-      defaultAddOnLines({
-        ...input,
-        catalogue: [addOn({ pricingType: "percentage_of_booking" })],
-      }),
     ).toEqual([]);
   });
 });

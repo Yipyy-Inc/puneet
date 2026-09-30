@@ -1,4 +1,6 @@
 import { bookings } from "@/data/bookings";
+import { addOnRef } from "@/lib/add-ons/bookable";
+import type { AddOn, AddOnCategory } from "@/types/add-on";
 import { masterServices } from "@/data/service-catalog";
 import { groomingPrepaidPackages } from "@/data/grooming-prepaid-packages";
 import { membershipPlans } from "@/data/services-pricing";
@@ -102,7 +104,8 @@ function serviceItems(): MappableItem[] {
 }
 
 function addOnItems(
-  addOns: NonNullable<MappableGroupOptions["addOns"]>,
+  addOns: AddOn[],
+  categories: AddOnCategory[],
 ): MappableItem[] {
   const catalogAddOns = masterServices
     .filter((s) => s.isActive && s.category === "addon")
@@ -112,10 +115,12 @@ function addOnItems(
       type: "Add-on",
     }));
   const facilityAddOns = addOns.map((a) => ({
-    id: `addon:${a.id}`,
+    // Named as a booking names it (`addOnRef`), which is what a mapping
+    // saved before 2026-09-30 holds.
+    id: `addon:${addOnRef(a)}`,
     name: a.name,
     // Add-on categories are optional in the facility catalog.
-    type: a.category ?? "Add-on",
+    type: categories.find((c) => c.id === a.categoryId)?.name ?? "Add-on",
   }));
   return [...catalogAddOns, ...facilityAddOns];
 }
@@ -186,10 +191,11 @@ export interface MappableGroupOptions {
    *  location tracking is off, because mapping branches you aren't tracking is
    *  work with no effect. */
   locations?: { id: string; name: string; city?: string; shortCode?: string }[];
-  /** The facility's own add-ons (`useServiceAddOns().addOns`). They were a
-   *  sample-data list until 2026-09-26, so the screen offered to map extras
-   *  the facility never sold and left out the ones it does. */
-  addOns?: { id: string; name: string; category?: string }[];
+  /** The facility's own add-ons and their categories (`useServiceAddOns()`).
+   *  They were a sample-data list until 2026-09-26, so the screen offered to
+   *  map extras the facility never sold and left out the ones it does. */
+  addOns?: AddOn[];
+  addOnCategories?: AddOnCategory[];
 }
 
 export function buildMappableGroups(
@@ -229,7 +235,7 @@ export function buildMappableGroups(
       key: "addons",
       title: "Add-ons",
       description: "Extras sold alongside a booking.",
-      items: addOnItems(options.addOns ?? []),
+      items: addOnItems(options.addOns ?? [], options.addOnCategories ?? []),
     },
     {
       key: "packages",

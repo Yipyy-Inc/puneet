@@ -41,6 +41,7 @@ import {
 import { toast } from "sonner";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { useRooms } from "@/hooks/use-rooms";
+import { addOnRef } from "@/lib/add-ons/bookable";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
 import type { PricingRules } from "@/lib/settings/pricing";
 import type {
@@ -164,12 +165,12 @@ export function PricingRulesPanel({
     serviceOptions.map((service) => [service.value, service.label]),
   ) as Record<string, string>;
   const allServiceValues = serviceOptions.map((service) => service.value);
-  // Service add-ons are still a localStorage fixture and are NOT part of this
-  // change. Unscoped deliberately: the scope key used to be the `facilityId={11}`
-  // the settings page hardcoded, so every facility on the platform read and
-  // wrote the demo facility's key. Dropping a scope that was the same wrong
-  // value for everyone loses nothing and removes one more hardcoded 11.
-  const addOnOptions = serviceAddOns.filter((addOn) => addOn.isActive);
+  // The facility's live add-ons, each named as a booking line names it
+  // (`addOnRef`): a fee's trigger and waiver ids are compared with the lines
+  // of the booking being priced.
+  const addOnOptions = serviceAddOns
+    .filter((addOn) => addOn.isActive)
+    .map((addOn) => ({ id: addOnRef(addOn), name: addOn.name }));
   const serviceScopeLabel =
     serviceType === "all"
       ? "all services"

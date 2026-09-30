@@ -199,7 +199,6 @@ test.describe("a customer books with their own facility's settings", () => {
       "business_hours",
       "pricing_rules",
       "deposit_rules",
-      "service_addons",
       "care_fees",
       "daycare_rates",
     ]) {
@@ -208,6 +207,9 @@ test.describe("a customer books with their own facility's settings", () => {
     }
     // …and one the customer may not read is only ever its default.
     expect(body.payroll_config?.configured).toBe(false);
+    // Add-ons are not a setting: the one add-ons list is a table with its own
+    // route, and the domain that held the JSON it replaced is gone.
+    expect(body.service_addons).toBeUndefined();
   });
 
   test("the booking wizard never asks the staff route", async ({ page }) => {

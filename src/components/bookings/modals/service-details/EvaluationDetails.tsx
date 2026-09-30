@@ -546,6 +546,9 @@ export function EvaluationDetails({
 
 // ── Add-ons sub-step ────────────────────────────────────────────────────────
 
+/** The most of one add-on an evaluation takes — this step's own ceiling. */
+const MAX_EVALUATION_ADD_ON_QUANTITY = 10;
+
 function EvaluationAddOnsSubStep({
   isStepAccessible,
   extraServices,
@@ -608,47 +611,32 @@ function EvaluationAddOnsSubStep({
         <div className="grid grid-cols-2 gap-3">
           {addOns.map((service) => {
             const totalQty = extraServices
-              .filter((es) => es.serviceId === service.id)
+              .filter((es) => es.serviceId === service.ref)
               .reduce((sum, es) => sum + es.quantity, 0);
             const isAdded = totalQty > 0;
             const priceLabel = addOnPriceLabel(service, t, locale);
-            const hasUnits = service.pricingType !== "flat";
             const petId = selectedPets[0]?.id ?? 0;
-
-            const toggle = () => {
-              if (isAdded) {
-                setExtraServices(
-                  extraServices.filter((es) => es.serviceId !== service.id),
-                );
-              } else {
-                setExtraServices([
-                  ...extraServices,
-                  { serviceId: service.id, quantity: 1, petId },
-                ]);
-              }
-            };
 
             const setQty = (q: number) => {
               if (q <= 0) {
                 setExtraServices(
-                  extraServices.filter((es) => es.serviceId !== service.id),
+                  extraServices.filter((es) => es.serviceId !== service.ref),
                 );
               } else {
-                const max = service.maxQuantity ?? 10;
-                const clamped = Math.min(q, max);
+                const clamped = Math.min(q, MAX_EVALUATION_ADD_ON_QUANTITY);
                 const without = extraServices.filter(
-                  (es) => es.serviceId !== service.id,
+                  (es) => es.serviceId !== service.ref,
                 );
                 setExtraServices([
                   ...without,
-                  { serviceId: service.id, quantity: clamped, petId },
+                  { serviceId: service.ref, quantity: clamped, petId },
                 ]);
               }
             };
 
             return (
               <div
-                key={service.id}
+                key={service.ref}
                 className={cn(
                   "group flex flex-col overflow-hidden rounded-2xl border-2 transition-all duration-200",
                   isAdded
@@ -658,9 +646,9 @@ function EvaluationAddOnsSubStep({
               >
                 {/* Image */}
                 <div className="relative h-28 w-full overflow-hidden">
-                  {service.image ? (
+                  {service.imageUrl ? (
                     <Image
-                      src={service.image}
+                      src={service.imageUrl}
                       alt={service.name}
                       fill
                       className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -695,49 +683,28 @@ function EvaluationAddOnsSubStep({
                   )}
 
                   <div className="mt-auto pt-2">
-                    {hasUnits ? (
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="size-7 p-0"
-                          disabled={!isAdded}
-                          onClick={() => setQty(totalQty - 1)}
-                        >
-                          <Minus className="size-3" />
-                        </Button>
-                        <span className="w-6 text-center text-sm font-semibold tabular-nums">
-                          {totalQty}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="size-7 p-0"
-                          onClick={() => setQty(totalQty + 1)}
-                        >
-                          <Plus className="size-3" />
-                        </Button>
-                      </div>
-                    ) : (
+                    <div className="flex items-center gap-2">
                       <Button
-                        variant={isAdded ? "default" : "outline"}
+                        variant="outline"
                         size="sm"
-                        className="h-8 w-full gap-1.5 text-xs"
-                        onClick={toggle}
+                        className="size-7 p-0"
+                        disabled={!isAdded}
+                        onClick={() => setQty(totalQty - 1)}
                       >
-                        {isAdded ? (
-                          <>
-                            <Check className="size-3" />
-                            {t("added")}
-                          </>
-                        ) : (
-                          <>
-                            <Plus className="size-3" />
-                            {t("add")}
-                          </>
-                        )}
+                        <Minus className="size-3" />
                       </Button>
-                    )}
+                      <span className="w-6 text-center text-sm font-semibold tabular-nums">
+                        {totalQty}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="size-7 p-0"
+                        onClick={() => setQty(totalQty + 1)}
+                      >
+                        <Plus className="size-3" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>

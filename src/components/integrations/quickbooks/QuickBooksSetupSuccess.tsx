@@ -40,9 +40,12 @@ export function QuickBooksSetupSuccess({
   const setup = useQuickBooksSetup(scope);
   const data = useQuickBooksData(scope);
   const mappings = useQuickBooksMappings(scope);
-  const { addOns } = useServiceAddOns();
+  const { addOns, categories: addOnCategories } = useServiceAddOns();
 
-  const groups = useMemo(() => buildMappableGroups({ addOns }), [addOns]);
+  const groups = useMemo(
+    () => buildMappableGroups({ addOns, addOnCategories }),
+    [addOns, addOnCategories],
+  );
   const progress = mappingProgress(groups, mappings);
   const depositAccount = data.accounts.find(
     (a) => a.Id === settings.depositAccountId,

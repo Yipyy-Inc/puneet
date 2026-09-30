@@ -4215,12 +4215,9 @@
       "includedAddOns": {
         "title": "Included add-ons (free)",
         "blurb": "These come with this service at no extra charge, even when they carry a price in your catalogue.",
-        "noneFound": "No active add-ons yet. Create them in the Add-ons tab on this page.",
+        "noneFound": "No active add-ons for this service yet. Set them up in Settings › Add-ons.",
         "free": "Free",
         "includedCount": "{n} included free with this service",
-        "percentOfBooking": "{n}% of the booking",
-        "session": "session",
-        "hour": "h",
         "item": "item"
       },
       "lodging": {
@@ -9519,11 +9516,7 @@
       "tip": "Tip",
       "total": "Total",
       "packagePassApplied": "Package pass applied",
-      "unitDay": "day",
-      "unitSession": "session",
-      "unitHour": "hr",
       "unitItem": "item",
-      "unitPercentOfBooking": "% of the booking",
       "stepClientPet": "Client & pet",
       "stepClientPetHelp": "Choose or create",
       "stepDetailsHelp": "Service info",
@@ -9647,7 +9640,6 @@
       "roomsFree": "{n} / {total} rooms free",
       "includedFree": "Included free",
       "pricePerUnit": "{price}/{unit}",
-      "percentOfBooking": "{percent} of booking",
       "daycareDaysHint": "Pick one or more days and set drop-off and pick-up times. Half day or full day is worked out automatically.",
       "sectionAssignmentHint": "Drag a pet onto a section, or click to assign. The system matches by eligibility and capacity when the booking is created.",
       "rateRestrictionHint": "The selected rate is set up for specific rooms. Rooms outside the rate are dimmed — you can still assign them by hand.",

@@ -24,7 +24,7 @@ interface AddOnSupply {
 }
 
 /** Add-on canonical name (as stored on `appointment.addOns`) → the consumable
- *  it draws down. Names must match `groomingAddOnsList`. */
+ *  it draws down. Matched by the add-on's NAME, as the facility wrote it. */
 export const ADD_ON_SUPPLY_MAP: Record<string, AddOnSupply> = {
   "Teeth Brushing": {
     productId: "prod-026",

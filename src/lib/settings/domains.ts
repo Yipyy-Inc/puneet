@@ -124,7 +124,6 @@ import {
   DEFAULT_INCIDENT_REPORTING,
   incidentReportingConfigSchema,
 } from "@/lib/settings/incidents";
-import { NO_ADDONS, serviceAddOnsConfigSchema } from "@/lib/settings/addons";
 import { NO_REBOOK_CONFIG, rebookConfigSchema } from "@/lib/settings/rebook";
 import {
   messagingPolicySchema,
@@ -495,19 +494,12 @@ export const SETTING_DOMAINS = {
     schema: incidentReportingConfigSchema,
     fallback: DEFAULT_INCIDENT_REPORTING,
   },
-  // ── SERVICE ADD-ONS ────────────────────────────────────────────────────
+  // ── SERVICE ADD-ONS ARE NOT A SETTING ──────────────────────────────────
   //
-  // The extras a facility sells on a booking. localStorage until 2026-09-05 —
-  // and the key was copy-pasted into THIRTEEN files, each with its own loader
-  // and its own fixture fallback, one of them src/lib/pricing-rules.ts. Ten
-  // more read the fixture directly and never saw a facility's edits at all.
-  //
-  // Empty fallback, and it is the most visible one: a facility that has not
-  // opened the add-ons screen now offers no extras rather than the seed file's.
-  // An add-on is offered and then charged, so shipping the fixture had every
-  // business quietly selling services at prices nobody there set. See the
-  // banner in lib/settings/addons.ts.
-  service_addons: { schema: serviceAddOnsConfigSchema, fallback: NO_ADDONS },
+  // `service_addons` was a domain here from 2026-09-05 — one JSON of add-ons
+  // and categories — until the one add-ons list replaced it (the
+  // `service_add_ons` tables, 20260926223644). The domain and its rows went
+  // on 2026-09-30; read add-ons with `useServiceAddOns()`.
   // ── YIPYY GO ───────────────────────────────────────────────────────────
   //
   // The pre-arrival check-in form: which services ask for one, whether it is

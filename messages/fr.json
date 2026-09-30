@@ -4215,12 +4215,9 @@
       "includedAddOns": {
         "title": "Suppléments inclus (gratuits)",
         "blurb": "Ils viennent avec ce service sans frais, même s'ils ont un prix dans votre catalogue.",
-        "noneFound": "Aucun supplément actif. Créez-en dans l'onglet Suppléments de cette page.",
+        "noneFound": "Aucun supplément actif pour ce service. Configurez-les dans Paramètres › Suppléments.",
         "free": "Gratuit",
         "includedCount": "{n} inclus gratuitement avec ce service",
-        "percentOfBooking": "{n} % de la réservation",
-        "session": "séance",
-        "hour": "h",
         "item": "article"
       },
       "lodging": {
@@ -9519,11 +9516,7 @@
       "tip": "Pourboire",
       "total": "Total",
       "packagePassApplied": "Passe du forfait appliquée",
-      "unitDay": "jour",
-      "unitSession": "séance",
-      "unitHour": "h",
       "unitItem": "article",
-      "unitPercentOfBooking": "% de la réservation",
       "stepClientPet": "Client et animal",
       "stepClientPetHelp": "Choisir ou créer",
       "stepDetailsHelp": "Info du service",
@@ -9647,7 +9640,6 @@
       "roomsFree": "{n} / {total} chambres libres",
       "includedFree": "Inclus gratuitement",
       "pricePerUnit": "{price}/{unit}",
-      "percentOfBooking": "{percent} de la réservation",
       "daycareDaysHint": "Choisissez un ou plusieurs jours et indiquez les heures de dépôt et de ramassage. Demi-journée ou journée complète est déterminé automatiquement.",
       "sectionAssignmentHint": "Glissez un animal vers une section, ou cliquez pour l’assigner. Le système associe selon l’admissibilité et la capacité à la création de la réservation.",
       "rateRestrictionHint": "Le tarif choisi est prévu pour certaines chambres. Les autres sont atténuées — vous pouvez quand même les assigner.",

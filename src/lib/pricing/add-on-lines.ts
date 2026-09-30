@@ -1,5 +1,4 @@
 import type { ExtraService } from "@/types/booking";
-import type { ServiceAddOn } from "@/types/facility";
 
 // ============================================================================
 // Add-on lines — merged, totalled and checked the SAME way on both sides.
@@ -104,14 +103,15 @@ export function sameAddOnSelection(
 
 /**
  * Catalogue price × quantity. An add-on the catalogue does not hold counts
- * nothing, and a negative price is not a refund.
+ * nothing, and a negative price is not a refund. The catalogue is keyed by
+ * whatever a line may name an add-on by (`bookableLookup`).
  */
 export function computeAddOnsTotal(
   extraServices: readonly ExtraService[],
-  addOnsById: ReadonlyMap<string, ServiceAddOn>,
+  addOnsByRef: ReadonlyMap<string, { price: number }>,
 ): number {
   return extraServices.reduce((sum, service) => {
-    const addOn = addOnsById.get(service.serviceId);
+    const addOn = addOnsByRef.get(service.serviceId);
     if (!addOn) return sum;
     return sum + Math.max(0, addOn.price) * service.quantity;
   }, 0);

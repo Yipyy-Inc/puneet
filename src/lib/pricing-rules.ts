@@ -1,5 +1,5 @@
 import { facilityConfig } from "@/data/facility-config";
-import { defaultServiceAddOns } from "@/data/service-addons";
+import { bookableLookup, type BookableAddOn } from "@/lib/add-ons/bookable";
 import type { ExtraService } from "@/types/booking";
 import type {
   CustomFee,
@@ -13,7 +13,6 @@ import type {
   RoomTypeAdjustment,
   ServiceBundleRule,
 } from "@/types/boarding";
-import type { ServiceAddOn } from "@/types/facility";
 import type { Pet } from "@/types/pet";
 import { resolvePeakDateCharges } from "@/lib/policies/peak-dates";
 import { feeAmountAt } from "@/lib/pricing/service-charge-lines";
@@ -65,21 +64,6 @@ function isCompetingDiscountRule(adjustment: PricingRuleAdjustment): boolean {
     adjustment.amount < 0 &&
     COMPETING_DISCOUNT_SOURCES.includes(adjustment.source)
   );
-}
-
-export const SERVICE_ADDONS_STORAGE_KEY = "settings-service-addons";
-
-function toScopeToken(scopeKey?: string | number): string | null {
-  if (scopeKey == null) return null;
-  const token = String(scopeKey).trim();
-  return token.length > 0 ? token : null;
-}
-
-export function getServiceAddOnsStorageKey(scopeKey?: string | number): string {
-  const token = toScopeToken(scopeKey);
-  return token
-    ? `${SERVICE_ADDONS_STORAGE_KEY}::facility-${token}`
-    : SERVICE_ADDONS_STORAGE_KEY;
 }
 
 export interface StoredPricingRules {
@@ -179,7 +163,12 @@ export interface ApplyPricingRulesInput {
   existingExtraServices: ExtraService[];
   selectedPetIds: number[];
   pets: PricingContextPet[];
-  addOnsCatalog: ServiceAddOn[];
+  /**
+   * The add-ons for this booking's TYPE of service, at its location's price
+   * (`usePricedAddOns`) — what a line's money is read from, and what a
+   * bundle rule resolves its service against.
+   */
+  addOnsCatalog: BookableAddOn[];
   roomAssignments?: Array<{ petId: number; roomId: string }>;
   /**
    * The kennel class an assignment's `roomId` belongs to.
@@ -257,29 +246,6 @@ function normalizeRuleArray<T>(value: unknown, fallback: T[]): T[] {
   return Array.isArray(value) ? (value as T[]) : fallback;
 }
 
-function parseStoredJson<T>(key: string): T | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return null;
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
-}
-
-function parseStoredJsonFromKeys<T>(keys: string[]): T | null {
-  for (const key of keys) {
-    const parsed = parseStoredJson<T>(key);
-    if (parsed != null) return parsed;
-  }
-  return null;
-}
-
-function uniqueKeys(keys: string[]): string[] {
-  return Array.from(new Set(keys.filter((key) => key.trim().length > 0)));
-}
-
 // ── THE PRICING RULES USED TO BE READ AND WRITTEN HERE ────────────────────
 //
 // `getStoredPricingRules` / `saveStoredPricingRules` / `…ForScope` are gone,
@@ -294,21 +260,9 @@ function uniqueKeys(keys: string[]): string[] {
 // Deleted rather than deprecated: a helper that silently disagrees with the
 // database about what a customer is charged should not be within reach.
 //
-// `getStoredServiceAddOns` below is still localStorage-backed. Add-ons are a
-// separate domain and a separate conversion.
-
-export function getStoredServiceAddOns(
-  scopeKey?: string | number,
-): ServiceAddOn[] {
-  const parsed = parseStoredJsonFromKeys<ServiceAddOn[]>(
-    uniqueKeys([
-      getServiceAddOnsStorageKey(scopeKey),
-      getServiceAddOnsStorageKey(),
-    ]),
-  );
-  if (Array.isArray(parsed)) return parsed;
-  return defaultServiceAddOns;
-}
+// `getStoredServiceAddOns` went the same way on 2026-09-30, with its storage
+// key and the fixture it fell back to: add-ons are one list in Postgres
+// (`service_add_ons`), passed in as `addOnsCatalog`.
 
 function normalizeServices(applicableServices?: string[]): string[] {
   if (!applicableServices || applicableServices.length === 0) return ["all"];
@@ -375,13 +329,23 @@ function buildUnitDates(
   return [];
 }
 
+/**
+ * The add-on a bundle rule means. A rule names a kind of service and a label
+ * ("grooming", "Departure Bath"), not an add-on, so this guesses: the add-on
+ * named by id, then by label, then one in a grooming category, then one with
+ * "bath" in its name, then the first. The catalogue is already this booking's
+ * type of service's, which is what the last three used to check for.
+ */
 function resolveBundleAddOn(
   rule: ServiceBundleRule,
-  catalog: ServiceAddOn[],
-): ServiceAddOn | null {
+  catalog: BookableAddOn[],
+): BookableAddOn | null {
   const active = catalog.filter((addon) => addon.isActive);
 
-  const byId = active.find((addon) => addon.id === rule.bundledService);
+  const byId = active.find(
+    (addon) =>
+      addon.ref === rule.bundledService || addon.rowId === rule.bundledService,
+  );
   if (byId) return byId;
 
   const label = rule.bundledServiceLabel.trim().toLowerCase();
@@ -398,28 +362,20 @@ function resolveBundleAddOn(
   }
 
   if (rule.bundledService === "grooming") {
-    const groomingCategory = active.find(
-      (addon) =>
-        addon.applicableServices.includes(rule.triggerService) &&
-        addon.category?.toLowerCase().includes("groom"),
+    const groomingCategory = active.find((addon) =>
+      addon.category?.toLowerCase().includes("groom"),
     );
     if (groomingCategory) return groomingCategory;
   }
 
   if (label.includes("bath")) {
-    const bathAddOn = active.find(
-      (addon) =>
-        addon.applicableServices.includes(rule.triggerService) &&
-        addon.name.toLowerCase().includes("bath"),
+    const bathAddOn = active.find((addon) =>
+      addon.name.toLowerCase().includes("bath"),
     );
     if (bathAddOn) return bathAddOn;
   }
 
-  return (
-    active.find((addon) =>
-      addon.applicableServices.includes(rule.triggerService),
-    ) ?? null
-  );
+  return active[0] ?? null;
 }
 
 function computeBundleDelta(
@@ -523,7 +479,7 @@ function hasAddOnPurchaseTrigger(
 function computeWaivedAddOnTotal(
   fee: CustomFee,
   extraServices: ExtraService[],
-  addOnsById: Map<string, ServiceAddOn>,
+  addOnsById: ReadonlyMap<string, BookableAddOn>,
 ): number {
   const waivedIds = new Set(normalizeLower(fee.waivedAddOnIds));
   if (waivedIds.size === 0) return 0;
@@ -1060,7 +1016,7 @@ export function applyDynamicPricingRules(
     const perUnitDelta = computeBundleDelta(rule, unitPrice);
 
     for (const petId of eligiblePetIds) {
-      const key = `${bundleAddOn.id}::${petId}`;
+      const key = `${bundleAddOn.ref}::${petId}`;
       const existingEntry = mergedExtraServices.find(
         (service) => `${service.serviceId}::${service.petId}` === key,
       );
@@ -1068,7 +1024,7 @@ export function applyDynamicPricingRules(
       const existingQuantity = existingEntry?.quantity ?? 0;
       if (rule.bundleMode === "mandatory" && existingQuantity < 1) {
         mergedExtraServices.push({
-          serviceId: bundleAddOn.id,
+          serviceId: bundleAddOn.ref,
           petId,
           quantity: 1,
         });
@@ -1093,9 +1049,7 @@ export function applyDynamicPricingRules(
   const normalizedMergedExtraServices =
     normalizeExtraServices(mergedExtraServices);
 
-  const addOnsById = new Map(
-    input.addOnsCatalog.map((addon) => [addon.id, addon]),
-  );
+  const addOnsById = bookableLookup(input.addOnsCatalog);
   const addOnsTotal = computeAddOnsTotal(
     normalizedMergedExtraServices,
     addOnsById,

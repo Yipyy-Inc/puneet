@@ -269,12 +269,18 @@ begin
   -- What the booking wizard prices and schedules with (a_customer_books_with_their_facilitys_own_settings).
   perform pg_temp.t(12,
     'the booking wizard''s domains are on the customer allowlist',
-    array['pricing_rules', 'deposit_rules', 'service_addons', 'care_fees',
+    array['pricing_rules', 'deposit_rules', 'care_fees',
           'booking_approval', 'evaluation_config', 'daycare_rates',
           'service_date_blocks', 'schedule_time_overrides',
           'drop_off_pick_up_overrides', 'grooming_scheduling',
           'training_programs', 'training_course_types'] <@ domains,
     array_to_string(domains, ', '));
+  -- Add-ons are not a setting any more: the one add-ons list is a table
+  -- (service_add_ons) a customer reads through its own policies, and the JSON
+  -- it replaced must not stay readable under a domain nothing serves.
+  perform pg_temp.t(14,
+    'service_addons is no longer a domain a customer can read',
+    not ('service_addons' = any(domains)), array_to_string(domains, ', '));
   -- ...and nothing that is the facility's own business.
   perform pg_temp.t(13,
     'staff, payroll, messaging and integration domains stay off it',

@@ -31,7 +31,7 @@ import {
   useServiceAddOns,
 } from "@/lib/api/facility-settings";
 import { useStaffText } from "@/lib/staff/use-staff-text";
-import { addOnsForService } from "@/lib/settings/addons";
+import { addOnsForCareType } from "@/lib/add-ons/availability";
 import { toast } from "sonner";
 import {
   ProgramDialog,
@@ -79,12 +79,12 @@ export default function TrainingRatesPage() {
   // localStorage loader — one of thirteen — plus a `storage` listener to keep
   // TABS of one browser in step, which was as far as the old storage reached.
   //
-  // `addOnsForService` also treats an add-on marked "all" as applying here.
-  // `applicableServices.includes("training")` did not, so a universal add-on
-  // was invisible on this screen while the pricing layer applied it.
+  // An add-on for "all services" applies here as one that names training
+  // does — the add-on rules' own answer (`appliesToService`), so this count
+  // and the booking screens cannot disagree about it.
   const { addOns: allAddOns } = useServiceAddOns();
   const trainingAddOns = useMemo(
-    () => addOnsForService(allAddOns, "training"),
+    () => addOnsForCareType(allAddOns, "training"),
     [allAddOns],
   );
 

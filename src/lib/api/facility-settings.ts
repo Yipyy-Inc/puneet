@@ -1,20 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   useAddOnCategories,
   useAddOns,
   useCustomerAddOns,
 } from "@/lib/api/add-ons";
-import {
-  toLegacyAddOnCategory,
-  toLegacyServiceAddOn,
-} from "@/lib/add-ons/legacy-shape";
-import type {
-  AddOn as NewAddOn,
-  AddOnCategory as NewAddOnCategory,
-} from "@/types/add-on";
+import type { AddOn, AddOnCategory } from "@/types/add-on";
 import type { FacilityDailyCareConfig } from "@/types/boarding";
 import type { CareTaskFeedback } from "@/lib/settings/care-task-feedback";
 
@@ -89,11 +81,6 @@ import type { VaccinationRules } from "@/lib/settings/vaccinations";
 import type { EstimateSettings } from "@/lib/settings/estimates";
 import type { BookingStatusRules } from "@/lib/settings/booking-statuses";
 import type { IncidentReportingConfig } from "@/lib/settings/incidents";
-import type {
-  AddOnCategory,
-  ServiceAddOn,
-  ServiceAddOnsConfig,
-} from "@/lib/settings/addons";
 import type { YipyyGoSettings } from "@/lib/settings/yipyy-go";
 import type { TagNotePolicy } from "@/lib/settings/tag-notes";
 import type { MobileAppConfig } from "@/lib/settings/mobile-app";
@@ -167,8 +154,6 @@ export interface FacilitySettings {
   booking_status_rules: SettingState<BookingStatusRules>;
   /** Who is told when an animal is hurt, and what a report must carry. */
   incident_reporting: SettingState<IncidentReportingConfig>;
-  /** The extras this facility sells on a booking, and their categories. */
-  service_addons: SettingState<ServiceAddOnsConfig>;
   /**
    * The pre-arrival check-in form: which services ask for one, whether it is
    * mandatory, when it is sent and what it asks.
@@ -727,7 +712,9 @@ export function useIncidentReporting(): {
 }
 
 /**
- * The extras this facility sells.
+ * The extras this facility sells — the one add-ons list (`service_add_ons`,
+ * 20260926223644), which is not a setting: it lives here because whoever is
+ * asking decides which route answers.
  *
  * A named hook because TWENTY-THREE files used to answer this question for
  * themselves — thirteen with their own copy of a localStorage key, ten by
@@ -735,20 +722,19 @@ export function useIncidentReporting(): {
  * booking flow, the rates screen and the estimate wizard could each offer a
  * different set of extras at different prices for the same service.
  *
+ * The rows come back as they are. What a booking may offer of them, and at
+ * what price, is `lib/add-ons/availability.ts`; what a booking names one by
+ * is `lib/add-ons/bookable.ts`. Do not compare `addOn.id` with an id a
+ * record holds — see `namesAddOn`.
+ *
  * `isPending` matters here for the same reason it does on deposits: an empty
  * list because the facility sells no extras, and an empty list because the
  * request has not landed, must not look the same to a screen deciding what to
  * put in front of a customer.
  */
 export function useServiceAddOns(): {
-  addOns: ServiceAddOn[];
+  addOns: AddOn[];
   categories: AddOnCategory[];
-  /**
-   * The same list in its own shape, with every rule the old one cannot carry
-   * (services, pet details, locations and their overrides) — what
-   * `lib/add-ons/availability.ts` decides from.
-   */
-  catalogue: NewAddOn[];
   /**
    * For a pet owner, the location their booking will land at (the primary
    * one), which may override an add-on's price. Null for staff, whose
@@ -759,10 +745,8 @@ export function useServiceAddOns(): {
   configured: boolean;
   isPending: boolean;
 } {
-  // The one add-ons list (20260926223644) replaced the `service_addons` JSON.
   // Staff read their facility's list, a pet owner the live ones of their own
-  // facility; both come back in the old shape (lib/add-ons/legacy-shape.ts) so
-  // the screens that read this move without being edited in the same change.
+  // facility.
   const audience = useSettingsAudience();
   const staffAddOns = useAddOns({ enabled: audience === "staff" });
   const staffCategories = useAddOnCategories({ enabled: audience === "staff" });
@@ -781,22 +765,12 @@ export function useServiceAddOns(): {
       ? customer.isPending
       : staffAddOns.isPending || staffCategories.isPending;
 
-  // Memoised on the query data, which is stable between fetches: several
-  // booking screens run effects on this list, and a new array every render
-  // would run them every render.
-  const legacyAddOns = useMemo(
-    () => addOns.map((addOn) => toLegacyServiceAddOn(addOn, categories)),
-    [addOns, categories],
-  );
-  const legacyCategories = useMemo(
-    () => categories.map(toLegacyAddOnCategory),
-    [categories],
-  );
-
+  // Both are the query's own arrays, stable between fetches: several booking
+  // screens run effects on this list, and a new array every render would run
+  // them every render.
   return {
-    addOns: legacyAddOns,
-    categories: legacyCategories,
-    catalogue: addOns,
+    addOns,
+    categories,
     bookingLocationId:
       audience === "customer" ? (customer.data?.locationId ?? null) : null,
     configured: addOns.length > 0,
@@ -806,8 +780,8 @@ export function useServiceAddOns(): {
 
 // Stable empties: a `?? []` in a hook's return is a new array every render,
 // and an effect that depends on it loops (check:query-default-loops).
-const NO_ADD_ONS: NewAddOn[] = [];
-const NO_ADD_ON_CATEGORIES: NewAddOnCategory[] = [];
+const NO_ADD_ONS: AddOn[] = [];
+const NO_ADD_ON_CATEGORIES: AddOnCategory[] = [];
 
 /**
  * This facility's Yipyy Go setup: which services ask a customer for a

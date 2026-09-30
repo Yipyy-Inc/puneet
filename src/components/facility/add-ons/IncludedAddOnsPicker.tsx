@@ -5,29 +5,16 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Check, Gift } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { addOnsForCareType } from "@/lib/add-ons/availability";
+import { addOnRef, namesAddOn } from "@/lib/add-ons/bookable";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
-import { addOnsForService } from "@/lib/settings/addons";
-import type { ServiceAddOn } from "@/types/facility";
 import { useStaffText } from "@/lib/staff/use-staff-text";
+import type { AddOn } from "@/types/add-on";
 
-// The unit labels a facility typed (`unitLabel`) are NOT translated: a name a
-// person entered never passes through the locale layer (§5q). Only the
-// fallbacks and the sentences around them do.
-function fmtPrice(addon: ServiceAddOn, t: (key: string) => string): string {
-  switch (addon.pricingType) {
-    case "flat":
-      return `$${addon.price}`;
-    case "per_day":
-      return `$${addon.price}/day`;
-    case "per_session":
-      return `$${addon.price}/${addon.unitLabel ?? t("session")}`;
-    case "per_hour":
-      return `$${addon.price}/${addon.unitLabel ?? t("hour")}`;
-    case "per_item":
-      return `$${addon.price}/${addon.unitLabel ?? t("item")}`;
-    case "percentage_of_booking":
-      return t("percentOfBooking").replace("{n}", String(addon.price));
-  }
+// One price, and the booking says how many — so one unit. The JSON this list
+// replaced priced by day, session, hour or a share of the booking.
+function fmtPrice(addon: AddOn, t: (key: string) => string): string {
+  return `$${addon.price}/${t("item")}`;
 }
 
 interface Props {
@@ -47,15 +34,21 @@ export function IncludedAddOnsPicker({
   // so a retired add-on appeared on the server render and vanished on hydration.
   const { addOns: allAddOns } = useServiceAddOns();
   const addOns = useMemo(
-    () => addOnsForService(allAddOns, serviceFilter),
+    () => addOnsForCareType(allAddOns, serviceFilter),
     [allAddOns, serviceFilter],
   );
 
-  function toggle(id: string) {
+  // An included add-on is named as a booking line names it (`addOnRef`),
+  // because the booking step matches its lines against this list; one written
+  // as the row's uuid is recognised and cleared the same way.
+  const isIncluded = (addOn: AddOn) =>
+    selectedIds.some((id) => namesAddOn(id, addOn));
+
+  function toggle(addOn: AddOn) {
     onChange(
-      selectedIds.includes(id)
-        ? selectedIds.filter((x) => x !== id)
-        : [...selectedIds, id],
+      isIncluded(addOn)
+        ? selectedIds.filter((id) => !namesAddOn(id, addOn))
+        : [...selectedIds, addOnRef(addOn)],
     );
   }
 
@@ -76,12 +69,12 @@ export function IncludedAddOnsPicker({
       ) : (
         <div className="rounded-lg border">
           {addOns.map((addon, i) => {
-            const selected = selectedIds.includes(addon.id);
+            const selected = isIncluded(addon);
             return (
               <button
                 key={addon.id}
                 type="button"
-                onClick={() => toggle(addon.id)}
+                onClick={() => toggle(addon)}
                 className={cn(
                   "hover:bg-muted/50 flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors",
                   i > 0 && "border-t",

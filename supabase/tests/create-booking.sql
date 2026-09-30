@@ -139,7 +139,7 @@ $$;
 -- not from the request and not from the service's base row.
 do $$
 declare
-  v_id uuid; v_size text; v_price numeric; v_dur integer; v_addons integer;
+  v_id uuid; v_size text; v_price numeric; v_dur integer;
   v_pets integer;
 begin
   perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000190001', 'role', 'authenticated')::text, true);
@@ -148,24 +148,20 @@ begin
   select booking_id into v_id from public.create_booking(
     pg_temp.booking('00000000-0000-0000-0000-000000190040'),
     array['00000000-0000-0000-0000-000000190050']::uuid[],
-    jsonb_build_object('serviceId', 'cb-svc-1',
-                       'addOnIds', jsonb_build_array('cb-add-1'))
+    jsonb_build_object('serviceId', 'cb-svc-1')
   );
   reset role;
 
   select size_label, service_price, service_duration_min
     into v_size, v_price, v_dur
     from public.grooming_appointments where booking_id = v_id;
-  select count(*) into v_addons
-    from public.grooming_appointment_add_ons where booking_id = v_id;
   select count(*) into v_pets
     from public.booking_pets where booking_id = v_id;
 
   perform pg_temp.t('B1  a grooming booking creates its appointment, sized and priced',
-    v_size = 'medium' and v_price = 80 and v_dur = 105
-      and v_addons = 1 and v_pets = 1,
-    format('size=%s price=%s duration=%s add_ons=%s pets=%s',
-           v_size, v_price, v_dur, v_addons, v_pets));
+    v_size = 'medium' and v_price = 80 and v_dur = 105 and v_pets = 1,
+    format('size=%s price=%s duration=%s pets=%s',
+           v_size, v_price, v_dur, v_pets));
 exception when others then
   reset role; perform pg_temp.t('B1  appointment created', false, sqlerrm);
 end $$;
@@ -260,30 +256,27 @@ end $$;
 -- groom -- and it must carry no money, matching what the trigger did to the
 -- booking beside it.
 do $$
-declare v_id uuid; v_price numeric; v_addon numeric; v_booking numeric; v_status text;
+declare v_id uuid; v_price numeric; v_booking numeric; v_status text;
 begin
   perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000190005', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select booking_id into v_id from public.create_booking(
     pg_temp.booking('00000000-0000-0000-0000-000000190040'),
     array['00000000-0000-0000-0000-000000190050']::uuid[],
-    jsonb_build_object('serviceId', 'cb-svc-1',
-                       'addOnIds', jsonb_build_array('cb-add-1'))
+    jsonb_build_object('serviceId', 'cb-svc-1')
   );
   reset role;
 
   select service_price into v_price
     from public.grooming_appointments where booking_id = v_id;
-  select price into v_addon
-    from public.grooming_appointment_add_ons where booking_id = v_id;
   select total_cost, status::text into v_booking, v_status
     from public.bookings where id = v_id;
 
   perform pg_temp.t('B5  a customer request books the groom and agrees no price',
-    v_id is not null and v_price = 0 and v_addon = 0
+    v_id is not null and v_price = 0
       and v_booking = 0 and v_status = 'request_submitted',
-    format('appointment=%s service_price=%s add_on=%s booking_total=%s status=%s',
-           v_id is not null, v_price, v_addon, v_booking, v_status));
+    format('appointment=%s service_price=%s booking_total=%s status=%s',
+           v_id is not null, v_price, v_booking, v_status));
 exception when others then
   reset role; perform pg_temp.t('B5  customer request pricing', false, sqlerrm);
 end $$;
@@ -359,14 +352,20 @@ exception when others then
   reset role; perform pg_temp.t('B8  anon execute', false, sqlerrm);
 end $$;
 
--- ── B9: an add-on the facility does not have is not quietly skipped ────────
+-- ── B9: add-ons in the grooming payload are refused, not quietly skipped ───
 --
--- The insert is a JOIN, and a join that matches nothing inserts nothing and
--- raises nothing -- the pet would arrive without the nail trim the booking
--- screen had already charged for. B1 is the positive control for this: it
--- writes a real add-on and counts it.
+-- A groom's add-ons are `add_on` lines on the bill, placed by
+-- `create_bookings` from the request's `addOns` (booking-add-on-lines.sql).
+-- A list of ids in `p_grooming` used to be written to a table of its own,
+-- which is gone -- and a list that is read by nothing is a nail trim the
+-- booking screen promised and no bill carries. So it raises, and the booking
+-- goes with it. This add-on is a real one the facility sells, to prove the
+-- refusal is of the KEY and not of an unknown id.
+--
+-- An EMPTY list is accepted: the build that was live while this migration
+-- was applied sends one on every groom.
 do $$
-declare v_before integer; v_after integer; v_raised boolean;
+declare v_before integer; v_after integer; v_raised boolean; v_empty uuid;
 begin
   select count(*) into v_before from public.bookings
    where client_id = '00000000-0000-0000-0000-000000190040';
@@ -378,7 +377,7 @@ begin
       pg_temp.booking('00000000-0000-0000-0000-000000190040'),
       array['00000000-0000-0000-0000-000000190050']::uuid[],
       jsonb_build_object('serviceId', 'cb-svc-1',
-                         'addOnIds', jsonb_build_array('cb-add-1', 'cb-nope'))
+                         'addOnIds', jsonb_build_array('cb-add-1'))
     );
     v_raised := false;
   exception when others then v_raised := true; end;
@@ -387,36 +386,41 @@ begin
   select count(*) into v_after from public.bookings
    where client_id = '00000000-0000-0000-0000-000000190040';
 
-  perform pg_temp.t('B9  an unknown add-on is refused, not silently dropped',
-    v_raised and v_after = v_before,
-    format('raised=%s before=%s after=%s', v_raised, v_before, v_after));
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000190001', 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select booking_id into v_empty from public.create_booking(
+    pg_temp.booking('00000000-0000-0000-0000-000000190040'),
+    array['00000000-0000-0000-0000-000000190050']::uuid[],
+    jsonb_build_object('serviceId', 'cb-svc-1', 'addOnIds', '[]'::jsonb)
+  );
+  reset role;
+
+  perform pg_temp.t('B9  add-on ids in the grooming payload are refused; an empty list is not',
+    v_raised and v_after = v_before and v_empty is not null,
+    format('raised=%s before=%s after=%s empty_list_booked=%s',
+           v_raised, v_before, v_after, v_empty is not null));
 exception when others then
-  reset role; perform pg_temp.t('B9  unknown add-on', false, sqlerrm);
+  reset role; perform pg_temp.t('B9  add-on ids in the grooming payload', false, sqlerrm);
 end $$;
 
 -- ── B10: what the facility made in the app can be booked ───────────────────
 --
--- A service, add-on or station created through the app has no legacy id, and
--- the routes address it by uuid. Until 20260911135248 create_booking matched on
+-- A service or station created through the app has no legacy id, and the
+-- routes address it by uuid. Until 20260911135248 create_booking matched on
 -- legacy_id alone, so the facility could put a service on its menu and never
--- book it.
+-- book it. (An add-on by uuid is booking-add-on-lines.sql's.)
 insert into public.grooming_services
   (id, facility_id, name, base_price, duration_min)
 values
   ('00000000-0000-0000-0000-000000190061', '00000000-0000-0000-0000-000000190020',
    'App Bath', 40, 45);
-insert into public.service_add_ons
-  (id, facility_id, name, price, duration_min)
-values
-  ('00000000-0000-0000-0000-000000190071', '00000000-0000-0000-0000-000000190020',
-   'App Teeth', 9, 5);
 insert into public.grooming_stations (id, facility_id, name, type)
 values
   ('00000000-0000-0000-0000-000000190080', '00000000-0000-0000-0000-000000190020',
    'App Table', 'table');
 
 do $$
-declare v_id uuid; v_service text; v_station uuid; v_addons integer;
+declare v_id uuid; v_service text; v_station uuid;
 begin
   perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000190001', 'role', 'authenticated')::text, true);
   set local role authenticated;
@@ -425,21 +429,17 @@ begin
     array['00000000-0000-0000-0000-000000190050']::uuid[],
     jsonb_build_object(
       'serviceId', '00000000-0000-0000-0000-000000190061',
-      'stationId', '00000000-0000-0000-0000-000000190080',
-      'addOnIds', jsonb_build_array('00000000-0000-0000-0000-000000190071'))
+      'stationId', '00000000-0000-0000-0000-000000190080')
   );
   reset role;
 
   select service_name, station_id into v_service, v_station
     from public.grooming_appointments where booking_id = v_id;
-  select count(*) into v_addons
-    from public.grooming_appointment_add_ons where booking_id = v_id;
 
-  perform pg_temp.t('B10 a service, station and add-on with no legacy id are booked by uuid',
+  perform pg_temp.t('B10 a service and a station with no legacy id are booked by uuid',
     v_service = 'App Bath'
-      and v_station = '00000000-0000-0000-0000-000000190080'
-      and v_addons = 1,
-    format('service=%s station=%s add_ons=%s', v_service, v_station, v_addons));
+      and v_station = '00000000-0000-0000-0000-000000190080',
+    format('service=%s station=%s', v_service, v_station));
 exception when others then
   reset role; perform pg_temp.t('B10 book by uuid', false, sqlerrm);
 end $$;

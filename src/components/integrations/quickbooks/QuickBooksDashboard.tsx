@@ -231,8 +231,11 @@ function NewServiceBanner({
 }) {
   const watch = useCatalogWatch(scope);
   const mappings = useQuickBooksMappings(scope);
-  const { addOns } = useServiceAddOns();
-  const groups = useMemo(() => buildMappableGroups({ addOns }), [addOns]);
+  const { addOns, categories: addOnCategories } = useServiceAddOns();
+  const groups = useMemo(
+    () => buildMappableGroups({ addOns, addOnCategories }),
+    [addOns, addOnCategories],
+  );
 
   // Recorded in an effect, not during render: this writes to a store, and the
   // first visit baselines the whole catalog.

@@ -72,17 +72,17 @@ export function QuickBooksMappingScreen({
         : [],
     [settings.trackByLocation, data.plan, scope.facilityId],
   );
-  const { addOns } = useServiceAddOns();
+  const { addOns, categories: addOnCategories } = useServiceAddOns();
   // Deleted-but-mapped items are folded back in: their mapping is still in
   // force for historical transactions, so it stays visible and editable.
   const groups = useMemo(
     () =>
       withRetainedMappings(
-        buildMappableGroups({ locations, addOns }),
+        buildMappableGroups({ locations, addOns, addOnCategories }),
         mappedItemIds(mappings),
         mappedItemNames(mappings),
       ),
-    [mappings, locations, addOns],
+    [mappings, locations, addOns, addOnCategories],
   );
   const [expanded, setExpanded] = useState<Set<string>>(
     () => new Set(initialExpanded ?? []),

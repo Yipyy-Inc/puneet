@@ -87,10 +87,7 @@ import {
 } from "./constants";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { isBuiltinService } from "@/lib/service-registry";
-import {
-  applyDynamicPricingRules,
-  getServiceAddOnsStorageKey,
-} from "@/lib/pricing-rules";
+import { applyDynamicPricingRules } from "@/lib/pricing-rules";
 import { splitBookingMoney } from "@/lib/pricing/booking-write-money";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
@@ -466,31 +463,6 @@ export function BookingModal({
 
   // Customer booking request confirmation state
   const [bookingRequested, setBookingRequested] = useState(false);
-
-  const addOnsStorageKey = useMemo(
-    () => getServiceAddOnsStorageKey(facilityId),
-    [facilityId],
-  );
-  const [pricingStorageVersion, setPricingStorageVersion] = useState(0);
-
-  useEffect(() => {
-    const handleStorage = (event: StorageEvent) => {
-      if (!event.key) return;
-      // Add-ons only. The pricing RULES moved to `facility_settings`, where
-      // TanStack Query owns freshness — another tab saving them invalidates the
-      // query rather than poking localStorage, so watching for a storage event
-      // that can no longer fire would be dead code pretending to be a feature.
-      if (
-        event.key === addOnsStorageKey ||
-        event.key === getServiceAddOnsStorageKey()
-      ) {
-        setPricingStorageVersion((prev) => prev + 1);
-      }
-    };
-
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
-  }, [addOnsStorageKey]);
 
   // The facility's own tax settings. This read the fixture facilities list,
   // so an estimate carried fixture facility 11's taxes whoever it was for.

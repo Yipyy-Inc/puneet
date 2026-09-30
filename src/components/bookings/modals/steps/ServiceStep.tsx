@@ -21,8 +21,9 @@ import { SERVICE_CATEGORIES, SERVICE_ACCENTS } from "../constants";
 import { trainingQueries } from "@/lib/api/training";
 import { useServiceFromPrices } from "@/lib/api/service-from-prices";
 import type { TrainingCourseType } from "@/lib/training-config";
+import { offeredAddOns } from "@/lib/add-ons/availability";
+import { useBookingLocationId } from "@/lib/add-ons/use-offered-add-ons";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
-import { addOnsForService } from "@/lib/settings/addons";
 import { getPetSize } from "@/lib/pet-size";
 import type { FacilityBookingFlowConfig } from "@/types/booking";
 import type { ModuleConfig } from "@/types/facility";
@@ -88,6 +89,7 @@ export function ServiceStep({
   // the card's detail pane advertised the seed list's services at the seed
   // list's prices whatever the business had configured.
   const { addOns: facilityAddOns } = useServiceAddOns();
+  const bookingLocationId = useBookingLocationId();
   // Which card is currently expanded into its inline detail pane. Defaults to
   // whatever `selectedService` is so an already-picked service stays open.
   // Independent from `selectedService` to allow "preview without selecting"
@@ -372,7 +374,12 @@ export function ServiceStep({
           // Inline detail pane data (rendered only for the expanded card).
           const isExpanded = expandedServiceId === service.id && !isDisabled;
           const allIncludedItems = service.included;
-          const applicableAddOns = addOnsForService(facilityAddOns, service.id);
+          // What this type of service may offer HERE, at this location's
+          // price: the add-on rules with no service row or pet chosen yet.
+          const applicableAddOns = offeredAddOns(facilityAddOns, {
+            careType: service.id,
+            locationId: bookingLocationId,
+          });
 
           // #1 — when a card is expanded inline, take the full row.
           //      Otherwise keep the odd-row full-span rule.
@@ -593,27 +600,29 @@ export function ServiceStep({
                             {t("optionalAddOns")}
                           </p>
                           <ul className="space-y-1">
-                            {applicableAddOns.slice(0, 6).map((addon) => (
-                              <li
-                                key={addon.id}
-                                className="bg-card flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-xs"
-                              >
-                                <span className="truncate">{addon.name}</span>
-                                <span
-                                  className={cn(
-                                    "shrink-0 font-semibold",
-                                    accent.price,
-                                  )}
+                            {applicableAddOns
+                              .slice(0, 6)
+                              .map(({ addOn, terms }) => (
+                                <li
+                                  key={addOn.id}
+                                  className="bg-card flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-xs"
                                 >
-                                  {formatMoney(addon.price, locale, {
-                                    whole: true,
-                                  })}
-                                  <span className="text-muted-foreground ml-0.5 text-[10px] font-normal">
-                                    /{addon.unitLabel || t("unitEach")}
+                                  <span className="truncate">{addOn.name}</span>
+                                  <span
+                                    className={cn(
+                                      "shrink-0 font-semibold",
+                                      accent.price,
+                                    )}
+                                  >
+                                    {formatMoney(terms.price, locale, {
+                                      whole: true,
+                                    })}
+                                    <span className="text-muted-foreground ml-0.5 text-[10px] font-normal">
+                                      /{t("unitEach")}
+                                    </span>
                                   </span>
-                                </span>
-                              </li>
-                            ))}
+                                </li>
+                              ))}
                             {applicableAddOns.length > 6 && (
                               <li className="text-muted-foreground/80 text-[10px]">
                                 {t("moreAvailableAtBooking").replace(

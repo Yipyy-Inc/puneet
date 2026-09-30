@@ -666,17 +666,15 @@ const DEPOSIT_TENDERS = ["cash", "e_transfer"] as const;
 
 /**
  * The grooming payload carries CHOICES, not money: which service, which
- * add-ons, which station. The RPC reads the prices from the catalogue, because
- * a price in a request body is a suggestion.
+ * station. The RPC reads the price from the catalogue, because a price in a
+ * request body is a suggestion. The groom's add-ons are not here: they are
+ * `add_on` lines, sent with the request's `addOns` (below the item map),
+ * and `create_booking` refuses a list of them in this payload.
  */
 function groomingFor(booking: NewBooking) {
   return booking.service === "grooming"
     ? {
         serviceId: booking.serviceType ?? null,
-        // The groom's add-ons are `add_on` lines since 2026-09-30, sent with
-        // the request's `addOns` (below the item map) — not rows in
-        // `grooming_appointment_add_ons`, which now holds history only.
-        addOnIds: [],
         stationId: booking.stationAssignment ?? null,
         durationOverrideMin: booking.groomingDurationOverrideMin ?? null,
       }

@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { usePricingRules, useServiceAddOns } from "@/lib/api/facility-settings";
+import { usePricedAddOns } from "@/lib/add-ons/use-offered-add-ons";
+import { usePricingRules } from "@/lib/api/facility-settings";
 import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -328,9 +329,8 @@ const SERVICE_VARIANTS: Record<string, ServiceVariant[]> = {
   ],
 };
 
-// Available add-ons are loaded at runtime from the global service-addons store
-// (see groomingAddOns memo inside the component). Add-ons created in the
-// grooming rates page Add-ons tab automatically appear here.
+// Available add-ons are the facility's add-ons list, as it prices a groom at
+// this location (see the groomingAddOns memo inside the component).
 
 export function GroomingBookingFlow({
   open,
@@ -341,8 +341,8 @@ export function GroomingBookingFlow({
   // These used to come from localStorage, so what a customer was charged
   // depended on which browser took the booking.
   const { rules: pricingRules } = usePricingRules();
-  // And the extras, from the same place, for the same reason.
-  const { addOns: serviceAddOns } = useServiceAddOns();
+  // And the extras: the live add-ons for a groom, at this location's price.
+  const serviceAddOns = usePricedAddOns("grooming");
   const customerId = customer?.id;
 
   const router = useRouter();
@@ -811,20 +811,19 @@ export function GroomingBookingFlow({
     return { isAnxious, isSenior };
   }, [selectedPet]);
 
-  // Grooming add-ons sourced from the global service-addons store, scoped to
-  // the grooming module via applicableServices.
-  const groomingAddOns = useMemo<GroomingAddOn[]>(() => {
-    return serviceAddOns
-      .filter((a) => a.isActive && a.applicableServices.includes("grooming"))
-      .map((a) => ({
-        id: a.id,
+  // Named as a booking line names an add-on (its ref).
+  const groomingAddOns = useMemo<GroomingAddOn[]>(
+    () =>
+      serviceAddOns.map((a) => ({
+        id: a.ref,
         name: a.name,
         description: a.description,
-        durationMinutes: a.duration ?? 0,
+        durationMinutes: a.durationMin,
         price: a.price,
         enabled: a.isActive,
-      }));
-  }, [open]);
+      })),
+    [serviceAddOns],
+  );
 
   // Get available add-ons (filtered by pet flags)
   const availableAddOns = useMemo(() => {
@@ -932,10 +931,7 @@ export function GroomingBookingFlow({
     return total;
   }, [calculatedPrice, selectedAddOns, groomingAddOns]);
 
-  const storedServiceAddOns = useMemo(
-    () => serviceAddOns.filter((addOn) => addOn.isActive),
-    [serviceAddOns],
-  );
+  const storedServiceAddOns = serviceAddOns;
 
   const groomingPricingComputation = useMemo(() => {
     if (!selectedPet || !selectedServiceCategory) {

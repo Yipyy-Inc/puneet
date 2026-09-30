@@ -194,7 +194,6 @@ export interface AppointmentRow {
     session_progress: { step: string; done: boolean; at?: string }[] | null;
     service: { legacy_id: string | null } | null;
     station: { legacy_id: string | null; id: string } | null;
-    grooming_appointment_add_ons: { name: string }[] | null;
     grooming_alert_notes:
       | {
           id: string;
@@ -348,14 +347,11 @@ export function rowToGroomingAppointment(
 
     packageId: ext?.service?.legacy_id ?? "",
     packageName: ext?.service_name ?? row.status,
-    // The old table for a groom booked before 2026-09-30; the booking's
-    // `add_on` lines since — both, so neither generation loses its extras.
-    addOns: [
-      ...(ext?.grooming_appointment_add_ons ?? []).map((a) => a.name),
-      ...(row.lines ?? [])
-        .filter((line) => line.kind === "add_on")
-        .map((line) => line.name),
-    ],
+    // The booking's `add_on` lines. (A groom booked before 2026-09-30 held
+    // them in `grooming_appointment_add_ons`, which went that day.)
+    addOns: (row.lines ?? [])
+      .filter((line) => line.kind === "add_on")
+      .map((line) => line.name),
 
     basePrice: Number(ext?.service_price ?? row.base_price),
     // The reasons ARE the app's own enum now — 20260805210000 replaced the set
@@ -531,7 +527,6 @@ export const APPOINTMENT_SELECT = `
     groomer_notes, session_progress,
     service:service_id ( legacy_id ),
     station:station_id ( id, legacy_id ),
-    grooming_appointment_add_ons ( name ),
     grooming_alert_notes ( id, body, applies_to_future, author_name, created_at ),
     grooming_ticket_comments ( id, message, author_name, created_at ),
     grooming_price_adjustments ( id, reason, amount, note, custom_reason,

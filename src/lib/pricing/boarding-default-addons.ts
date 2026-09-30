@@ -1,5 +1,5 @@
+import type { BookableAddOn } from "@/lib/add-ons/bookable";
 import type { ExtraService } from "@/types/booking";
-import type { ServiceAddOn } from "@/types/facility";
 
 // ============================================================================
 // A boarding service's DEFAULT ADD-ONS — attached to a stay by its length.
@@ -42,7 +42,11 @@ export const DEFAULT_ADD_ON_WHENS: readonly DefaultAddOnWhen[] = [
 ];
 
 export interface BoardingDefaultAddOn {
-  /** The add-on's id in the facility's `service_addons` catalogue. */
+  /**
+   * What the rule names its add-on by. `addon_id` is text: the rates screen
+   * writes the add-on's ref (`addOnRef`), and anything else may write the
+   * row's uuid. `defaultAddOnLines` finds it by either.
+   */
   addOnId: string;
   appliesOn: DefaultAddOnWhen;
   /** How many on each day the rule covers. At least 1. */
@@ -69,21 +73,10 @@ export function daysCovered(
 }
 
 /**
- * An add-on the facility can attach by length of stay. A percentage-of-booking
- * add-on is not one: its `price` is a percentage, and a quantity of days
- * multiplied into a percentage is not a price anybody set.
- */
-export function canBeDefault(
-  addOn: Pick<ServiceAddOn, "pricingType">,
-): boolean {
-  return addOn.pricingType !== "percentage_of_booking";
-}
-
-/**
  * The add-on lines a stay of `nights` nights gets from its service's defaults.
  *
- * One line per pet, or one for the booking when the add-on says it is per
- * booking — a pick-up is not fetched twice for two dogs. A default whose
+ * One line per pet, named as a chosen line names it (the add-on's ref), so a
+ * default and the same add-on chosen by hand are one line. A default whose
  * add-on the facility has since removed or switched off attaches nothing,
  * rather than a line nobody can price.
  */
@@ -96,21 +89,22 @@ export function defaultAddOnLines({
   defaults: readonly BoardingDefaultAddOn[];
   nights: number;
   petIds: readonly number[];
-  catalogue: readonly ServiceAddOn[];
+  catalogue: readonly Pick<BookableAddOn, "ref" | "rowId" | "isActive">[];
 }): ExtraService[] {
   if (petIds.length === 0) return [];
   const lines: ExtraService[] = [];
   for (const rule of defaults) {
     if (rule.minNights !== null && nights < rule.minNights) continue;
-    const addOn = catalogue.find((a) => a.id === rule.addOnId);
-    if (!addOn || !addOn.isActive || !canBeDefault(addOn)) continue;
+    const addOn = catalogue.find(
+      (a) => a.rowId === rule.addOnId || a.ref === rule.addOnId,
+    );
+    if (!addOn || !addOn.isActive) continue;
     const quantity =
       Math.max(1, Math.round(rule.quantityPerDay)) *
       daysCovered(rule.appliesOn, nights);
     if (quantity <= 0) continue;
-    const pets = addOn.petScope === "per_booking" ? petIds.slice(0, 1) : petIds;
-    for (const petId of pets) {
-      lines.push({ serviceId: addOn.id, quantity, petId });
+    for (const petId of petIds) {
+      lines.push({ serviceId: addOn.ref, quantity, petId });
     }
   }
   return lines;

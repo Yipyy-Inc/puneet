@@ -43,44 +43,15 @@ import { useGroomingMenu } from "@/lib/api/grooming-catalogue";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { useServiceAddOns } from "@/lib/api/facility-settings";
+import { bookableLookup, type BookableAddOn } from "@/lib/add-ons/bookable";
 import { facilityConfig } from "@/data/facility-config";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
-import type { ServiceAddOn } from "@/types/facility";
 import { useBookingApproval, useCareFees } from "@/lib/api/facility-settings";
 import { responseHoursFor } from "@/lib/settings/booking-approval";
 import { offeredMedicationAids } from "@/lib/settings/care-fees";
 import { staffQueries } from "@/lib/api/staff";
 import { AddOnStaffSelect } from "./AddOnStaffSelect";
 
-/**
- * The unit an add-on is priced by — `/day`, `/hr`, `% of booking`.
- *
- * Every arm returned English, and none of them could be seen by a gate: a
- * string starting with `/` or `%` is not prose by any test worth having, and
- * a bare `return` is not a rendered node. `unitLabel` is what the FACILITY
- * typed and stays out of the locale layer (§5q); only the fallback and the
- * percentage phrase are translated.
- */
-function formatAddonUnit(
-  addon: ServiceAddOn,
-  t: (key: string) => string,
-): string {
-  switch (addon.pricingType) {
-    case "flat":
-      return "";
-    case "per_day":
-      return `/${addon.unitLabel || t("unitDay")}`;
-    case "per_session":
-      return `/${addon.unitLabel || t("unitSession")}`;
-    case "per_hour":
-      return `/${addon.unitLabel || t("unitHour")}`;
-    case "per_item":
-      return `/${addon.unitLabel || t("unitItem")}`;
-    case "percentage_of_booking":
-      return t("unitPercentOfBooking");
-  }
-}
 import type { Pet } from "@/types/pet";
 import { localToday } from "@/lib/vaccinations";
 import type { Client } from "@/types/client";
@@ -134,7 +105,11 @@ interface ConfirmStepProps {
     petId: number,
     staffId: string | null,
   ) => void;
-  addOnsCatalog?: ServiceAddOn[];
+  /**
+   * The add-ons the booking was priced from (`usePricedAddOns`), so a line
+   * here says the name and the price the total was built with.
+   */
+  addOnsCatalog: BookableAddOn[];
   calculatePrice: {
     basePrice: number;
     subtotal?: number;
@@ -321,15 +296,14 @@ export function ConfirmStep({
   const serviceInfo = SERVICE_CATEGORIES.find((s) => s.id === selectedService);
   const ServiceIcon = serviceInfo?.icon ?? PawPrint;
   const hasAddons = extraServices.length > 0;
-  const { addOns: facilityAddOns } = useServiceAddOns();
   const hasRooms = roomAssignments.length > 0;
   const isEvaluation = selectedService === "evaluation";
   const isDaycareOrBoarding =
     selectedService === "daycare" || selectedService === "boarding";
-  // The catalogue the parent passed, or the facility's own. The fallback used
-  // to be this browser's localStorage, so a confirmation screen could price an
+  // By whatever a line names its add-on by. The catalogue used to fall back
+  // to this browser's localStorage, so a confirmation screen could price an
   // extra the booking screen had never offered.
-  const resolvedAddOns = addOnsCatalog ?? facilityAddOns;
+  const addOnsByRef = bookableLookup(addOnsCatalog);
   const t = useShellText("booking");
   // The room step keeps an id — a room type from its cards, a room from the
   // occupancy grid. This printed the id itself, so a dog placed in the
@@ -944,9 +918,7 @@ export function ConfirmStep({
               <div className="space-y-2">
                 {extraServices.map((es) => {
                   const pet = selectedPets.find((p) => p.id === es.petId);
-                  const addon = resolvedAddOns.find(
-                    (a) => a.id === es.serviceId,
-                  );
+                  const addon = addOnsByRef.get(es.serviceId);
                   const unitPrice = addon?.price ?? 0;
                   const lineTotal = unitPrice * es.quantity;
                   // "Does this add-on require staff?" — asked of staff, for
@@ -978,16 +950,7 @@ export function ConfirmStep({
                         <div className="flex items-center gap-2 text-xs">
                           <span className="text-muted-foreground">
                             {formatMoney(unitPrice, locale)}
-                            {formatAddonUnit(
-                              addon ??
-                                ({
-                                  pricingType: "flat",
-                                  price: 0,
-                                  unitLabel: "",
-                                } as ServiceAddOn),
-                              t,
-                            )}{" "}
-                            × {es.quantity}
+                            {addon ? `/${t("unitItem")}` : ""} × {es.quantity}
                           </span>
                           <span className="font-semibold tabular-nums">
                             {formatMoney(lineTotal, locale)}
@@ -1370,9 +1333,7 @@ export function ConfirmStep({
               return (
                 <div className="space-y-1">
                   {extraServices.map((es, i) => {
-                    const addon = resolvedAddOns.find(
-                      (a) => a.id === es.serviceId,
-                    );
+                    const addon = addOnsByRef.get(es.serviceId);
                     const lineTotal = (addon?.price ?? 0) * es.quantity;
                     return (
                       <div

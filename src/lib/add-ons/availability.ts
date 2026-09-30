@@ -117,6 +117,20 @@ export function offeredAddOns(
 }
 
 /**
+ * The live add-ons for one TYPE of service ("boarding", "training", a custom
+ * module's slug) — what a rates page counts and what a service's own setup
+ * chooses from, where no location, service or pet is known yet.
+ */
+export function addOnsForCareType(
+  addOns: readonly AddOn[],
+  careType: string,
+): AddOn[] {
+  return addOns.filter(
+    (addOn) => addOn.isActive && appliesToService(addOn, careType),
+  );
+}
+
+/**
  * Offered for EVERY pet named — what a picker that attaches an add-on to the
  * whole booking can promise. With no pet named, the booking alone decides.
  */

@@ -10,7 +10,6 @@ import {
 } from "@/lib/pricing/add-on-lines";
 import { editablePatch } from "@/components/bookings/use-save-booking-edit";
 import type { Booking, NewBooking } from "@/types/booking";
-import type { ServiceAddOn } from "@/types/facility";
 
 // ── WHAT THESE PIN ────────────────────────────────────────────────────────
 //
@@ -25,10 +24,10 @@ const line = (serviceId: string, quantity: number, petId = 1) => ({
   petId,
 });
 
-const catalogue = new Map<string, ServiceAddOn>([
-  ["walk", { id: "walk", price: 8 } as ServiceAddOn],
-  ["bath", { id: "bath", price: 25 } as ServiceAddOn],
-  ["refund", { id: "refund", price: -5 } as ServiceAddOn],
+const catalogue = new Map<string, { price: number }>([
+  ["walk", { price: 8 }],
+  ["bath", { price: 25 }],
+  ["refund", { price: -5 }],
 ]);
 
 describe("merging add-on lines", () => {

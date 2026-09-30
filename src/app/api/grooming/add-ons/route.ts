@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { appliesToService } from "@/lib/add-ons/availability";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import {
   activeFacilityIdForStaff,
@@ -7,18 +8,21 @@ import {
 } from "@/lib/api/facility-context";
 
 // ============================================================================
-// The facility's grooming add-ons, from `grooming_add_ons` — since 2026-09-26
-// a view over the one add-ons list (20260926223644): every add-on that applies
-// to grooming, deleted ones left out.
+// The facility's grooming add-ons: every live add-on of the one add-ons list
+// (`service_add_ons`, 20260926223644) that applies to grooming — to all
+// services, or to a grooming service by name.
 //
-// Both grooming booking screens offered `GROOMING_ADD_ONS` from
-// `@/data/grooming-add-ons` — eight invented extras at invented prices. The
-// booking RPC resolves add-ons against THIS table by legacy id, so an add-on
-// the fixture named and the facility does not sell made the whole booking
-// fail with "This facility has 0 of the 1 grooming add-ons requested."
+// Both grooming booking screens offered `GROOMING_ADD_ONS` from a fixture —
+// eight invented extras at invented prices — and an add-on the fixture named
+// and the facility does not sell made the whole booking fail.
 //
-// The id is the legacy id when there is one, else the uuid — the rule every
-// catalogue route uses, and what `create_booking` accepts for either.
+// Read from the table, by the add-on rules' own answer to "does this apply to
+// grooming" (`appliesToService`). Until 2026-09-30 it read `grooming_add_ons`,
+// a view that answered the same question in SQL, kept from the days when that
+// name was a table of its own.
+//
+// The id is the legacy id when there is one, else the uuid — what a booking
+// names an add-on by, and what the database accepts either of.
 // ============================================================================
 
 export const dynamic = "force-dynamic";
@@ -39,31 +43,34 @@ export async function GET() {
   const supabase = await createServerClient();
   const scope = await activeFacilityIdForStaff();
   const { data, error } = await supabase
-    .from("grooming_add_ons")
+    .from("service_add_ons")
     .select(
-      "id, legacy_id, name, price, duration_min, is_active, display_order",
+      "id, legacy_id, name, price, duration_min, applies_to_all_services, service_refs",
     )
     .match(inFacility(scope))
     .eq("is_active", true)
+    .is("archived_at", null)
     .order("display_order", { ascending: true });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // A view's columns are all nullable to the type generator, though these
-  // never are: the view selects them straight from `service_add_ons`.
-  const options: GroomingAddOnOption[] = (data ?? []).flatMap((row) =>
-    row.id && row.name
-      ? [
-          {
-            id: row.legacy_id ?? row.id,
-            name: row.name,
-            price: Number(row.price),
-            duration: row.duration_min ?? 0,
-          },
-        ]
-      : [],
-  );
+  const options: GroomingAddOnOption[] = (data ?? [])
+    .filter((row) =>
+      appliesToService(
+        {
+          appliesToAllServices: row.applies_to_all_services,
+          serviceRefs: row.service_refs ?? [],
+        },
+        "grooming",
+      ),
+    )
+    .map((row) => ({
+      id: row.legacy_id ?? row.id,
+      name: row.name,
+      price: Number(row.price),
+      duration: row.duration_min,
+    }));
   return NextResponse.json(options);
 }

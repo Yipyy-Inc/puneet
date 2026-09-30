@@ -26,6 +26,7 @@ import {
   type BookingRequestActionHandlers,
 } from "@/components/facility/BookingRequestActions";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { namesAddOn } from "@/lib/add-ons/bookable";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
 import { facilityRooms } from "@/data/rooms";
 import { cn } from "@/lib/utils";
@@ -154,7 +155,7 @@ export function BookingRequestDetailDialog({
     : null;
 
   const addOnLines = (request.extraServices ?? []).map((es) => {
-    const def = facilityAddOns.find((a) => a.id === es.serviceId);
+    const def = facilityAddOns.find((a) => namesAddOn(es.serviceId, a));
     return {
       ...es,
       name: def?.name ?? es.serviceId,

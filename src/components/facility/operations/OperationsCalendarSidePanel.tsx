@@ -28,7 +28,7 @@ import {
 } from "@/lib/operations-calendar";
 import { formatCurrency } from "@/components/facility/operations/OperationsCalendarDrawerHelpers";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
-import type { ServiceAddOn } from "@/types/facility";
+import type { AddOn } from "@/types/add-on";
 
 // Booking statuses that drop out of the "Upcoming Today" active list.
 const FINISHED_STATUSES = new Set(["Checked-out", "Completed", "Cancelled"]);
@@ -45,11 +45,11 @@ function getStaffInitials(name: string): string {
     .join("");
 }
 
-/** Price for an add-on by name (from service-addons); 0 for unknown/custom. */
+/** Price for an add-on by name (the add-ons list); 0 for unknown/custom. */
 // Priced off the FACILITY's list. This was a Map built from the shipped
 // fixture at import, so the revenue this panel reported counted the seed
 // file's prices and scored a facility's own add-ons at zero.
-function addOnPrice(addOns: ServiceAddOn[], name: string): number {
+function addOnPrice(addOns: AddOn[], name: string): number {
   const match = addOns.find(
     (addOn) => addOn.name.toLowerCase() === name.toLowerCase(),
   );

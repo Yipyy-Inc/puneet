@@ -186,20 +186,6 @@ export const daycareRateSchema = z
 export type DaycareRate = z.infer<typeof daycareRateSchema>;
 
 // ============================================================================
-// Daycare Add-On
-// ============================================================================
-
-export const daycareAddOnSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  description: z.string(),
-  price: z.number(),
-  duration: z.number(),
-  isActive: z.boolean(),
-});
-export type DaycareAddOn = z.infer<typeof daycareAddOnSchema>;
-
-// ============================================================================
 // Daycare Package
 // ============================================================================
 

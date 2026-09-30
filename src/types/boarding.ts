@@ -239,16 +239,6 @@ export type BoardingGuest = z.infer<typeof boardingGuestSchema>;
 // and the rate is a boarding SERVICE now (20260924210000). Deleted rather
 // than kept "for later", so it cannot be picked up as if it priced something.
 
-export const boardingAddOnSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  description: z.string(),
-  price: z.number(),
-  duration: z.number(),
-  isActive: z.boolean(),
-});
-export type BoardingAddOn = z.infer<typeof boardingAddOnSchema>;
-
 export const multiNightDiscountSchema = z
   .object({
     id: z.string(),

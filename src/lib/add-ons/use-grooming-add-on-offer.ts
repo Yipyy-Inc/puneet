@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import type { GroomingAddOnOption } from "@/app/api/grooming/add-ons/route";
 import { addOnPetFacts, offeredForPets } from "@/lib/add-ons/availability";
+import { addOnRef } from "@/lib/add-ons/bookable";
 import { useBookingLocationId } from "@/lib/add-ons/use-offered-add-ons";
 import { breedQueries } from "@/lib/api/breeds";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
@@ -14,13 +15,13 @@ import { useGroomingMenu } from "@/lib/api/grooming-catalogue";
 // THE GROOMING ADD-ONS A BOOKING MAY OFFER (2026-09-26).
 //
 // Grooming offered add-ons from two lists once they were one table: the
-// groom's own list (`grooming_add_ons`, now a view over `service_add_ons`)
-// and every add-on for "grooming" from `useServiceAddOns`, per pet. An add-on
-// for all services sat in both and could be charged twice, and only the first
-// reaches `create_booking`, the ready-time trigger and the server's price.
-// So the groom has ONE list — that one — decided by the same rules as every
-// other service: active, at this location, for the chosen grooming service,
-// and for every pet on the booking.
+// groom's own list (`/api/grooming/add-ons`) and every add-on for "grooming"
+// from `useServiceAddOns`, per pet. An add-on for all services sat in both
+// and could be charged twice, and only the first reached `create_booking`,
+// the ready-time trigger and the server's price. So the groom has ONE list —
+// the add-ons list itself — decided by the same rules as every other
+// service: active, at this location, for the chosen grooming service, and
+// for every pet on the booking.
 //
 // Each add-on is quoted at the booking LOCATION'S price and minutes, as on
 // every other service, since 2026-09-30: a groom's add-on is now a bill line
@@ -57,7 +58,7 @@ export function useGroomingAddOnOffer({
   }[];
   asCustomer?: boolean;
 }): GroomingAddOnOffer[] {
-  const { catalogue } = useServiceAddOns();
+  const { addOns: catalogue } = useServiceAddOns();
   const locationId = useBookingLocationId();
   // The same menu query the booking screen and the details step already
   // hold, so this costs no request. Only the row's uuid is read from it.
@@ -78,7 +79,7 @@ export function useGroomingAddOnOffer({
     );
     if (offered.length === 0) return NO_OFFERS;
     return offered.map(({ addOn, terms }) => ({
-      id: addOn.legacyId ?? addOn.id,
+      id: addOnRef(addOn),
       name: addOn.name,
       price: terms.price,
       duration: terms.durationMin,

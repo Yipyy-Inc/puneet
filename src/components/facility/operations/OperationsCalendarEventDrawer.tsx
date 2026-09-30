@@ -79,7 +79,7 @@ import {
   useCapturedLeads,
 } from "@/lib/lead-capture";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
-import type { ServiceAddOn } from "@/types/facility";
+import type { AddOn, AddOnCategory } from "@/types/add-on";
 import type { FacilityTask } from "@/data/facility-tasks";
 import type { Booking } from "@/types/booking";
 import type { Client } from "@/types/client";
@@ -1188,16 +1188,19 @@ function NotifyComposer({
 interface AddOnOption {
   id: string;
   name: string;
-  /** Optional on ServiceAddOn, and therefore optional here. */
+  /** The category's name. An add-on need not be in one. */
   category?: string;
   price: number;
 }
 
-function toAddOnOptions(addOns: ServiceAddOn[]): AddOnOption[] {
+function toAddOnOptions(
+  addOns: AddOn[],
+  categories: AddOnCategory[],
+): AddOnOption[] {
   return addOns.map((addOn) => ({
     id: addOn.id,
     name: addOn.name,
-    category: addOn.category,
+    category: categories.find((c) => c.id === addOn.categoryId)?.name,
     price: addOn.price,
   }));
 }
@@ -1209,7 +1212,7 @@ function toAddOnOptions(addOns: ServiceAddOn[]): AddOnOption[] {
  * revenue this drawer showed was priced off the seed file — and an add-on the
  * facility had added itself counted as zero.
  */
-function addOnPrice(addOns: ServiceAddOn[], name: string): number {
+function addOnPrice(addOns: AddOn[], name: string): number {
   const match = addOns.find(
     (addOn) => addOn.name.toLowerCase() === name.toLowerCase(),
   );
@@ -1225,10 +1228,10 @@ function AddOnPicker({
   trigger: React.ReactNode;
 }) {
   const { t: calT } = useStaffText("opsCalendar");
-  const { addOns: facilityAddOns } = useServiceAddOns();
+  const { addOns: facilityAddOns, categories } = useServiceAddOns();
   const options = useMemo(
-    () => toAddOnOptions(facilityAddOns),
-    [facilityAddOns],
+    () => toAddOnOptions(facilityAddOns, categories),
+    [facilityAddOns, categories],
   );
   const [open, setOpen] = useState(false);
   return (

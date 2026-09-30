@@ -67,8 +67,8 @@ import {
   useEstimateSettings,
   useServiceAddOns,
 } from "@/lib/api/facility-settings";
-import { addOnsForService } from "@/lib/settings/addons";
-import type { ServiceAddOn } from "@/types/facility";
+import { addOnsForCareType } from "@/lib/add-ons/availability";
+import type { AddOn } from "@/types/add-on";
 import { GuestContactForm } from "./GuestContactForm";
 import { SERVICE_CATEGORIES } from "@/components/bookings/modals/constants";
 import type { EstimateLineItem } from "@/types/booking";
@@ -414,7 +414,7 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
   // Add-ons offered for this service (fallback to all active). The list is
   // the FACILITY's now — this read the shipped fixture, so an estimate offered
   // extras the business does not sell, at prices it never set.
-  const serviceAddOns = addOnsForService(facilityAddOns, selectedService);
+  const serviceAddOns = addOnsForCareType(facilityAddOns, selectedService);
   const activeAddOns =
     serviceAddOns.length > 0
       ? serviceAddOns
@@ -688,7 +688,7 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
     ]);
   };
 
-  const addAddOnLineItem = (addon: ServiceAddOn) => {
+  const addAddOnLineItem = (addon: AddOn) => {
     setLineItems([
       ...allLineItems,
       {
@@ -1737,7 +1737,6 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
                               </span>
                               <span className="text-muted-foreground text-xs tabular-nums">
                                 ${addon.price.toFixed(2)}
-                                {addon.unitLabel ? ` / ${addon.unitLabel}` : ""}
                               </span>
                               <Plus className="size-3.5 shrink-0 text-blue-500" />
                             </button>

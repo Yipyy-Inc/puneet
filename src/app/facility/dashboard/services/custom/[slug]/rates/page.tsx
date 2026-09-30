@@ -22,7 +22,7 @@ import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import type { CustomServiceVariant } from "@/types/facility";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
-import { addOnsForService } from "@/lib/settings/addons";
+import { addOnsForCareType } from "@/lib/add-ons/availability";
 import { AddOnsSettingsLink } from "@/components/facility/add-ons/add-ons-settings-link";
 import {
   DollarSign,
@@ -258,7 +258,7 @@ export default function CustomServiceRatesPage() {
   // tabs of one browser and nothing else.
   const { addOns: allAddOns } = useServiceAddOns();
   const customAddOns = useMemo(
-    () => (slug ? addOnsForService(allAddOns, slug) : []),
+    () => (slug ? addOnsForCareType(allAddOns, slug) : []),
     [allAddOns, slug],
   );
 

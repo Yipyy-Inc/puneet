@@ -16,11 +16,11 @@ import { trainingPackages } from "@/data/training";
 import type { FacilityTask } from "@/data/facility-tasks";
 import type { Booking } from "@/types/booking";
 import type { Client } from "@/types/client";
+import type { AddOn } from "@/types/add-on";
 import type {
   CustomServiceCheckIn,
   CustomServiceModule,
   FacilityResource,
-  ServiceAddOn,
 } from "@/types/facility";
 import type { Transaction } from "@/types/retail";
 
@@ -405,7 +405,7 @@ interface BuildUnifiedEventsInput {
    * name and colour. Passed in for the same reason as `groomingMenu`. Absent,
    * a line shows its id and takes the default colour.
    */
-  addOns?: ServiceAddOn[];
+  addOns?: AddOn[];
   /**
    * The facility's tag catalogue and its assignments.
    *
@@ -858,32 +858,37 @@ function mapTaskSubtype(task: FacilityTask): string {
 
 // The facility's add-ons by id and by name, rebuilt when the list changes —
 // compared by reference, as `_rateColorMenu` is below. A booking's own lines
-// name an add-on by id; an invoice line only by name.
+// name an add-on by id — the one it had before the one list, or its row's
+// uuid, so both are keys; an invoice line only by name.
 let _addOnLookup: {
-  byId: Map<string, ServiceAddOn>;
-  byName: Map<string, ServiceAddOn>;
+  byId: Map<string, AddOn>;
+  byName: Map<string, AddOn>;
 } | null = null;
-let _addOnSource: ServiceAddOn[] | null = null;
+let _addOnSource: AddOn[] | null = null;
 // One empty list, so a caller without the catalogue does not rebuild the
 // lookup on every call.
-const NO_ADD_ONS: ServiceAddOn[] = [];
+const NO_ADD_ONS: AddOn[] = [];
 
-function addOnLookup(addOns: ServiceAddOn[]) {
+function addOnLookup(addOns: AddOn[]) {
   if (!_addOnLookup || _addOnSource !== addOns) {
     _addOnSource = addOns;
+    const byId = new Map<string, AddOn>();
+    for (const addOn of addOns) {
+      byId.set(addOn.id, addOn);
+      if (addOn.legacyId) byId.set(addOn.legacyId, addOn);
+    }
     _addOnLookup = {
-      byId: new Map(addOns.map((a) => [a.id, a])),
+      byId,
       byName: new Map(addOns.map((a) => [a.name.toLowerCase(), a])),
     };
   }
   return _addOnLookup;
 }
 
-function getAddOnColor(
-  name: string,
-  addOns: ServiceAddOn[],
-): string | undefined {
-  return addOnLookup(addOns).byName.get(name.toLowerCase())?.colorCode;
+function getAddOnColor(name: string, addOns: AddOn[]): string | undefined {
+  return (
+    addOnLookup(addOns).byName.get(name.toLowerCase())?.colorCode ?? undefined
+  );
 }
 
 let _rateColorLookup: Map<string, string> | null = null;
@@ -993,7 +998,7 @@ function inferAddOnScheduledAt(
 
 function extractBookingAddOns(
   booking: Booking,
-  addOns: ServiceAddOn[],
+  addOns: AddOn[],
 ): CalendarAddOn[] {
   const invoiceAddOns = [
     ...(booking.invoice?.items ?? []),
@@ -1264,7 +1269,7 @@ function buildBookingEvents(
   decorationContext: DecorationContext,
   groomingMenu: GroomingPackage[],
   buildTagNames: TagNameLookup,
-  addOnCatalogue: ServiceAddOn[],
+  addOnCatalogue: AddOn[],
 ): OperationsCalendarEvent[] {
   const { petLookup } = buildClientLookups(clients);
 
@@ -1787,7 +1792,7 @@ function buildStayAddOnCalendarEvents(
   clients: Client[],
   buildTagNames: TagNameLookup,
   completedAddOns: CompletedAddOnEntry[] | undefined,
-  addOnCatalogue: ServiceAddOn[],
+  addOnCatalogue: AddOn[],
 ): OperationsCalendarEvent[] {
   const completedLookup = new Map(
     (completedAddOns ?? []).map((entry) => [

@@ -125,12 +125,12 @@ begin
           '00000000-0000-0000-0000-00000000a010',    -- a lie
           '00000000-0000-0000-0000-00000000a050', 'Full Groom', 'medium', 80, 90);
 
-  insert into public.grooming_appointment_add_ons
-    (booking_id, facility_id, add_on_id, name, price, duration_min, auto_attached)
-  values ('00000000-0000-0000-0000-00000000a070', '00000000-0000-0000-0000-00000000a010',
-          '00000000-0000-0000-0000-00000000a060', 'Teeth Brushing', 12, 10, true),
-         ('00000000-0000-0000-0000-00000000a070', '00000000-0000-0000-0000-00000000a010',
-          '00000000-0000-0000-0000-00000000a061', 'De-shed', 20, 20, false);
+  -- The add-ons on the ticket are `add_on` lines on the booking's bill
+  -- (20260930153912), put there the way an edit puts them. Until 2026-09-30
+  -- they were rows of a table of their own, and the ready time read those.
+  perform public.set_booking_add_ons(
+    '00000000-0000-0000-0000-00000000a070',
+    '[{"serviceId": "ao1", "quantity": 1}, {"serviceId": "ao2", "quantity": 1}]'::jsonb);
   reset role;
 
   -- Scoped to the fixture's own booking. Read after `reset role`, so RLS is
@@ -273,7 +273,7 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000000a004', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into a   from public.grooming_appointments;
-  select count(*) into l   from public.grooming_appointment_add_ons;
+  select count(*) into l   from public.booking_line_items;
   select count(*) into adj from public.grooming_price_adjustments;
   reset role;
   perform pg_temp.t('T8  a rival facility reads none of it',
@@ -320,20 +320,25 @@ exception when others then
 end $$;
 
 -- ── T11: cross-facility add-on line ─────────────────────────────────────────
+-- The rival's add-on is a real row; it is simply not this facility's, and an
+-- add-on is looked up within the booking's own. The two lines already on the
+-- ticket are counted afterwards: a refused edit takes nothing off.
 do $$
-declare ok boolean;
+declare ok boolean; kept integer;
 begin
   perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000000a001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
-    insert into public.grooming_appointment_add_ons
-      (booking_id, facility_id, add_on_id, name, price, duration_min)
-    values ('00000000-0000-0000-0000-00000000a070', '00000000-0000-0000-0000-00000000a020',
-            '00000000-0000-0000-0000-00000000a062', 'Rival Add-on', 5, 5);
+    perform public.set_booking_add_ons(
+      '00000000-0000-0000-0000-00000000a070',
+      '[{"serviceId": "aoR", "quantity": 1}]'::jsonb);
     ok := false;
-  exception when insufficient_privilege then ok := true; end;
+  exception when foreign_key_violation then ok := true; end;
   reset role;
-  perform pg_temp.t('T11 cannot bill another facility''s add-on', ok);
+  select count(*) into kept from public.booking_line_items
+   where booking_id = '00000000-0000-0000-0000-00000000a070' and kind = 'add_on';
+  perform pg_temp.t('T11 cannot bill another facility''s add-on',
+    ok and kept = 2, format('refused=%s lines_kept=%s', ok, kept));
 exception when others then
   reset role; perform pg_temp.t('T11 cross-facility line', false, sqlerrm);
 end $$;

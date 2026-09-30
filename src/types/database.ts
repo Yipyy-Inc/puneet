@@ -642,13 +642,6 @@ export type Database = {
             foreignKeyName: "booking_line_items_add_on_id_fkey";
             columns: ["add_on_id"];
             isOneToOne: false;
-            referencedRelation: "grooming_add_ons";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "booking_line_items_add_on_id_fkey";
-            columns: ["add_on_id"];
-            isOneToOne: false;
             referencedRelation: "service_add_ons";
             referencedColumns: ["id"];
           },
@@ -4190,64 +4183,6 @@ export type Database = {
           },
           {
             foreignKeyName: "grooming_alert_notes_facility_id_fkey";
-            columns: ["facility_id"];
-            isOneToOne: false;
-            referencedRelation: "facilities";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      grooming_appointment_add_ons: {
-        Row: {
-          add_on_id: string | null;
-          auto_attached: boolean;
-          booking_id: string;
-          created_at: string;
-          duration_min: number;
-          facility_id: string;
-          id: string;
-          name: string;
-          price: number;
-        };
-        Insert: {
-          add_on_id?: string | null;
-          auto_attached?: boolean;
-          booking_id: string;
-          created_at?: string;
-          duration_min?: number;
-          facility_id: string;
-          id?: string;
-          name: string;
-          price?: number;
-        };
-        Update: {
-          add_on_id?: string | null;
-          auto_attached?: boolean;
-          booking_id?: string;
-          created_at?: string;
-          duration_min?: number;
-          facility_id?: string;
-          id?: string;
-          name?: string;
-          price?: number;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "grooming_appointment_add_ons_add_on_id_fkey";
-            columns: ["add_on_id"];
-            isOneToOne: false;
-            referencedRelation: "service_add_ons";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "grooming_appointment_add_ons_booking_id_fkey";
-            columns: ["booking_id"];
-            isOneToOne: false;
-            referencedRelation: "grooming_appointments";
-            referencedColumns: ["booking_id"];
-          },
-          {
-            foreignKeyName: "grooming_appointment_add_ons_facility_id_fkey";
             columns: ["facility_id"];
             isOneToOne: false;
             referencedRelation: "facilities";
@@ -13598,22 +13533,6 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
-      };
-      grooming_add_ons: {
-        Row: {
-          created_at: string | null;
-          description: string | null;
-          display_order: number | null;
-          duration_min: number | null;
-          facility_id: string | null;
-          id: string | null;
-          is_active: boolean | null;
-          legacy_id: string | null;
-          name: string | null;
-          price: number | null;
-          updated_at: string | null;
-        };
-        Relationships: [];
       };
       grooming_stylist_stats: {
         Row: {
