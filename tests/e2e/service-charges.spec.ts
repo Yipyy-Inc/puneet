@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { createClient } from "@supabase/supabase-js";
 
 import { ACCOUNTS, signIn } from "./_auth";
 
@@ -18,6 +19,11 @@ import { ACCOUNTS, signIn } from "./_auth";
 //   S4  a per-pet fee multiplies; a capped one stops at the cap
 //   S5  a multi-day block is charged ONCE, not once per day
 //   S6  a second application is refused, so no pass can double it
+//   S7  a fee for a new customer, a new pet, a customer segment or an add-on
+//       bought is billed too — until 2026-09-30 it was quoted, taken out of
+//       `total_cost`, and charged by nothing
+//   S8  a customer's request is billed its fees when staff approve it, and a
+//       percentage is of the WHOLE request, not its first day
 //
 // ── IT PUTS THE FACILITY'S PRICING RULES BACK ────────────────────────────
 //
@@ -62,6 +68,19 @@ interface LineItem {
 
 let originalPricingRules: Record<string, unknown> | null = null;
 const made: number[] = [];
+/** Pets, clients and add-ons made here, removed in afterAll. */
+const madePets: number[] = [];
+const madeClients: number[] = [];
+
+function admin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  expect(url, "NEXT_PUBLIC_SUPABASE_URL must be set").toBeTruthy();
+  expect(key, "SUPABASE_SERVICE_ROLE_KEY must be set").toBeTruthy();
+  return createClient(url!, key!, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
 
 function day(offset: number): string {
   const d = new Date();
@@ -96,12 +115,21 @@ async function withFees(page: Page, fees: unknown[]) {
 
 async function book(
   page: Page,
-  input: { service: string; start: string; end: string; total: number },
+  input: {
+    service: string;
+    start: string;
+    end: string;
+    total: number;
+    client?: number;
+    pet?: number;
+    extraServices?: { serviceId: string; quantity: number; petId: number }[];
+  },
 ): Promise<number> {
   const res = await page.request.post("/api/bookings", {
     data: {
-      clientId: ALICE.client,
-      petId: ALICE.pet,
+      clientId: input.client ?? ALICE.client,
+      petId: input.pet ?? ALICE.pet,
+      ...(input.extraServices ? { extraServices: input.extraServices } : {}),
       facilityId: 0,
       service: input.service,
       startDate: input.start,
@@ -166,8 +194,29 @@ test.afterAll(async ({ browser }) => {
       });
       if (res.ok()) cancelled++;
     }
+
+    // What S7 made to have something new: a pet (its bookings keep their
+    // rows, cancelled), a client (with its pet and its cancelled booking),
+    // and the add-on the fees were triggered by.
+    let pets = 0;
+    for (const ref of madePets) {
+      const res = await page.request.delete(`/api/pets/${ref}`);
+      if (res.ok()) pets++;
+    }
+    const db = admin();
+    let clients = 0;
+    for (const ref of madeClients) {
+      const { error } = await db.from("clients").delete().eq("ref", ref);
+      if (!error) clients++;
+    }
+    const { error: addOnError } = await db
+      .from("service_add_ons")
+      .delete()
+      .like("name", `${MARKER}%`);
     console.log(
-      `cleanup: pricing rules restored, ${cancelled}/${made.length} booking(s) cancelled`,
+      `cleanup: pricing rules restored, ${cancelled}/${made.length} booking(s) cancelled, ` +
+        `${pets}/${madePets.length} pet(s) and ${clients}/${madeClients.length} client(s) removed` +
+        (addOnError ? `, add-ons NOT removed: ${addOnError.message}` : ""),
     );
   } finally {
     await page.close();
@@ -479,5 +528,287 @@ test.describe("a facility's service charges", () => {
     const after = await booking(page, ref);
     expect(after?.totalCost).toBe(180);
     expect(after?.amountDue, "no fee, no change").toBe(180);
+  });
+});
+
+// ── S7 / S8: EVERY TRIGGER REACHES THE BILL ─────────────────────────────────
+//
+// The server decides these from the database — who came before, which pets,
+// the client's record, the add-ons on the booking — with the functions the
+// booking form's quote uses. Nothing in these requests says which fee applies.
+
+test.describe("fees that apply by themselves", () => {
+  test("a new pet's fee is billed on its first stay, and not its second", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+    const created = await page.request.post("/api/pets", {
+      data: {
+        clientId: ALICE.client,
+        name: `${MARKER} Pip ${Date.now() % 100000}`,
+        type: "dog",
+      },
+    });
+    expect(created.status(), await created.text()).toBe(201);
+    const pet = ((await created.json()) as { id: number }).id;
+    madePets.push(pet);
+
+    await withFees(page, [
+      {
+        ...CLEANING_FEE,
+        id: "e2e-sc-new-pet",
+        name: `${MARKER} New pet fee`,
+        amount: 20,
+        autoApply: "new_pet",
+        scope: "per_pet",
+      },
+    ]);
+
+    const first = await book(page, {
+      service: "boarding",
+      start: day(50),
+      end: day(52),
+      total: 100,
+      pet,
+    });
+    const fee = (await lines(page, first)).find((i) =>
+      i.name.includes("New pet fee"),
+    );
+    expect(fee?.price, "billed, not only quoted").toBe(20);
+    expect((await booking(page, first))?.amountDue).toBe(120);
+
+    const second = await book(page, {
+      service: "boarding",
+      start: day(54),
+      end: day(56),
+      total: 100,
+      pet,
+    });
+    expect(
+      (await lines(page, second)).filter((i) => i.name.includes("New pet fee")),
+      "the pet has been here before",
+    ).toHaveLength(0);
+    expect((await booking(page, second))?.amountDue).toBe(100);
+  });
+
+  test("a segment fee is billed to a client in that segment, and no other", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+    const client = await page.request.get(`/api/clients/${ALICE.client}`);
+    expect(client.ok(), await client.text()).toBe(true);
+    const status = ((await client.json()) as { status?: string }).status;
+    expect(
+      status,
+      "the client's status is what the segment reads",
+    ).toBeTruthy();
+
+    await withFees(page, [
+      {
+        ...CLEANING_FEE,
+        id: "e2e-sc-segment",
+        name: `${MARKER} Segment fee`,
+        amount: 7,
+        autoApply: "customer_segment",
+        customerStatuses: [status],
+      },
+      {
+        ...CLEANING_FEE,
+        id: "e2e-sc-other-segment",
+        name: `${MARKER} Other segment fee`,
+        amount: 9,
+        autoApply: "customer_segment",
+        customerStatuses: ["e2e-nobody-has-this-status"],
+      },
+    ]);
+
+    const ref = await book(page, {
+      service: "boarding",
+      start: day(58),
+      end: day(60),
+      total: 100,
+    });
+    const names = (await lines(page, ref)).map((i) => i.name);
+    expect(names.some((n) => n.includes("Segment fee"))).toBe(true);
+    expect(names.some((n) => n.includes("Other segment fee"))).toBe(false);
+    expect((await booking(page, ref))?.amountDue).toBe(107);
+  });
+
+  test("an add-on bought brings its fee, and a waiver takes its price off", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+    const saved = await page.request.post("/api/add-ons", {
+      data: { name: `${MARKER} Bath`, price: 25 },
+    });
+    expect(saved.status(), await saved.text()).toBe(201);
+    const bath = ((await saved.json()) as { addOn: { id: string } }).addOn.id;
+
+    await withFees(page, [
+      {
+        ...CLEANING_FEE,
+        id: "e2e-sc-bath-fee",
+        name: `${MARKER} Bath fee`,
+        amount: 5,
+        autoApply: "addon_purchase",
+        triggerAddOnIds: [bath],
+      },
+      {
+        ...CLEANING_FEE,
+        id: "e2e-sc-bath-waiver",
+        name: `${MARKER} Half-price bath`,
+        amount: 0,
+        autoApply: "addon_purchase",
+        triggerAddOnIds: [bath],
+        waivedAddOnIds: [bath],
+        waivePercentage: 50,
+      },
+    ]);
+
+    const ref = await book(page, {
+      service: "boarding",
+      start: day(62),
+      end: day(64),
+      total: 100,
+      extraServices: [{ serviceId: bath, quantity: 2, petId: ALICE.pet }],
+    });
+    const items = await lines(page, ref);
+    expect(items.find((i) => i.kind === "add_on")?.price).toBe(50);
+    expect(items.find((i) => i.name.includes("Bath fee"))?.price).toBe(5);
+    const waiver = items.find((i) => i.name.includes("Half-price bath"));
+    // Half of two $25 baths, as a negative item: a discount, not a fee.
+    expect(waiver?.kind).toBe("item");
+    expect(waiver?.price).toBe(-25);
+    expect((await booking(page, ref))?.amountDue).toBe(100 + 50 + 5 - 25);
+  });
+
+  test("a new customer's fee is billed on their first booking", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+    const stamp = Date.now();
+    const client = await page.request.post("/api/clients", {
+      data: {
+        name: `${MARKER} New client ${stamp % 100000}`,
+        email: `e2e-sc-new-${stamp}@example.invalid`,
+      },
+    });
+    expect(client.status(), await client.text()).toBe(201);
+    const clientRef = ((await client.json()) as { id: number }).id;
+    madeClients.push(clientRef);
+    const pet = await page.request.post("/api/pets", {
+      data: {
+        clientId: clientRef,
+        name: `${MARKER} Newcomer`,
+        type: "dog",
+      },
+    });
+    expect(pet.status(), await pet.text()).toBe(201);
+    const petRef = ((await pet.json()) as { id: number }).id;
+
+    await withFees(page, [
+      {
+        ...CLEANING_FEE,
+        id: "e2e-sc-new-customer",
+        name: `${MARKER} Welcome fee`,
+        amount: 25,
+        autoApply: "new_customer",
+      },
+    ]);
+
+    const ref = await book(page, {
+      service: "boarding",
+      start: day(66),
+      end: day(68),
+      total: 100,
+      client: clientRef,
+      pet: petRef,
+    });
+    expect(
+      (await lines(page, ref)).find((i) => i.name.includes("Welcome fee"))
+        ?.price,
+    ).toBe(25);
+    expect((await booking(page, ref))?.amountDue).toBe(125);
+  });
+
+  test("a request is billed its fees when staff approve it, on the whole request", async ({
+    page,
+    browser,
+  }) => {
+    // The customer asks for three days at $40. A request arrives at $0, so
+    // nothing is billed yet.
+    const customer = await browser.newContext();
+    const asCustomer = await customer.newPage();
+    let refs: number[] = [];
+    try {
+      await signIn(asCustomer, ACCOUNTS.customer);
+      const days = [70, 71, 72].map(day);
+      const res = await asCustomer.request.post("/api/bookings", {
+        data: {
+          clientId: ALICE.client,
+          petId: ALICE.pet,
+          facilityId: 0,
+          service: "daycare",
+          startDate: days[0],
+          endDate: days[0],
+          checkInTime: "08:00",
+          checkOutTime: "17:00",
+          status: "request_submitted",
+          basePrice: 120,
+          discount: 0,
+          totalCost: 120,
+          specialRequests: MARKER,
+          daycareSelectedDates: days,
+          parts: days.map((date) => ({
+            petIds: [ALICE.pet],
+            startDate: date,
+            endDate: date,
+            checkInTime: "08:00",
+            checkOutTime: "17:00",
+            basePrice: 40,
+            discount: 0,
+            totalCost: 40,
+          })),
+        },
+      });
+      expect(res.status(), await res.text()).toBe(201);
+      const body = (await res.json()) as { id: number; groupRefs?: number[] };
+      refs = body.groupRefs?.length ? body.groupRefs : [body.id];
+      made.push(...refs);
+    } finally {
+      await customer.close();
+    }
+
+    await signIn(page, ACCOUNTS.owner);
+    await withFees(page, [
+      CLEANING_FEE,
+      {
+        ...CLEANING_FEE,
+        id: "e2e-sc-share",
+        name: `${MARKER} Share of the stay`,
+        feeType: "percentage",
+        amount: 10,
+      },
+    ]);
+    const first = Math.min(...refs);
+    expect(await lines(page, first), "a request is not billed").toHaveLength(0);
+
+    const decided = await page.request.post(`/api/bookings/${first}/decision`, {
+      data: { action: "approve", atQuote: true },
+    });
+    expect(decided.status(), await decided.text()).toBe(200);
+
+    const items = await lines(page, first);
+    expect(items.find((i) => i.name.includes("Cleaning fee"))?.price).toBe(15);
+    // 10% of the three days, $120 — not of the first day's $40.
+    expect(items.find((i) => i.name.includes("Share of the stay"))?.price).toBe(
+      12,
+    );
+    for (const ref of refs.filter((r) => r !== first)) {
+      expect(await lines(page, ref), "charged once per request").toHaveLength(
+        0,
+      );
+    }
+    expect((await booking(page, first))?.amountDue).toBe(40 + 15 + 12);
   });
 });

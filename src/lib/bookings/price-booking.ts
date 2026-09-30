@@ -415,7 +415,7 @@ async function priceBoarding(input: PriceRequest): Promise<ServerQuote> {
  * then price no add-ons, and a booking that carries one disagrees and stays a
  * request.
  */
-async function liveAddOns(
+export async function pricedAddOnsFor(
   facilityId: string,
   careType: string,
   locationId: string | null,
@@ -460,7 +460,7 @@ async function withAddOns(
   }
   const lines = addOnLinesFrom(input.extraServices);
   // The one add-ons list, by the rule the wizard uses (`usePricedAddOns`).
-  const catalogue = await liveAddOns(
+  const catalogue = await pricedAddOnsFor(
     input.facilityId,
     input.service,
     input.locationId ?? null,

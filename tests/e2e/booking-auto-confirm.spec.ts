@@ -148,7 +148,7 @@ async function bookGroomingAsCustomer(page: Page, total: number) {
   });
 }
 
-async function bookAsCustomer(page: Page, total: number) {
+async function bookAsCustomer(page: Page, total: number, discount = 0) {
   return page.request.post("/api/bookings", {
     data: {
       clientId: ALICE.client,
@@ -160,7 +160,7 @@ async function bookAsCustomer(page: Page, total: number) {
       checkOutTime: "17:00",
       status: "confirmed",
       basePrice: total,
-      discount: 0,
+      discount,
       totalCost: total,
       specialRequests: MARKER,
     },
@@ -275,6 +275,54 @@ test.describe("a facility decides which services need its approval", () => {
       booking.status,
       "a price the server did not derive is never confirmed",
     ).toBe("request_submitted");
+  });
+
+  // Until 2026-09-30 this was confirmed at the full $38 and the $5 the
+  // customer was shown off it was dropped: they were billed more than they
+  // were told. The server checks the day's price and cannot work out a
+  // discount again, and taking the browser's word for one would let anyone
+  // give themselves one — so staff decide it, and the quote keeps it.
+  test("on and priced right, but with a discount: left to staff, who keep it", async ({
+    page,
+  }) => {
+    const staff = await page.context().browser()!.newPage();
+    try {
+      await signIn(staff, ACCOUNTS.owner);
+      await setAutoConfirm(staff, { daycare: true });
+    } finally {
+      await staff.close();
+    }
+
+    await signIn(page, ACCOUNTS.customer);
+    const res = await bookAsCustomer(page, FULL_DAY, 5);
+    expect(res.ok(), await res.text()).toBe(true);
+    const booking = (await res.json()) as { id: number; status: string };
+    made.push(booking.id);
+    expect(booking.status, "never confirmed at the full price").toBe(
+      "request_submitted",
+    );
+
+    await signIn(page, ACCOUNTS.owner);
+    const decided = await page.request.post(
+      `/api/bookings/${booking.id}/decision`,
+      { data: { action: "approve", atQuote: true } },
+    );
+    expect(decided.status(), await decided.text()).toBe(200);
+    const after = await page.request.get(`/api/bookings?ref=${booking.id}`);
+    const [row] = (await after.json()) as Array<{
+      status: string;
+      totalCost?: number;
+      extrasTotal?: number;
+      discount?: number;
+      amountDue?: number;
+    }>;
+    expect(row.status).toBe("confirmed");
+    expect(row.totalCost).toBe(FULL_DAY);
+    expect(row.discount).toBe(5);
+    // The day less the discount, and whatever the facility bills on top.
+    expect(row.amountDue, "what the customer was shown").toBe(
+      FULL_DAY - 5 + (row.extrasTotal ?? 0),
+    );
   });
 
   test("grooming confirms at the size the database picked", async ({

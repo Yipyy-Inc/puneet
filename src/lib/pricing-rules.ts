@@ -15,14 +15,18 @@ import type {
 } from "@/types/boarding";
 import type { Pet } from "@/types/pet";
 import { resolvePeakDateCharges } from "@/lib/policies/peak-dates";
-import { feeAmountAt } from "@/lib/pricing/service-charge-lines";
+import {
+  customFeeApplies,
+  customFeeCharge,
+  type CustomFeeFacts,
+  type FeeCustomerFacts,
+} from "@/lib/pricing/service-charge-lines";
 // Shared with the server's re-price, so the two cannot count add-ons differently.
 import {
   computeAddOnsTotal,
   normalizeExtraServices,
 } from "@/lib/pricing/add-on-lines";
 import {
-  appliesToLocation,
   appliesToService,
   computeTimeFees,
   isWithinTimeWindow,
@@ -147,13 +151,8 @@ interface PricingContextPet {
   petStatus?: Pet["petStatus"];
 }
 
-interface PricingContextCustomer {
-  status?: string;
-  membershipPlan?: string;
-  membershipStatus?: string;
-  storeCreditBalance?: number;
-  hasPackageCredits?: boolean;
-}
+/** A client's segment — the same facts the server reads for the bill. */
+type PricingContextCustomer = FeeCustomerFacts;
 
 export interface ApplyPricingRulesInput {
   /** The facility's own rules, from `usePricingRules()`. */
@@ -263,13 +262,6 @@ function normalizeRuleArray<T>(value: unknown, fallback: T[]): T[] {
 // `getStoredServiceAddOns` went the same way on 2026-09-30, with its storage
 // key and the fixture it fell back to: add-ons are one list in Postgres
 // (`service_add_ons`), passed in as `addOnsCatalog`.
-
-function normalizeServices(applicableServices?: string[]): string[] {
-  if (!applicableServices || applicableServices.length === 0) return ["all"];
-  return applicableServices.includes("all")
-    ? ["all"]
-    : Array.from(new Set(applicableServices));
-}
 
 /*
  * `parseTimeToMinutes`, `isWithinTimeWindow` and `appliesToService` used to be
@@ -417,85 +409,6 @@ function normalizeLower(values?: string[]): string[] {
     .filter((value) => value.length > 0);
 }
 
-function matchesCustomerSegment(
-  fee: CustomFee,
-  customer?: PricingContextCustomer,
-): boolean {
-  if (!customer) return false;
-
-  const statusTargets = normalizeLower(fee.customerStatuses);
-  const planTargets = normalizeLower(fee.membershipPlans);
-
-  const requiresMembership = fee.requireMembershipActive === true;
-  const requiresPrepaid = fee.requirePrepaidBalance === true;
-
-  const hasCriteria =
-    statusTargets.length > 0 ||
-    planTargets.length > 0 ||
-    requiresMembership ||
-    requiresPrepaid;
-
-  if (!hasCriteria) return false;
-
-  if (statusTargets.length > 0) {
-    const customerStatus = customer.status?.trim().toLowerCase();
-    if (!customerStatus || !statusTargets.includes(customerStatus)) {
-      return false;
-    }
-  }
-
-  if (planTargets.length > 0) {
-    const membershipPlan = customer.membershipPlan?.trim().toLowerCase();
-    if (!membershipPlan || !planTargets.includes(membershipPlan)) {
-      return false;
-    }
-  }
-
-  if (requiresMembership) {
-    const membershipStatus = customer.membershipStatus?.trim().toLowerCase();
-    if (membershipStatus !== "active") return false;
-  }
-
-  if (requiresPrepaid) {
-    const hasStoreCredit = (customer.storeCreditBalance ?? 0) > 0;
-    if (!hasStoreCredit && !customer.hasPackageCredits) return false;
-  }
-
-  return true;
-}
-
-function hasAddOnPurchaseTrigger(
-  fee: CustomFee,
-  extraServices: ExtraService[],
-): boolean {
-  const triggerIds = new Set(normalizeLower(fee.triggerAddOnIds));
-  if (triggerIds.size === 0) return false;
-
-  return extraServices.some((service) =>
-    triggerIds.has(service.serviceId.trim().toLowerCase()),
-  );
-}
-
-function computeWaivedAddOnTotal(
-  fee: CustomFee,
-  extraServices: ExtraService[],
-  addOnsById: ReadonlyMap<string, BookableAddOn>,
-): number {
-  const waivedIds = new Set(normalizeLower(fee.waivedAddOnIds));
-  if (waivedIds.size === 0) return 0;
-
-  return extraServices.reduce((sum, service) => {
-    if (!waivedIds.has(service.serviceId.trim().toLowerCase())) {
-      return sum;
-    }
-
-    const addOn = addOnsById.get(service.serviceId);
-    if (!addOn) return sum;
-
-    return sum + Math.max(0, addOn.price) * service.quantity;
-  }, 0);
-}
-
 function findTierForPetCount(
   tiers: MultiPetDiscountRule["tiers"],
   petCount: number,
@@ -518,39 +431,6 @@ function combineDateAndTime(dateIso?: string, time?: string): Date | null {
   if (!dateIso || !time) return null;
   const date = new Date(`${dateIso}T${time}`);
   return Number.isNaN(date.getTime()) ? null : date;
-}
-
-function shouldApplyCustomFee(
-  fee: CustomFee,
-  serviceId: string,
-  isNewCustomer: boolean,
-  newPetIds: number[],
-  customer: PricingContextCustomer | undefined,
-  extraServices: ExtraService[],
-  locationId: string | null | undefined,
-): boolean {
-  if (!fee.isActive) return false;
-  if (!appliesToService(serviceId, fee.applicableServices)) return false;
-  if (!appliesToLocation(locationId, fee.applicableLocationIds)) return false;
-
-  switch (fee.autoApply) {
-    case "at_checkout":
-      return true;
-    case "by_care_type": {
-      const targets = normalizeServices(fee.autoApplyCareTypes);
-      return targets.includes("all") || targets.includes(serviceId);
-    }
-    case "new_customer":
-      return isNewCustomer;
-    case "new_pet":
-      return newPetIds.length > 0;
-    case "customer_segment":
-      return matchesCustomerSegment(fee, customer);
-    case "addon_purchase":
-      return hasAddOnPurchaseTrigger(fee, extraServices);
-    default:
-      return false;
-  }
 }
 
 /**
@@ -1055,97 +935,35 @@ export function applyDynamicPricingRules(
     addOnsById,
   );
 
-  // Auto-applied custom fees
+  // Auto-applied custom fees — decided and priced by the same functions the
+  // server bills them with (lib/pricing/service-charge-lines.ts), from the
+  // facts of this form. The base of a percentage is the service and its
+  // add-ons, fixed for every fee, so two percentages cannot compound.
+  const feeFacts: CustomFeeFacts = {
+    serviceId: input.serviceId,
+    locationId: input.locationId,
+    petCount: input.selectedPetIds.length,
+    serviceTotal: basePrice + addOnsTotal,
+    isNewCustomer,
+    newPetCount: newPetIds.length,
+    customer,
+    extraServices: normalizedMergedExtraServices,
+    addOnPrice: (serviceId) => addOnsById.get(serviceId)?.price,
+  };
   for (const fee of rules.customFees) {
-    if (
-      !shouldApplyCustomFee(
-        fee,
-        input.serviceId,
-        isNewCustomer,
-        newPetIds,
-        customer,
-        normalizedMergedExtraServices,
-        input.locationId,
-      )
-    ) {
-      continue;
-    }
-
-    const hasWaiveTargets = (fee.waivedAddOnIds?.length ?? 0) > 0;
-    const adjustmentKind =
-      fee.adjustmentKind ??
-      (fee.autoApply === "addon_purchase" && hasWaiveTargets
-        ? "discount"
-        : "fee");
-
-    // ── `scope` WAS IGNORED FOR EVERY ADD-ON-TRIGGERED FEE ────────────────
-    //
-    // The old guard was `fee.autoApply !== "addon_purchase"`, which forced
-    // `multiplier = 1` on all of them. That is only right when the fee WAIVES
-    // add-ons, because then the amount already derives from real add-on rows
-    // and multiplying by the pet count would count them twice. A flat "$5
-    // because they bought a bath" fee scoped per-pet was silently per-booking.
-    const derivesFromAddOnRows =
-      fee.autoApply === "addon_purchase" && hasWaiveTargets;
-
-    let multiplier = 1;
-    if (fee.autoApply === "new_pet") {
-      multiplier = fee.scope === "per_pet" ? newPetIds.length : 1;
-    } else if (!derivesFromAddOnRows) {
-      multiplier =
-        fee.scope === "per_pet" ? Math.max(1, input.selectedPetIds.length) : 1;
-    }
-
-    if (multiplier <= 0) continue;
-
-    let unitAmount = 0;
-
-    if (derivesFromAddOnRows) {
-      const waivedBase = computeWaivedAddOnTotal(
-        fee,
-        normalizedMergedExtraServices,
-        addOnsById,
-      );
-      const waivePct =
-        Math.min(100, Math.max(0, fee.waivePercentage ?? 100)) / 100;
-      unitAmount = waivedBase * waivePct;
-    } else {
-      // ── THE BASE IS THE SERVICE, NOT "THE TOTAL SO FAR" ─────────────────
-      //
-      // `basePrice + addOnsTotal` is fixed for the whole loop, so two
-      // percentage fees cannot compound into each other and the answer does
-      // not depend on which order the facility happened to author them in.
-      const percentageBase = basePrice + addOnsTotal;
-      // The branch's price where it has one — the SAME resolution the server
-      // and the till use, so the quote a customer is shown and the line that
-      // is written cannot disagree about what this branch charges.
-      const amount = feeAmountAt(fee, input.locationId);
-      unitAmount =
-        fee.feeType === "percentage"
-          ? (percentageBase * Math.max(0, amount)) / 100
-          : Math.max(0, amount);
-    }
-
-    let feeTotal = unitAmount * multiplier;
-
-    // A percentage of a three-week boarding stay is unbounded without this.
-    // `maxFee` caps the WHOLE line, not the unit, which is what a facility
-    // means by "never more than $50".
-    if (fee.maxFee != null && fee.maxFee > 0) {
-      feeTotal = Math.min(feeTotal, fee.maxFee);
-    }
-
-    if (feeTotal <= 0) continue;
+    if (!customFeeApplies(fee, feeFacts)) continue;
+    const charge = customFeeCharge(fee, feeFacts);
+    if (!charge) continue;
 
     adjustments.push({
       id: `${fee.id}-${fee.autoApply}`,
       label: fee.name,
-      amount: adjustmentKind === "discount" ? -feeTotal : feeTotal,
+      amount: charge.isDiscount ? -charge.total : charge.total,
       source: "custom_fee",
       feeId: fee.id,
-      unitAmount,
-      quantity: multiplier,
-      adjustmentKind,
+      unitAmount: charge.unitAmount,
+      quantity: charge.quantity,
+      adjustmentKind: charge.isDiscount ? "discount" : "fee",
     });
   }
 

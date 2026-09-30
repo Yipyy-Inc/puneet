@@ -12,6 +12,7 @@ import {
 import { writeFailure } from "@/lib/api/write-failure";
 import { requireForms } from "@/lib/forms/require-forms";
 import { assignKennelsOnConfirm } from "@/lib/boarding/assign-kennel-on-confirm";
+import { applyBookingServiceCharges } from "@/lib/payments/booking-service-charges";
 import {
   OPEN_REQUEST_STATUSES,
   approvalRefusal,
@@ -234,6 +235,13 @@ export async function POST(
           days.map((day) => day.row.id),
         )
       : [];
+
+  // An approved request is priced now, so its service charges land — once,
+  // on its first day, decided as the create path decides them. They were
+  // skipped when it was made, at the $0 the database gives a request.
+  if (action === "approve") {
+    await applyBookingServiceCharges(days.map((day) => day.row.id));
+  }
 
   const messaged = await tellTheCustomer(supabase, action, {
     facilityId: context.facilityId,

@@ -11,6 +11,7 @@ import {
 } from "@/lib/api/mappers/booking";
 import { writeFailure } from "@/lib/api/write-failure";
 import { staffForStylist } from "@/lib/api/stylist-staff";
+import { applyBookingServiceCharges } from "@/lib/payments/booking-service-charges";
 import { stampBookingTaxable } from "@/lib/payments/booking-service-tax";
 import { returnPassUnlessForfeited } from "@/lib/policies/return-pass-on-cancel";
 import {
@@ -336,6 +337,18 @@ export async function PATCH(
         });
       }
     }
+  }
+
+  // ── AN APPROVED REQUEST IS PRICED NOW ───────────────────────────────────
+  //
+  // Its service charges were skipped when it was made, at the $0 the database
+  // gives a customer's request. They land now, decided as the create path
+  // decides them — before the booking is read back, so the answer owes them.
+  if (
+    nextStatus === "confirmed" &&
+    (currentStatus === "request_submitted" || currentStatus === "waitlisted")
+  ) {
+    await applyBookingServiceCharges([stored.id]);
   }
 
   const { data: updated } = await supabase

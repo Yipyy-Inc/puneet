@@ -6159,7 +6159,7 @@
         "autoConfirmOff": "Needs your approval",
         "autoConfirmSaved": "Approval settings saved",
         "autoConfirmUnpriceable": "Bookings for this service always need approval: the price depends on the pet, so it is settled by a person.",
-        "autoConfirmNoRates": "A booking is only confirmed when this facility's own rates can price it. One that cannot be priced arrives for approval instead."
+        "autoConfirmNoRates": "A booking is only confirmed when this facility's own rates can price it and it carries no discount. One that cannot be priced, or has a discount, arrives for approval instead."
       },
       "form-notifications": {
         "newSubmission": "New submission received",

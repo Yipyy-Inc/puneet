@@ -43,6 +43,18 @@ import { assignKennelsOnConfirm } from "@/lib/boarding/assign-kennel-on-confirm"
 // is what would have happened anyway. This never fails a booking: the booking
 // is already made before this runs, and the worst outcome is that staff look
 // at it, which is the status quo.
+//
+// ── A DISCOUNT IS NOT CONFIRMED HERE ──────────────────────────────────────
+//
+// The price the server checks is the SERVICE's. A discount the customer was
+// shown — several pets, several nights — came from their browser with the
+// rest of the quote, and nothing here can work it out again. Until 2026-09-30
+// a request carrying one was confirmed at the full price and the discount was
+// dropped: the customer was billed more than they were told. Taking the
+// discount from the request instead would let anyone give themselves one.
+// So a request with a discount stays a request, on every one of its days, and
+// staff approve it at the quote, which carries the discount
+// (`quotedPrice` in request-decision.ts).
 // ============================================================================
 
 interface Promotable {
@@ -81,6 +93,23 @@ function isoDay(value: string | null): string | undefined {
   return value ? value.slice(0, 10) : undefined;
 }
 
+/** The discount the customer was shown on this booking, or 0. */
+function quotedDiscount(details: Record<string, unknown> | null): number {
+  const quote = (details ?? {})["requestedQuote"] as
+    | { discount?: unknown }
+    | undefined;
+  const discount = Number(quote?.discount ?? 0);
+  return Number.isFinite(discount) && discount > 0 ? discount : 0;
+}
+
+/** The request a booking belongs to — its group, or itself. */
+function requestOf(row: Pick<Promotable, "id" | "details">): string {
+  const group = (row.details ?? {})["bookingGroup"] as
+    | { id?: unknown }
+    | undefined;
+  return typeof group?.id === "string" && group.id ? group.id : row.id;
+}
+
 /** What the customer was shown, as the trigger recorded it. */
 function quotedTotal(details: Record<string, unknown> | null): number | null {
   const quote = (details ?? {})["requestedQuote"] as
@@ -117,6 +146,14 @@ export async function autoConfirmCustomerBookings(
       (row) => row.status === "request_submitted" && row.service,
     );
     if (candidates.length === 0) return 0;
+
+    // A request with a discount on any day is left to staff, every day of it.
+    // See the header.
+    const discounted = new Set(
+      candidates
+        .filter((row) => quotedDiscount(row.details) > 0)
+        .map(requestOf),
+    );
 
     // ── WHICH ANIMAL EACH BOOKING IS FOR ──────────────────────────────
     //
@@ -205,6 +242,7 @@ export async function autoConfirmCustomerBookings(
       // No quote means the customer was shown nothing to agree with. That is
       // not a booking to confirm silently.
       if (quoted === null) continue;
+      if (discounted.has(requestOf(row))) continue;
 
       // ── THE FACILITY'S DEPOSIT, RECORDED AND NOT CHARGED ────────────────
       //

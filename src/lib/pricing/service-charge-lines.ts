@@ -1,17 +1,24 @@
+import type { ExtraService } from "@/types/booking";
 import type { CustomFee } from "@/types/boarding";
 
 import { appliesToLocation, appliesToService } from "@/lib/policies/time-fee";
 
 // ============================================================================
-// A custom fee, turned into a line on the bill.
+// A custom fee: whether it applies, and the line it becomes on the bill.
 //
-// ── THIS IS NOT A SECOND EVALUATOR ────────────────────────────────────────
+// ── ONE EVALUATOR, FOR THE FORM AND THE SERVER ────────────────────────────
 //
-// `shouldApplyCustomFee` in pricing-rules.ts still decides WHETHER a fee
-// applies — every trigger mode, the customer segment, the add-on rules. This
-// module only turns a fee that has already been chosen into money, and it
-// exists so the three places that need that answer cannot disagree about it:
-// the booking form's preview, the server's create path, and the till.
+// `customFeeApplies` and `customFeeCharge` decide every trigger — at checkout,
+// by care type, a new customer, a new pet, a customer segment, an add-on
+// bought — and what the fee comes to. The booking form's pricing engine
+// (`applyDynamicPricingRules`) calls them for its quote, and the server calls
+// them for the bill (lib/payments/booking-service-charges.ts), from the same
+// FACTS gathered two ways: what is on the form, and what is in the database.
+//
+// Until 2026-09-30 only the form could decide the four richer triggers. It
+// showed those fees in the quote and took them out of `total_cost`, since a
+// fee is a line; the server wrote lines for the two service-only triggers and
+// nothing wrote the rest. A new-customer fee was quoted and never charged.
 //
 // Pure on purpose. No `server-only`, no `"use client"`, no database, no
 // settings read — everything it needs arrives as an argument, which is what
@@ -19,12 +26,10 @@ import { appliesToLocation, appliesToService } from "@/lib/policies/time-fee";
 //
 // ── THE SERVICE-ONLY SUBSET ───────────────────────────────────────────────
 //
-// `automaticServiceCharges` answers the narrower question the SERVER can ask
-// at booking creation: which fees depend on nothing but the service. That is
-// the reference's own set — "auto-apply at checkout" and "by care type" — and
-// it matters because the richer triggers (`new_customer`, `customer_segment`,
-// `addon_purchase`) need context the create path does not have. Those are
-// applied later, at the till, where the context exists.
+// `automaticServiceCharges` and `serviceChargeLine` answer the narrower
+// question the TILL asks of a booking it has in front of it, and the manual
+// "add a service charge" picker: which fees depend on nothing but the service,
+// and what one costs for this many pets.
 // ============================================================================
 
 export interface ServiceChargeLine {
@@ -226,6 +231,232 @@ export function serviceChargeLines(
   return automaticServiceCharges(fees, context.serviceId, context.locationId)
     .map((fee) => serviceChargeLine(fee, context))
     .filter((line): line is ServiceChargeLine => line !== null);
+}
+
+// ── EVERY TRIGGER, FROM THE FACTS OF ONE REQUEST ──────────────────────────
+
+/** A client's segment, as the client record holds it. */
+export interface FeeCustomerFacts {
+  status?: string;
+  membershipPlan?: string;
+  membershipStatus?: string;
+  storeCreditBalance?: number;
+  hasPackageCredits?: boolean;
+}
+
+/**
+ * What a fee is decided from, for one request — however many bookings the
+ * form splits it into. The form fills it from the screen, the server from the
+ * database; each field says what both must mean by it.
+ */
+export interface CustomFeeFacts extends ServiceChargeContext {
+  /** The client had no booking before this request, whatever became of it. */
+  isNewCustomer: boolean;
+  /** Of the request's pets, how many were on no earlier booking. */
+  newPetCount: number;
+  customer?: FeeCustomerFacts;
+  /** The request's add-on lines, named as a booking names them. */
+  extraServices: readonly ExtraService[];
+  /** An add-on's price at the request's location, by whatever a line names it by. */
+  addOnPrice: (serviceId: string) => number | undefined;
+}
+
+/** Whether a fee applies to this request. `none` is chosen by hand, never here. */
+export function customFeeApplies(
+  fee: CustomFee,
+  facts: CustomFeeFacts,
+): boolean {
+  if (!fee.isActive) return false;
+  if (!appliesToService(facts.serviceId, fee.applicableServices)) return false;
+  if (!appliesToLocation(facts.locationId, fee.applicableLocationIds)) {
+    return false;
+  }
+
+  switch (fee.autoApply) {
+    case "at_checkout":
+      return true;
+    case "by_care_type":
+      return appliesToService(facts.serviceId, fee.autoApplyCareTypes);
+    case "new_customer":
+      return facts.isNewCustomer;
+    case "new_pet":
+      return facts.newPetCount > 0;
+    case "customer_segment":
+      return matchesCustomerSegment(fee, facts.customer);
+    case "addon_purchase":
+      return hasAddOnPurchaseTrigger(fee, facts.extraServices);
+    default:
+      return false;
+  }
+}
+
+/** What a fee comes to on this request, before it is written as a line. */
+export interface CustomFeeCharge {
+  /** One unit, before a cap: per pet, per new pet, or the whole booking. */
+  unitAmount: number;
+  /** How many units: the pets, the new pets, or one. */
+  quantity: number;
+  /** The whole charge, after the cap. Never negative — see `isDiscount`. */
+  total: number;
+  isDiscount: boolean;
+}
+
+/**
+ * What a fee that applies comes to. Null when that is nothing.
+ *
+ * A fee that WAIVES add-ons is worth a share of those add-ons' own price, and
+ * is a discount unless the facility said otherwise; its units are the add-on
+ * lines themselves, so it is never multiplied by the pets as well. A
+ * percentage is of `serviceTotal`, fixed for every fee, so two percentages
+ * cannot compound into each other.
+ */
+export function customFeeCharge(
+  fee: CustomFee,
+  facts: CustomFeeFacts,
+): CustomFeeCharge | null {
+  const waives =
+    fee.autoApply === "addon_purchase" && (fee.waivedAddOnIds?.length ?? 0) > 0;
+  const isDiscount =
+    (fee.adjustmentKind ?? (waives ? "discount" : "fee")) === "discount";
+
+  // `scope` counts pets for every trigger but one. A fee that waives add-ons
+  // already derives from the add-on rows, and multiplying it by the pets
+  // would count them twice. (Every add-on-triggered fee was once treated that
+  // way, so a flat "$5 because they bought a bath" fee scoped per pet was
+  // silently per booking.)
+  let quantity = 1;
+  if (fee.autoApply === "new_pet") {
+    quantity = fee.scope === "per_pet" ? facts.newPetCount : 1;
+  } else if (!waives) {
+    quantity = fee.scope === "per_pet" ? Math.max(1, facts.petCount) : 1;
+  }
+  if (quantity <= 0) return null;
+
+  let unitAmount: number;
+  if (waives) {
+    const share = Math.min(100, Math.max(0, fee.waivePercentage ?? 100)) / 100;
+    unitAmount =
+      waivedAddOnTotal(fee, facts.extraServices, facts.addOnPrice) * share;
+  } else {
+    const amount = feeAmountAt(fee, facts.locationId);
+    unitAmount =
+      fee.feeType === "percentage"
+        ? (Math.max(0, facts.serviceTotal) * Math.max(0, amount)) / 100
+        : Math.max(0, amount);
+  }
+
+  // A percentage of a three-week boarding stay is unbounded without this.
+  // `maxFee` caps the WHOLE charge, not the unit, which is what a facility
+  // means by "never more than $50".
+  let total = unitAmount * quantity;
+  if (fee.maxFee != null && fee.maxFee > 0) {
+    total = Math.min(total, fee.maxFee);
+  }
+  if (total <= 0) return null;
+  return { unitAmount, quantity, total, isDiscount };
+}
+
+/**
+ * The fee as a line on the bill. A capped charge is one unit carrying the
+ * whole amount, as `serviceChargeLine` says why; a discount is a negative
+ * `item`.
+ */
+export function customFeeLine(
+  fee: CustomFee,
+  charge: CustomFeeCharge,
+): ServiceChargeLine {
+  const capBinds = charge.total < charge.unitAmount * charge.quantity;
+  const quantity = capBinds ? 1 : charge.quantity;
+  const signed = charge.isDiscount ? -charge.total : charge.total;
+  return {
+    feeId: fee.id,
+    name: fee.name,
+    kind: charge.isDiscount ? "item" : "fee",
+    unitPrice: round2(signed / quantity),
+    quantity,
+    taxable: fee.taxable !== false,
+  };
+}
+
+/** Every fee a request owes, whatever triggered it, in the facility's order. */
+export function customFeeLines(
+  fees: CustomFee[] | undefined,
+  facts: CustomFeeFacts,
+): ServiceChargeLine[] {
+  return (fees ?? []).flatMap((fee) => {
+    if (!customFeeApplies(fee, facts)) return [];
+    const charge = customFeeCharge(fee, facts);
+    return charge ? [customFeeLine(fee, charge)] : [];
+  });
+}
+
+function lowerAll(values?: string[]): string[] {
+  if (!values || values.length === 0) return [];
+  return values
+    .map((value) => value.trim().toLowerCase())
+    .filter((value) => value.length > 0);
+}
+
+function matchesCustomerSegment(
+  fee: CustomFee,
+  customer?: FeeCustomerFacts,
+): boolean {
+  if (!customer) return false;
+
+  const statusTargets = lowerAll(fee.customerStatuses);
+  const planTargets = lowerAll(fee.membershipPlans);
+  const requiresMembership = fee.requireMembershipActive === true;
+  const requiresPrepaid = fee.requirePrepaidBalance === true;
+
+  const hasCriteria =
+    statusTargets.length > 0 ||
+    planTargets.length > 0 ||
+    requiresMembership ||
+    requiresPrepaid;
+  if (!hasCriteria) return false;
+
+  if (statusTargets.length > 0) {
+    const status = customer.status?.trim().toLowerCase();
+    if (!status || !statusTargets.includes(status)) return false;
+  }
+  if (planTargets.length > 0) {
+    const plan = customer.membershipPlan?.trim().toLowerCase();
+    if (!plan || !planTargets.includes(plan)) return false;
+  }
+  if (requiresMembership) {
+    const status = customer.membershipStatus?.trim().toLowerCase();
+    if (status !== "active") return false;
+  }
+  if (requiresPrepaid) {
+    const hasStoreCredit = (customer.storeCreditBalance ?? 0) > 0;
+    if (!hasStoreCredit && !customer.hasPackageCredits) return false;
+  }
+  return true;
+}
+
+function hasAddOnPurchaseTrigger(
+  fee: CustomFee,
+  extraServices: readonly ExtraService[],
+): boolean {
+  const triggers = new Set(lowerAll(fee.triggerAddOnIds));
+  if (triggers.size === 0) return false;
+  return extraServices.some((line) =>
+    triggers.has(line.serviceId.trim().toLowerCase()),
+  );
+}
+
+function waivedAddOnTotal(
+  fee: CustomFee,
+  extraServices: readonly ExtraService[],
+  addOnPrice: (serviceId: string) => number | undefined,
+): number {
+  const waived = new Set(lowerAll(fee.waivedAddOnIds));
+  if (waived.size === 0) return 0;
+  return extraServices.reduce((sum, line) => {
+    if (!waived.has(line.serviceId.trim().toLowerCase())) return sum;
+    const price = addOnPrice(line.serviceId);
+    return price === undefined ? sum : sum + Math.max(0, price) * line.quantity;
+  }, 0);
 }
 
 /** What the lines add to the bill, to the cent. */
