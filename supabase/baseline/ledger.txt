@@ -389,3 +389,4 @@
 20260926194342	a_service_picture_is_uploaded_not_pasted
 20260926223644	one_add_on_list_for_every_service
 20260926232440	the_schema_names_no_other_product
+20260930153912	an_add_on_is_a_line_on_the_bill

@@ -231,6 +231,115 @@ CREATE TYPE "public"."time_off_type" AS ENUM (
 
 ALTER TYPE "public"."time_off_type" OWNER TO "postgres";
 
+SET default_tablespace = '';
+
+SET default_table_access_method = "heap";
+
+
+CREATE TABLE IF NOT EXISTS "public"."bookings" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "ref" bigint NOT NULL,
+    "facility_id" "uuid" NOT NULL,
+    "location_id" "uuid",
+    "client_id" "uuid" NOT NULL,
+    "service" "text" NOT NULL,
+    "service_type" "text",
+    "status" "public"."booking_status" DEFAULT 'pending'::"public"."booking_status" NOT NULL,
+    "payment_status" "text" DEFAULT 'pending'::"text" NOT NULL,
+    "start_at" timestamp with time zone NOT NULL,
+    "end_at" timestamp with time zone NOT NULL,
+    "assigned_staff_id" "uuid",
+    "assigned_staff_name" "text",
+    "base_price" numeric(12,2) DEFAULT 0 NOT NULL,
+    "discount" numeric(12,2) DEFAULT 0 NOT NULL,
+    "total_cost" numeric(12,2) DEFAULT 0 NOT NULL,
+    "tip_amount" numeric(12,2),
+    "special_requests" "text",
+    "details" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "amount_paid" numeric(10,2) DEFAULT 0 NOT NULL,
+    "extras_total" numeric(10,2) DEFAULT 0 NOT NULL,
+    "amount_due" numeric(10,2) GENERATED ALWAYS AS (GREATEST((0)::numeric, (("total_cost" + "extras_total") - COALESCE("discount", (0)::numeric)))) STORED,
+    "training_series_session_id" "uuid",
+    "taxable" boolean DEFAULT true NOT NULL,
+    "taxable_extras_total" numeric(10,2) DEFAULT 0 NOT NULL,
+    "add_ons_total" numeric(10,2) DEFAULT 0 NOT NULL,
+    CONSTRAINT "bookings_discount_within_price" CHECK (("discount" <= "base_price")),
+    CONSTRAINT "bookings_ends_after_start" CHECK (("end_at" >= "start_at")),
+    CONSTRAINT "bookings_money_non_negative" CHECK ((("base_price" >= (0)::numeric) AND ("discount" >= (0)::numeric) AND ("total_cost" >= (0)::numeric) AND (("tip_amount" IS NULL) OR ("tip_amount" >= (0)::numeric)))),
+    CONSTRAINT "bookings_payment_status_check" CHECK (("payment_status" = ANY (ARRAY['pending'::"text", 'paid'::"text", 'refunded'::"text"])))
+);
+
+
+ALTER TABLE "public"."bookings" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."bookings"."discount" IS 'Money off the whole bill, subtracted ONCE by amount_due. Never already inside total_cost. Capped at base_price by bookings_discount_within_price.';
+
+
+
+COMMENT ON COLUMN "public"."bookings"."total_cost" IS 'The SERVICE''s price, GROSS of the discount and before tax. What a customer owes is amount_due = total_cost + extras_total - discount, so a caller that nets the discount out of this column has it taken twice. Set by 20260924100000.';
+
+
+
+COMMENT ON COLUMN "public"."bookings"."amount_paid" IS 'DERIVED from public.payments - sum(grand_total - tip). Never write it: private.derive_booking_payment() overwrites any value on every insert and update.';
+
+
+
+COMMENT ON COLUMN "public"."bookings"."extras_total" IS 'DERIVED from public.booking_line_items. Never write it.';
+
+
+
+COMMENT ON COLUMN "public"."bookings"."amount_due" IS 'What the booking COSTS, net of discount and before tax: total_cost + extras_total - discount. Not the outstanding balance -- subtract amount_paid for that. Tax is never here; it is per-facility and lives on the payment. See 20260819210000.';
+
+
+
+COMMENT ON COLUMN "public"."bookings"."taxable" IS 'Whether this booking''s OWN service price is taxed. Extras (booking_line_items) are taxed regardless — a tax-free service does not make a bag of food tax-free. Written by the server when it prices the booking; pinned to true for anything a customer inserts. See 20260921171524.';
+
+
+
+COMMENT ON COLUMN "public"."bookings"."taxable_extras_total" IS 'DERIVED from public.booking_line_items, like extras_total. The part of extras_total that tax applies to. Never write it: private.derive_booking_extras() overwrites any value on every insert and update.';
+
+
+
+COMMENT ON COLUMN "public"."bookings"."add_ons_total" IS 'The booking''s add_on lines — derived with extras_total, and inside it. What total_cost held for add-ons before 2026-09-30, so a reader that counted them reads total_cost + add_ons_total.';
+
+
+
+CREATE OR REPLACE FUNCTION "private"."add_on_for_booking"("p_booking" "public"."bookings", "p_requested" "text") RETURNS TABLE("add_on_id" "uuid", "name" "text", "price" numeric, "taxable" boolean, "duration_min" integer, "requires_staff" boolean)
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select a.id,
+         a.name,
+         coalesce(o.price, a.price),
+         coalesce(o.taxable, a.taxable),
+         coalesce(o.duration_min, a.duration_min),
+         a.requires_staff
+    from public.service_add_ons a
+    left join public.service_add_on_location_overrides o
+      on o.add_on_id = a.id and o.location_id = p_booking.location_id
+   where a.facility_id = p_booking.facility_id
+     and (a.legacy_id = p_requested or a.id::text = p_requested)
+     and a.is_active
+     and a.archived_at is null
+     -- A booking with no location is not refused by one, as in the wizard.
+     and (cardinality(a.location_ids) = 0
+          or p_booking.location_id is null
+          or p_booking.location_id = any (a.location_ids))
+     and (a.applies_to_all_services
+          or exists (
+            select 1 from unnest(a.service_refs) r(ref)
+             where r.ref = p_booking.service
+                or r.ref like p_booking.service || ':%'
+                or r.ref = 'custom:' || p_booking.service))
+   limit 1;
+$$;
+
+
+ALTER FUNCTION "private"."add_on_for_booking"("p_booking" "public"."bookings", "p_requested" "text") OWNER TO "postgres";
+
 
 CREATE OR REPLACE FUNCTION "private"."area_pets_in_use"("p_room_id" "uuid", "p_range" "tstzrange", "p_exclude_booking" "uuid" DEFAULT NULL::"uuid") RETURNS integer
     LANGUAGE "sql" STABLE SECURITY DEFINER
@@ -1308,6 +1417,20 @@ $$;
 ALTER FUNCTION "private"."boarding_stays_tile_their_booking"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "private"."booking_add_ons_total"("p_booking_id" "uuid") RETURNS numeric
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select coalesce(sum(li.price), 0)::numeric(10,2)
+    from public.booking_line_items li
+   where li.booking_id = p_booking_id
+     and li.kind = 'add_on';
+$$;
+
+
+ALTER FUNCTION "private"."booking_add_ons_total"("p_booking_id" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "private"."booking_amount_paid"("p_booking_id" "uuid") RETURNS numeric
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -1560,76 +1683,6 @@ $$;
 
 ALTER FUNCTION "private"."can_write_booking"("p_booking_id" "uuid") OWNER TO "postgres";
 
-SET default_tablespace = '';
-
-SET default_table_access_method = "heap";
-
-
-CREATE TABLE IF NOT EXISTS "public"."bookings" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "ref" bigint NOT NULL,
-    "facility_id" "uuid" NOT NULL,
-    "location_id" "uuid",
-    "client_id" "uuid" NOT NULL,
-    "service" "text" NOT NULL,
-    "service_type" "text",
-    "status" "public"."booking_status" DEFAULT 'pending'::"public"."booking_status" NOT NULL,
-    "payment_status" "text" DEFAULT 'pending'::"text" NOT NULL,
-    "start_at" timestamp with time zone NOT NULL,
-    "end_at" timestamp with time zone NOT NULL,
-    "assigned_staff_id" "uuid",
-    "assigned_staff_name" "text",
-    "base_price" numeric(12,2) DEFAULT 0 NOT NULL,
-    "discount" numeric(12,2) DEFAULT 0 NOT NULL,
-    "total_cost" numeric(12,2) DEFAULT 0 NOT NULL,
-    "tip_amount" numeric(12,2),
-    "special_requests" "text",
-    "details" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "amount_paid" numeric(10,2) DEFAULT 0 NOT NULL,
-    "extras_total" numeric(10,2) DEFAULT 0 NOT NULL,
-    "amount_due" numeric(10,2) GENERATED ALWAYS AS (GREATEST((0)::numeric, (("total_cost" + "extras_total") - COALESCE("discount", (0)::numeric)))) STORED,
-    "training_series_session_id" "uuid",
-    "taxable" boolean DEFAULT true NOT NULL,
-    "taxable_extras_total" numeric(10,2) DEFAULT 0 NOT NULL,
-    CONSTRAINT "bookings_discount_within_price" CHECK (("discount" <= "base_price")),
-    CONSTRAINT "bookings_ends_after_start" CHECK (("end_at" >= "start_at")),
-    CONSTRAINT "bookings_money_non_negative" CHECK ((("base_price" >= (0)::numeric) AND ("discount" >= (0)::numeric) AND ("total_cost" >= (0)::numeric) AND (("tip_amount" IS NULL) OR ("tip_amount" >= (0)::numeric)))),
-    CONSTRAINT "bookings_payment_status_check" CHECK (("payment_status" = ANY (ARRAY['pending'::"text", 'paid'::"text", 'refunded'::"text"])))
-);
-
-
-ALTER TABLE "public"."bookings" OWNER TO "postgres";
-
-
-COMMENT ON COLUMN "public"."bookings"."discount" IS 'Money off the whole bill, subtracted ONCE by amount_due. Never already inside total_cost. Capped at base_price by bookings_discount_within_price.';
-
-
-
-COMMENT ON COLUMN "public"."bookings"."total_cost" IS 'The SERVICE''s price, GROSS of the discount and before tax. What a customer owes is amount_due = total_cost + extras_total - discount, so a caller that nets the discount out of this column has it taken twice. Set by 20260924100000.';
-
-
-
-COMMENT ON COLUMN "public"."bookings"."amount_paid" IS 'DERIVED from public.payments - sum(grand_total - tip). Never write it: private.derive_booking_payment() overwrites any value on every insert and update.';
-
-
-
-COMMENT ON COLUMN "public"."bookings"."extras_total" IS 'DERIVED from public.booking_line_items. Never write it.';
-
-
-
-COMMENT ON COLUMN "public"."bookings"."amount_due" IS 'What the booking COSTS, net of discount and before tax: total_cost + extras_total - discount. Not the outstanding balance -- subtract amount_paid for that. Tax is never here; it is per-facility and lives on the payment. See 20260819210000.';
-
-
-
-COMMENT ON COLUMN "public"."bookings"."taxable" IS 'Whether this booking''s OWN service price is taxed. Extras (booking_line_items) are taxed regardless — a tax-free service does not make a bag of food tax-free. Written by the server when it prices the booking; pinned to true for anything a customer inserts. See 20260921171524.';
-
-
-
-COMMENT ON COLUMN "public"."bookings"."taxable_extras_total" IS 'DERIVED from public.booking_line_items, like extras_total. The part of extras_total that tax applies to. Never write it: private.derive_booking_extras() overwrites any value on every insert and update.';
-
-
 
 CREATE OR REPLACE FUNCTION "private"."cancellation_terms"("b" "public"."bookings") RETURNS "jsonb"
     LANGUAGE "plpgsql" STABLE SECURITY DEFINER
@@ -1658,7 +1711,9 @@ declare
   v_refund   text;
   v_may      text;
 
-  v_total    numeric := coalesce(b.total_cost, 0);
+  -- The service and its own add-ons, as `total_cost` held them before the
+  -- add-ons became `add_on` lines (2026-09-30).
+  v_total    numeric := coalesce(b.total_cost, 0) + coalesce(b.add_ons_total, 0);
   v_paid     numeric := coalesce(b.amount_paid, 0);
 
   v_rules    jsonb;
@@ -2196,7 +2251,8 @@ CREATE OR REPLACE FUNCTION "private"."deposit_for_booking"("b" "public"."booking
 declare
   v_rules jsonb;
   v_rule  jsonb;
-  v_total numeric := coalesce(b.total_cost, 0);
+  -- The service and its own add-ons (see cancellation_terms, 2026-09-30).
+  v_total numeric := coalesce(b.total_cost, 0) + coalesce(b.add_ons_total, 0);
   v_amt   numeric;
 begin
   select s.value into v_rules
@@ -2256,6 +2312,7 @@ CREATE OR REPLACE FUNCTION "private"."derive_booking_commission"() RETURNS "trig
     AS $$
 declare
   v_gross  numeric(12,4);
+  v_service numeric(12,2);
   v_basis  numeric(10,2);
   v_rate   numeric;
   v_share  numeric;
@@ -2286,14 +2343,18 @@ begin
   --
   -- With no extras, `total_cost / v_gross` is 1 and this is the old formula
   -- exactly, which is why no booking without a service charge moves.
+  -- The booking's own add-ons count as the service always has: they were
+  -- inside `total_cost` until they became `add_on` lines, and a groomer does
+  -- not stop earning on a nail trim because it moved (add_ons_total, 2026-09-30).
+  v_service := coalesce(new.total_cost, 0) + coalesce(new.add_ons_total, 0);
   v_gross := coalesce(new.total_cost, 0) + coalesce(new.extras_total, 0);
   v_basis := case
     when v_gross <= 0 then 0
     else greatest(
       0,
       round(
-        coalesce(new.total_cost, 0)
-          - coalesce(new.discount, 0) * (coalesce(new.total_cost, 0) / v_gross),
+        v_service
+          - coalesce(new.discount, 0) * (v_service / v_gross),
         2)
     )
   end;
@@ -2354,6 +2415,7 @@ CREATE OR REPLACE FUNCTION "private"."derive_booking_extras"() RETURNS "trigger"
 begin
   new.extras_total := private.booking_extras_total(new.id);
   new.taxable_extras_total := private.booking_taxable_extras_total(new.id);
+  new.add_ons_total := private.booking_add_ons_total(new.id);
   return new;
 end;
 $$;
@@ -5088,6 +5150,188 @@ $$;
 ALTER FUNCTION "private"."pets_inherit_facility"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "private"."place_add_on_lines"("p_booking_id" "uuid", "p_lines" "jsonb", "p_mode" "text" DEFAULT 'create'::"text") RETURNS integer
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $_$
+declare
+  v_booking   public.bookings;
+  v_group     text;
+  v_first     uuid;
+  v_line      jsonb;
+  v_requested text;
+  v_qty       integer;
+  v_target    uuid;
+  v_pet       uuid;
+  v_staff     uuid;
+  v_on        public.bookings;
+  v_terms     record;
+  v_line_id   uuid;
+  v_held      uuid[] := '{}';
+  v_name      text;
+  v_named     text;
+begin
+  if p_mode not in ('create', 'replace', 'adopt') then
+    raise exception 'place_add_on_lines: unknown mode %.', p_mode
+      using errcode = '22023';
+  end if;
+  if p_lines is null or jsonb_typeof(p_lines) <> 'array' then
+    p_lines := '[]'::jsonb;
+  end if;
+  -- Nothing chosen is nothing to write — except in an edit, where it means
+  -- "take them all off".
+  if p_mode <> 'replace' and jsonb_array_length(p_lines) = 0 then
+    return 0;
+  end if;
+
+  select * into v_booking from public.bookings where id = p_booking_id;
+  if not found then
+    raise exception 'That booking does not exist.' using errcode = 'P0002';
+  end if;
+  if not private.can_write_booking(p_booking_id) then
+    raise exception 'You may not change this booking''s add-ons.'
+      using errcode = '42501';
+  end if;
+
+  -- The request's first booking: where an add-on goes unless its pet is on
+  -- another part. A booking made alone is its own request.
+  v_group := nullif(v_booking.details->'bookingGroup'->>'id', '');
+  select b.id into v_first
+    from public.bookings b
+   where b.facility_id = v_booking.facility_id
+     and (b.id = p_booking_id
+          or (v_group is not null and b.details->'bookingGroup'->>'id' = v_group))
+   order by b.ref
+   limit 1;
+
+  for v_line in select value from jsonb_array_elements(p_lines) loop
+    v_requested := nullif(btrim(coalesce(v_line->>'serviceId', '')), '');
+    v_qty := case
+      when coalesce(v_line->>'quantity', '') ~ '^\d{1,4}$'
+        then (v_line->>'quantity')::integer
+      else 1
+    end;
+    continue when v_requested is null or v_qty < 1;
+
+    -- The pet, among the request's own bookings — and the part that holds
+    -- it, preferring the first when every part does (a daycare pet is on
+    -- every day).
+    v_pet := null;
+    v_target := v_first;
+    if coalesce(v_line->>'petId', '') ~ '^\d{1,18}$' then
+      select p.id, b.id into v_pet, v_target
+        from public.booking_pets bp
+        join public.pets p on p.id = bp.pet_id
+        join public.bookings b on b.id = bp.booking_id
+       where p.ref = (v_line->>'petId')::bigint
+         and b.facility_id = v_booking.facility_id
+         and (b.id = p_booking_id
+              or (v_group is not null and b.details->'bookingGroup'->>'id' = v_group))
+       order by (b.id = v_first) desc, b.ref
+       limit 1;
+      if v_target is null then
+        v_target := v_first;
+      end if;
+    end if;
+
+    -- Who it is assigned to, as the staff list names them: a legacy id or
+    -- the row's uuid. Somebody from another facility is nobody.
+    v_staff := null;
+    v_named := nullif(btrim(coalesce(v_line->>'staffId', '')), '');
+    if v_named is not null then
+      select s.id into v_staff
+        from public.staff s
+       where s.facility_id = v_booking.facility_id
+         and (s.legacy_id = v_named or s.id::text = v_named)
+       limit 1;
+    end if;
+
+    -- An edit keeps a line the request already has, as it was sold.
+    if p_mode = 'replace' then
+      select li.id into v_line_id
+        from public.booking_line_items li
+        join public.bookings b on b.id = li.booking_id
+       where li.kind = 'add_on'
+         and li.source_id = 'booking:' || v_requested
+         and li.pet_id is not distinct from v_pet
+         and not (li.id = any (v_held))
+         and b.facility_id = v_booking.facility_id
+         and (b.id = p_booking_id
+              or (v_group is not null and b.details->'bookingGroup'->>'id' = v_group))
+       order by li.created_at, li.id
+       limit 1;
+      if found then
+        update public.booking_line_items
+           set quantity = v_qty, staff_id = v_staff
+         where id = v_line_id
+           and (quantity, staff_id) is distinct from (v_qty, v_staff);
+        v_held := v_held || v_line_id;
+        continue;
+      end if;
+    end if;
+
+    select * into v_on from public.bookings where id = v_target;
+    select * into v_terms from private.add_on_for_booking(v_on, v_requested);
+    if not found then
+      continue when p_mode = 'adopt';
+      -- Named, when the facility has it at all: switched off, deleted, or
+      -- not for this service or location. An id means nothing to the
+      -- person reading the refusal.
+      select a.name into v_name
+        from public.service_add_ons a
+       where a.facility_id = v_booking.facility_id
+         and (a.legacy_id = v_requested or a.id::text = v_requested)
+       limit 1;
+      raise exception '%', case
+          when v_name is null
+            then 'This booking names an add-on this facility does not have.'
+          else format('%s is not offered on this booking. Take it off and try again.', v_name)
+        end
+        using errcode = '23503';
+    end if;
+
+    -- "Does this add-on require staff?" Yes, and nobody was chosen: whoever
+    -- the booking is with — a groom's groomer — until somebody says
+    -- otherwise.
+    if v_staff is null and v_terms.requires_staff then
+      v_staff := v_on.assigned_staff_id;
+    end if;
+
+    insert into public.booking_line_items (
+      booking_id, facility_id, kind, name, unit_price, quantity, taxable,
+      source_id, add_on_id, pet_id, staff_id, duration_min, author_name
+    ) values (
+      v_target, v_booking.facility_id, 'add_on', v_terms.name, v_terms.price,
+      v_qty, v_terms.taxable, 'booking:' || v_requested, v_terms.add_on_id,
+      v_pet, v_staff, v_terms.duration_min, 'Booking'
+    )
+    returning id into v_line_id;
+    v_held := v_held || v_line_id;
+  end loop;
+
+  -- An edit takes off what is no longer chosen — the request's OWN lines
+  -- only; what was added at check-in, on the calendar or by the pre-arrival
+  -- form is not this function's to touch.
+  if p_mode = 'replace' then
+    delete from public.booking_line_items li
+     using public.bookings b
+     where li.booking_id = b.id
+       and li.kind = 'add_on'
+       and li.source_id like 'booking:%'
+       and not (li.id = any (v_held))
+       and b.facility_id = v_booking.facility_id
+       and (b.id = p_booking_id
+            or (v_group is not null and b.details->'bookingGroup'->>'id' = v_group));
+  end if;
+
+  return coalesce(array_length(v_held, 1), 0);
+end;
+$_$;
+
+
+ALTER FUNCTION "private"."place_add_on_lines"("p_booking_id" "uuid", "p_lines" "jsonb", "p_mode" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "private"."platform_announcement_is_live"("p_status" "text", "p_starts_at" timestamp with time zone, "p_published_at" timestamp with time zone, "p_days" integer) RETURNS boolean
     LANGUAGE "sql" STABLE
     SET "search_path" TO ''
@@ -6221,8 +6465,17 @@ begin
   end if;
 
   if new.status = 'checked_in' and v_apt.check_in_at is null then
+    -- The add-ons' minutes: the old table for bookings made before
+    -- 2026-09-30, the booking's `add_on` lines since.
     select coalesce(sum(duration_min), 0) into v_add_mins
-      from public.grooming_appointment_add_ons where booking_id = new.id;
+      from (
+        select duration_min from public.grooming_appointment_add_ons
+         where booking_id = new.id
+        union all
+        select coalesce(li.duration_min, 0) * li.quantity
+          from public.booking_line_items li
+         where li.booking_id = new.id and li.kind = 'add_on'
+      ) minutes;
 
     update public.grooming_appointments
        set check_in_at = now(),
@@ -7421,6 +7674,41 @@ $$;
 ALTER FUNCTION "public"."active_platform_announcements"("p_facility_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."add_on_upcoming_bookings"("p_add_on" "uuid") RETURNS integer
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_facility uuid;
+begin
+  select a.facility_id into v_facility
+    from public.service_add_ons a where a.id = p_add_on;
+  if v_facility is null
+     or not private.has_permission(v_facility, 'manage_services') then
+    raise exception 'You may not change this facility''s add-ons.'
+      using errcode = '42501';
+  end if;
+
+  return (
+    select count(distinct li.booking_id)::integer
+      from public.booking_line_items li
+      join public.bookings b on b.id = li.booking_id
+     where li.add_on_id = p_add_on
+       and li.kind = 'add_on'
+       and b.status in ('pending', 'request_submitted', 'waitlisted', 'estimate_sent')
+       and b.start_at >= now()
+  );
+end;
+$$;
+
+
+ALTER FUNCTION "public"."add_on_upcoming_bookings"("p_add_on" "uuid") OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."add_on_upcoming_bookings"("p_add_on" "uuid") IS 'How many unconfirmed bookings that have not started carry this add-on — what "apply the changes to upcoming appointments?" would change. manage_services.';
+
+
+
 CREATE OR REPLACE FUNCTION "public"."add_owner_booking_note"("p_ref" bigint, "p_kind" "text", "p_content" "text") RETURNS "uuid"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
@@ -7679,6 +7967,57 @@ $$;
 
 
 ALTER FUNCTION "public"."annotate_call"("p_call_id" "uuid", "p_notes" "text", "p_tags" "text"[], "p_follow_up_status" "text", "p_handled_by" "uuid", "p_assigned_to" "uuid", "p_qa_score" integer, "p_booking_id" "uuid", "p_attribution_source" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."apply_add_on_to_upcoming"("p_add_on" "uuid") RETURNS integer
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_facility uuid;
+  v_bookings integer;
+begin
+  select a.facility_id into v_facility
+    from public.service_add_ons a where a.id = p_add_on;
+  if v_facility is null
+     or not private.has_permission(v_facility, 'manage_services') then
+    raise exception 'You may not change this facility''s add-ons.'
+      using errcode = '42501';
+  end if;
+
+  select count(distinct li.booking_id)::integer into v_bookings
+    from public.booking_line_items li
+    join public.bookings b on b.id = li.booking_id
+   where li.add_on_id = p_add_on
+     and li.kind = 'add_on'
+     and b.status in ('pending', 'request_submitted', 'waitlisted', 'estimate_sent')
+     and b.start_at >= now();
+
+  update public.booking_line_items li
+     set name         = a.name,
+         unit_price   = coalesce(o.price, a.price),
+         taxable      = coalesce(o.taxable, a.taxable),
+         duration_min = coalesce(o.duration_min, a.duration_min)
+    from public.bookings b
+    join public.service_add_ons a on a.id = p_add_on
+    left join public.service_add_on_location_overrides o
+      on o.add_on_id = a.id and o.location_id = b.location_id
+   where li.booking_id = b.id
+     and li.add_on_id = p_add_on
+     and li.kind = 'add_on'
+     and b.status in ('pending', 'request_submitted', 'waitlisted', 'estimate_sent')
+     and b.start_at >= now();
+
+  return v_bookings;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."apply_add_on_to_upcoming"("p_add_on" "uuid") OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."apply_add_on_to_upcoming"("p_add_on" "uuid") IS 'Bring this add-on''s lines on every unconfirmed booking that has not started to its current name, price (at the booking''s location), tax and minutes. Returns the number of bookings changed. manage_services.';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."staff_shifts" (
@@ -8469,7 +8808,7 @@ CREATE OR REPLACE FUNCTION "public"."booking_facility_totals"("p_facility_id" "u
   scoped as (
     select b.status::text as status,
            b.payment_status::text as payment_status,
-           b.total_cost,
+           b.total_cost + b.add_ons_total as total_cost,
            (b.start_at at time zone (select tz from zone))::date as day
       from public.bookings b
      where b.facility_id = p_facility_id
@@ -9158,6 +9497,7 @@ declare
   v_pets    uuid[];
   v_created record;
   v_move    jsonb;
+  v_first   uuid;
 begin
   if p_items is null or jsonb_typeof(p_items) <> 'array'
      or jsonb_array_length(p_items) = 0 then
@@ -9195,12 +9535,19 @@ begin
         nullif(trim(coalesce(v_move->>'overrideReason', '')), ''));
     end loop;
 
+    if v_index = 0 then
+      v_first := v_created.booking_id;
+    end if;
+
     item_index  := v_index;
     booking_id  := v_created.booking_id;
     booking_ref := v_created.booking_ref;
     return next;
     v_index := v_index + 1;
   end loop;
+
+  -- The request's add-ons, once, now that every part exists (2026-09-30).
+  perform private.place_add_on_lines(v_first, p_items->0->'addOns');
 end;
 $$;
 
@@ -10465,7 +10812,9 @@ begin
                              interval '1 day') g
     ),
     stays as (
-      select b.start_at, b.end_at, b.total_cost,
+      -- A stay's revenue is its service and its own add-ons, as `total_cost`
+      -- held them before the add-ons became lines (add_ons_total, 2026-09-30).
+      select b.start_at, b.end_at, b.total_cost + b.add_ons_total as total_cost,
              greatest(1, extract(epoch from
                (coalesce(b.end_at, b.start_at + interval '1 day') - b.start_at))
                / 86400.0) as nights
@@ -14048,7 +14397,8 @@ CREATE OR REPLACE FUNCTION "public"."rebook_history"("p_facility_id" "uuid", "p_
   from public.message_sends ms
   left join public.clients c on c.id = ms.client_id
   left join lateral (
-    select b.created_at, b.total_cost
+    -- The service and its own add-ons (add_ons_total, 2026-09-30).
+    select b.created_at, b.total_cost + b.add_ons_total as total_cost
       from public.bookings b
      where b.facility_id = ms.facility_id
        and b.client_id   = ms.client_id
@@ -16652,6 +17002,59 @@ $$;
 ALTER FUNCTION "public"."save_yipyy_go_draft"("p_booking_id" "uuid", "p_pet_id" "uuid", "p_answers" "jsonb", "p_add_on_requests" "jsonb") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."set_booking_add_ons"("p_booking_id" "uuid", "p_lines" "jsonb", "p_only_if_missing" boolean DEFAULT false) RETURNS integer
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_booking public.bookings;
+  v_group   text;
+begin
+  select * into v_booking from public.bookings where id = p_booking_id;
+  if not found or not private.can_write_booking(p_booking_id) then
+    raise exception 'You may not change this booking''s add-ons.'
+      using errcode = '42501';
+  end if;
+
+  v_group := nullif(v_booking.details->'bookingGroup'->>'id', '');
+
+  if p_only_if_missing then
+    if exists (
+      select 1
+        from public.booking_line_items li
+        join public.bookings b on b.id = li.booking_id
+       where li.kind = 'add_on'
+         and li.source_id like 'booking:%'
+         and b.facility_id = v_booking.facility_id
+         and (b.id = p_booking_id
+              or (v_group is not null and b.details->'bookingGroup'->>'id' = v_group))
+    ) then
+      return 0;
+    end if;
+    return private.place_add_on_lines(p_booking_id, p_lines, 'adopt');
+  end if;
+
+  if v_group is not null then
+    update public.bookings b
+       set details = jsonb_set(b.details, '{extraServices}',
+                               coalesce(p_lines, '[]'::jsonb))
+     where b.facility_id = v_booking.facility_id
+       and b.details->'bookingGroup'->>'id' = v_group
+       and b.id <> p_booking_id;
+  end if;
+
+  return private.place_add_on_lines(p_booking_id, p_lines, 'replace');
+end;
+$$;
+
+
+ALTER FUNCTION "public"."set_booking_add_ons"("p_booking_id" "uuid", "p_lines" "jsonb", "p_only_if_missing" boolean) OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."set_booking_add_ons"("p_booking_id" "uuid", "p_lines" "jsonb", "p_only_if_missing" boolean) IS 'Bring a booking''s own add-on lines (source booking:*) to a new selection, across its request: kept lines stay as sold, new ones are priced from the catalogue, dropped ones are removed. Staff who may create or edit bookings, or the booking''s client while it is open.';
+
+
+
 CREATE OR REPLACE FUNCTION "public"."set_booking_tip_split"("p_booking_ref" bigint, "p_method" "text", "p_allocations" "jsonb") RETURNS integer
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
@@ -18502,7 +18905,12 @@ CREATE TABLE IF NOT EXISTS "public"."booking_line_items" (
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "fee_id" "text",
     "taxable" boolean DEFAULT true NOT NULL,
-    CONSTRAINT "booking_line_items_kind_check" CHECK (("kind" = ANY (ARRAY['item'::"text", 'fee'::"text"]))),
+    "add_on_id" "uuid",
+    "pet_id" "uuid",
+    "staff_id" "uuid",
+    "duration_min" integer,
+    CONSTRAINT "booking_line_items_duration_min_check" CHECK ((("duration_min" IS NULL) OR (("duration_min" >= 0) AND ("duration_min" <= 1440)))),
+    CONSTRAINT "booking_line_items_kind_check" CHECK (("kind" = ANY (ARRAY['item'::"text", 'fee'::"text", 'add_on'::"text"]))),
     CONSTRAINT "booking_line_items_name_check" CHECK (("btrim"("name") <> ''::"text")),
     CONSTRAINT "booking_line_items_quantity_check" CHECK (("quantity" > 0))
 );
@@ -18520,6 +18928,22 @@ COMMENT ON COLUMN "public"."booking_line_items"."fee_id" IS 'The custom-fee rule
 
 
 COMMENT ON COLUMN "public"."booking_line_items"."taxable" IS 'Whether this line is subject to the facility tax. TRUE for everything that existed before 20260923200000, which is what taxableFraction already assumed. A fee sets it from custom_fee.taxable.';
+
+
+
+COMMENT ON COLUMN "public"."booking_line_items"."add_on_id" IS 'For kind add_on: the add-on this line is. Deleting the add-on keeps the line (name and price are the line''s own).';
+
+
+
+COMMENT ON COLUMN "public"."booking_line_items"."pet_id" IS 'For kind add_on: the pet it is for, when the booking said.';
+
+
+
+COMMENT ON COLUMN "public"."booking_line_items"."staff_id" IS 'For kind add_on: the member of staff it is assigned to — "does this add-on require staff?", yes.';
+
+
+
+COMMENT ON COLUMN "public"."booking_line_items"."duration_min" IS 'For kind add_on: the minutes one of it adds to the appointment.';
 
 
 
@@ -25107,6 +25531,10 @@ CREATE INDEX "booking_commission_allocations_unpaid_idx" ON "public"."booking_co
 
 
 
+CREATE INDEX "booking_line_items_add_on_idx" ON "public"."booking_line_items" USING "btree" ("add_on_id") WHERE ("add_on_id" IS NOT NULL);
+
+
+
 CREATE INDEX "booking_line_items_booking_idx" ON "public"."booking_line_items" USING "btree" ("booking_id");
 
 
@@ -27534,12 +27962,27 @@ ALTER TABLE ONLY "public"."booking_commission_allocations"
 
 
 ALTER TABLE ONLY "public"."booking_line_items"
+    ADD CONSTRAINT "booking_line_items_add_on_id_fkey" FOREIGN KEY ("add_on_id") REFERENCES "public"."service_add_ons"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."booking_line_items"
     ADD CONSTRAINT "booking_line_items_booking_id_fkey" FOREIGN KEY ("booking_id") REFERENCES "public"."bookings"("id") ON DELETE CASCADE;
 
 
 
 ALTER TABLE ONLY "public"."booking_line_items"
     ADD CONSTRAINT "booking_line_items_facility_id_fkey" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id");
+
+
+
+ALTER TABLE ONLY "public"."booking_line_items"
+    ADD CONSTRAINT "booking_line_items_pet_id_fkey" FOREIGN KEY ("pet_id") REFERENCES "public"."pets"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."booking_line_items"
+    ADD CONSTRAINT "booking_line_items_staff_id_fkey" FOREIGN KEY ("staff_id") REFERENCES "public"."staff"("id") ON DELETE SET NULL;
 
 
 
@@ -29843,7 +30286,7 @@ CREATE POLICY "booking_line_items_delete" ON "public"."booking_line_items" FOR D
 
 
 
-CREATE POLICY "booking_line_items_insert" ON "public"."booking_line_items" FOR INSERT WITH CHECK ("private"."has_permission"("facility_id", 'retail_process_sale'::"text"));
+CREATE POLICY "booking_line_items_insert" ON "public"."booking_line_items" FOR INSERT WITH CHECK ((("kind" <> 'add_on'::"text") AND "private"."has_permission"("facility_id", 'retail_process_sale'::"text")));
 
 
 
@@ -29853,7 +30296,7 @@ CREATE POLICY "booking_line_items_read" ON "public"."booking_line_items" FOR SEL
 
 
 
-CREATE POLICY "booking_line_items_update" ON "public"."booking_line_items" FOR UPDATE USING ("private"."has_permission"("facility_id", 'retail_process_sale'::"text")) WITH CHECK ("private"."has_permission"("facility_id", 'retail_process_sale'::"text"));
+CREATE POLICY "booking_line_items_update" ON "public"."booking_line_items" FOR UPDATE USING ("private"."has_permission"("facility_id", 'retail_process_sale'::"text")) WITH CHECK ((("kind" <> 'add_on'::"text") AND "private"."has_permission"("facility_id", 'retail_process_sale'::"text")));
 
 
 
@@ -33282,6 +33725,16 @@ GRANT USAGE ON SCHEMA "public" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."bookings" TO "anon";
+GRANT ALL ON TABLE "public"."bookings" TO "authenticated";
+GRANT ALL ON TABLE "public"."bookings" TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "private"."add_on_for_booking"("p_booking" "public"."bookings", "p_requested" "text") FROM PUBLIC;
+
+
+
 REVOKE ALL ON FUNCTION "private"."area_pets_in_use"("p_room_id" "uuid", "p_range" "tstzrange", "p_exclude_booking" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "private"."area_pets_in_use"("p_room_id" "uuid", "p_range" "tstzrange", "p_exclude_booking" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "private"."area_pets_in_use"("p_room_id" "uuid", "p_range" "tstzrange", "p_exclude_booking" "uuid") TO "service_role";
@@ -33316,6 +33769,10 @@ REVOKE ALL ON FUNCTION "private"."boarding_stay_space_type"() FROM PUBLIC;
 
 
 
+REVOKE ALL ON FUNCTION "private"."booking_add_ons_total"("p_booking_id" "uuid") FROM PUBLIC;
+
+
+
 REVOKE ALL ON FUNCTION "private"."booking_amount_paid"("p_booking_id" "uuid") FROM PUBLIC;
 
 
@@ -33347,12 +33804,6 @@ REVOKE ALL ON FUNCTION "private"."calendar_event_touch"() FROM PUBLIC;
 
 
 GRANT ALL ON FUNCTION "private"."can_write_booking"("p_booking_id" "uuid") TO "authenticated";
-
-
-
-GRANT ALL ON TABLE "public"."bookings" TO "anon";
-GRANT ALL ON TABLE "public"."bookings" TO "authenticated";
-GRANT ALL ON TABLE "public"."bookings" TO "service_role";
 
 
 
@@ -33557,6 +34008,11 @@ GRANT ALL ON FUNCTION "private"."pet_passed_daycare_evaluation"("p_pet_id" "uuid
 
 
 
+REVOKE ALL ON FUNCTION "private"."place_add_on_lines"("p_booking_id" "uuid", "p_lines" "jsonb", "p_mode" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "private"."place_add_on_lines"("p_booking_id" "uuid", "p_lines" "jsonb", "p_mode" "text") TO "authenticated";
+
+
+
 REVOKE ALL ON FUNCTION "private"."platform_announcement_is_live"("p_status" "text", "p_starts_at" timestamp with time zone, "p_published_at" timestamp with time zone, "p_days" integer) FROM PUBLIC;
 
 
@@ -33735,6 +34191,12 @@ GRANT ALL ON FUNCTION "public"."active_platform_announcements"("p_facility_id" "
 
 
 
+REVOKE ALL ON FUNCTION "public"."add_on_upcoming_bookings"("p_add_on" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."add_on_upcoming_bookings"("p_add_on" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."add_on_upcoming_bookings"("p_add_on" "uuid") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."add_owner_booking_note"("p_ref" bigint, "p_kind" "text", "p_content" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."add_owner_booking_note"("p_ref" bigint, "p_kind" "text", "p_content" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."add_owner_booking_note"("p_ref" bigint, "p_kind" "text", "p_content" "text") TO "service_role";
@@ -33761,6 +34223,12 @@ GRANT ALL ON TABLE "public"."call_record" TO "service_role";
 REVOKE ALL ON FUNCTION "public"."annotate_call"("p_call_id" "uuid", "p_notes" "text", "p_tags" "text"[], "p_follow_up_status" "text", "p_handled_by" "uuid", "p_assigned_to" "uuid", "p_qa_score" integer, "p_booking_id" "uuid", "p_attribution_source" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."annotate_call"("p_call_id" "uuid", "p_notes" "text", "p_tags" "text"[], "p_follow_up_status" "text", "p_handled_by" "uuid", "p_assigned_to" "uuid", "p_qa_score" integer, "p_booking_id" "uuid", "p_attribution_source" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."annotate_call"("p_call_id" "uuid", "p_notes" "text", "p_tags" "text"[], "p_follow_up_status" "text", "p_handled_by" "uuid", "p_assigned_to" "uuid", "p_qa_score" integer, "p_booking_id" "uuid", "p_attribution_source" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."apply_add_on_to_upcoming"("p_add_on" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."apply_add_on_to_upcoming"("p_add_on" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."apply_add_on_to_upcoming"("p_add_on" "uuid") TO "service_role";
 
 
 
@@ -34672,6 +35140,12 @@ GRANT ALL ON FUNCTION "public"."save_onboarding_section"("p_token" "text", "p_ta
 REVOKE ALL ON FUNCTION "public"."save_yipyy_go_draft"("p_booking_id" "uuid", "p_pet_id" "uuid", "p_answers" "jsonb", "p_add_on_requests" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."save_yipyy_go_draft"("p_booking_id" "uuid", "p_pet_id" "uuid", "p_answers" "jsonb", "p_add_on_requests" "jsonb") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."save_yipyy_go_draft"("p_booking_id" "uuid", "p_pet_id" "uuid", "p_answers" "jsonb", "p_add_on_requests" "jsonb") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."set_booking_add_ons"("p_booking_id" "uuid", "p_lines" "jsonb", "p_only_if_missing" boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."set_booking_add_ons"("p_booking_id" "uuid", "p_lines" "jsonb", "p_only_if_missing" boolean) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."set_booking_add_ons"("p_booking_id" "uuid", "p_lines" "jsonb", "p_only_if_missing" boolean) TO "service_role";
 
 
 
