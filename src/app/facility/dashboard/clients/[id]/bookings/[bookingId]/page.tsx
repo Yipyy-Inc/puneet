@@ -104,8 +104,7 @@ import { RefundModal } from "@/components/bookings/RefundModal";
 import { AddRetailItemModal } from "@/components/bookings/AddRetailItemModal";
 import { AddServiceChargeDialog } from "@/components/bookings/AddServiceChargeDialog";
 import {
-  automaticServiceCharges,
-  serviceChargeLines,
+  serviceChargesAtTheTill,
   serviceChargesTotal,
   type ServiceChargeLine,
 } from "@/lib/pricing/service-charge-lines";
@@ -1151,21 +1150,21 @@ export default function ClientBookingDetailPage({
     //
     // Anything already on the bill is excluded here as well as by the
     // constraint, so `amountDue` below matches what will actually be written.
+    // And nothing on a booking made from an estimate: its fees are on the
+    // bill as they were quoted, and the customer accepted no others.
     setPendingServiceCharges(
-      serviceChargeLines(
-        automaticServiceCharges(
-          pricingRules.customFees,
-          booking.service.toLowerCase(),
-          booking.locationId,
-        ),
-        {
+      serviceChargesAtTheTill({
+        fees: pricingRules.customFees,
+        context: {
           serviceId: booking.service.toLowerCase(),
           petCount,
           // The service and its own add-ons (2026-09-30: add-ons are lines).
           serviceTotal: bookingValue(booking),
           locationId: booking.locationId,
         },
-      ).filter((line) => !alreadyChargedFeeIds.has(line.feeId)),
+        chargesStated: booking.serviceChargesIncluded === true,
+        alreadyCharged: alreadyChargedFeeIds,
+      }),
     );
     setCheckoutOpen(true);
   };

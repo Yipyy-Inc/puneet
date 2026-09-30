@@ -127,6 +127,22 @@ export const extraServiceSchema = z.object({
 
 export type ExtraService = z.infer<typeof extraServiceSchema>;
 
+/**
+ * A fee as an estimate stated it, to be written on a booking's bill as it
+ * stands (2026-09-30): the rule that charges it, what the bill calls it, one
+ * unit's price — negative for a fee the facility set up as a discount — how
+ * many, and whether tax applies.
+ */
+export const statedServiceChargeSchema = z.object({
+  feeId: z.string().trim().min(1).max(200),
+  name: z.string().trim().min(1).max(200),
+  unitPrice: z.number().finite().min(-1_000_000).max(1_000_000),
+  quantity: z.number().int().min(1).max(10_000),
+  taxable: z.boolean(),
+});
+
+export type StatedServiceCharge = z.infer<typeof statedServiceChargeSchema>;
+
 export const taskTypeEnum = z.enum([
   "feeding",
   "medication",
@@ -406,13 +422,20 @@ export const newBookingSchema = z.object({
   medications: z.array(medicationItemSchema).optional(),
   extraServices: z.array(z.union([extraServiceSchema, z.string()])).optional(),
   /**
-   * The price already holds every charge there is: an estimate's conversion
-   * says so, because the estimate listed its fees and the customer accepted
-   * those. The facility's automatic service charges are then not added on top
-   * (they were, twice, until 2026-09-30). Read for STAFF alone — a customer
-   * cannot talk their way out of a fee with it.
+   * Every charge on the booking was stated by the estimate it is made from,
+   * and the customer accepted those: the facility's automatic fees are not
+   * added to it — not when it is created, and not at the till (they were, on
+   * top of the estimate's own, until 2026-09-30). The column
+   * `bookings.service_charges_included`: staff set it, and the integrity
+   * trigger pins it for a customer, who cannot switch their fees off with it.
    */
   serviceChargesIncluded: z.boolean().optional(),
+  /**
+   * The fees that estimate stated, one fee line each on the booking's bill at
+   * the amount quoted. Their money is not in `totalCost`. Read for STAFF
+   * alone, and never filed in `details`.
+   */
+  serviceCharges: z.array(statedServiceChargeSchema).optional(),
   initialDeposit: z
     .object({
       amount: z.number(),
@@ -621,6 +644,19 @@ export const estimateLineItemSchema = z.object({
   addOnRef: z.string().optional(),
   /** Which pet the add-on is for, by the pet's number. Absent: the first. */
   petRef: z.number().optional(),
+  /**
+   * Of an add-on line's units, how many the booking's service attaches by
+   * itself — a boarding service's default add-ons. Converting bills them all;
+   * the booking form, opened to redo the booking, derives these itself and is
+   * given only the rest.
+   */
+  includedQuantity: z.number().optional(),
+  /**
+   * The custom fee this line charges (`CustomFee.id`). A booking made from
+   * the estimate carries it as that fee's line on the bill, at this amount
+   * (2026-09-30), where it was money folded into the booking's price.
+   */
+  feeId: z.string().optional(),
 });
 export type EstimateLineItem = z.infer<typeof estimateLineItemSchema>;
 

@@ -854,6 +854,7 @@ export type Database = {
           payment_status: string;
           ref: number;
           service: string;
+          service_charges_included: boolean;
           service_type: string | null;
           special_requests: string | null;
           start_at: string;
@@ -884,6 +885,7 @@ export type Database = {
           payment_status?: string;
           ref?: number;
           service: string;
+          service_charges_included?: boolean;
           service_type?: string | null;
           special_requests?: string | null;
           start_at: string;
@@ -914,6 +916,7 @@ export type Database = {
           payment_status?: string;
           ref?: number;
           service?: string;
+          service_charges_included?: boolean;
           service_type?: string | null;
           special_requests?: string | null;
           start_at?: string;

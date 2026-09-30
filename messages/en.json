@@ -9707,7 +9707,7 @@
       "datesAndTimes": "Dates and times",
       "cartSeriesLine": "Every {day} · {time} · {weeks} weeks · starts {date}",
       "dropInBadge": "Drop-in",
-      "estimateLineFees": "Fees and adjustments",
+      "estimateLineOtherCharges": "Other charges",
       "estimateSaveFailed": "The estimate was not saved",
       "trainingEnrolled": "Enrolled {count} — each dog is booked into every remaining session",
       "trainingEnrolFailed": "Not every dog was enrolled",

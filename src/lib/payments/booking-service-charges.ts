@@ -9,6 +9,7 @@ import {
 import { customFeeLines } from "@/lib/pricing/service-charge-lines";
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import type { CustomFee } from "@/types/boarding";
+import type { StatedServiceCharge } from "@/types/booking";
 
 // ============================================================================
 // PUTTING A FACILITY'S SERVICE CHARGES ON A BOOKING.
@@ -61,6 +62,15 @@ import type { CustomFee } from "@/types/boarding";
 // own failures. A booking that exists with no service charge on it is
 // recoverable at the till; a booking that failed to be created because a fee
 // could not be read is not.
+//
+// ── NOT ON A BOOKING WHOSE CHARGES WERE STATED ───────────────────────────
+//
+// A booking made from an estimate carries the estimate's fees as they were
+// quoted (`writeStatedServiceCharges`, below) and no others: the estimate
+// listed every charge and the customer accepted those. It says so in
+// `service_charges_included` (20260930231159), a column the integrity trigger
+// pins for customers — so skipping on it cannot be something a customer asks
+// for. The till reads the same column and adds nothing either.
 // ============================================================================
 
 /** Statuses where the price is still the customer's claim, not the facility's. */
@@ -80,10 +90,12 @@ interface BookingRow {
   location_id: string | null;
   details: Record<string, unknown> | null;
   created_at: string;
+  /** Every charge was stated by an estimate (20260930231159). */
+  service_charges_included: boolean | null;
 }
 
 const BOOKING_COLUMNS =
-  "id, ref, facility_id, client_id, service, status, base_price, total_cost, add_ons_total, location_id, details, created_at";
+  "id, ref, facility_id, client_id, service, status, base_price, total_cost, add_ons_total, location_id, details, created_at, service_charges_included";
 
 export async function applyBookingServiceCharges(
   bookingIds: string[],
@@ -113,6 +125,10 @@ export async function applyBookingServiceCharges(
       const parts = await requestParts(admin, named);
       const first = parts[0];
       if (!first || UNPRICED_STATUSES.has(first.status)) continue;
+      // An estimate stated this booking's charges, all of them.
+      if (parts.some((part) => part.service_charges_included === true)) {
+        continue;
+      }
 
       if (!feesByFacility.has(first.facility_id)) {
         feesByFacility.set(
@@ -158,6 +174,86 @@ export async function applyBookingServiceCharges(
     // service charge is recoverable at the till; a booking that was never
     // created is not.
     return 0;
+  }
+}
+
+/** What became of the fees an estimate stated. */
+export type StatedChargesOutcome = "written" | "in_price" | "lost";
+
+/**
+ * Writes the fees an estimate stated onto its booking's bill: one line each,
+ * at the amount quoted, keyed by the rule that charged it like every fee. The
+ * amounts are staff's — from an estimate staff wrote and the customer
+ * accepted — and trusted no more than the booking's own price, which staff
+ * set too. The create route calls this for staff alone.
+ *
+ * The till adds nothing to such a booking, so a fee that failed to land here
+ * would never be charged. When the lines cannot be written their money goes
+ * back into the booking's price instead — where it sat before fees had lines
+ * of their own — so the booking never owes less than the estimate said.
+ * `lost` is the one answer the caller must report: neither happened.
+ */
+export async function writeStatedServiceCharges(
+  bookingId: string,
+  charges: readonly StatedServiceCharge[],
+): Promise<StatedChargesOutcome> {
+  if (charges.length === 0) return "written";
+  if (!hasServiceRoleKey()) return "lost";
+  const admin = createAdminClient();
+  const feeIds = charges.map((charge) => charge.feeId);
+
+  try {
+    const { data: booking } = await admin
+      .from("bookings")
+      .select("id, facility_id, total_cost")
+      .eq("id", bookingId)
+      .maybeSingle();
+    if (!booking) return "lost";
+
+    const { error } = await admin.from("booking_line_items").upsert(
+      charges.map((charge) => ({
+        booking_id: booking.id,
+        // The booking's own facility: nothing ties a line's to it
+        // (debt map, 2026-09-30).
+        facility_id: booking.facility_id,
+        // A fee the facility set up as a discount is a negative `item`, as
+        // `customFeeLine` writes it.
+        kind: charge.unitPrice < 0 ? "item" : "fee",
+        name: charge.name,
+        unit_price: charge.unitPrice,
+        quantity: charge.quantity,
+        fee_id: charge.feeId,
+        taxable: charge.taxable,
+        author_name: "Estimate",
+      })) as never,
+      { onConflict: "booking_id,fee_id", ignoreDuplicates: true },
+    );
+    if (!error) return "written";
+
+    // An error is not proof that nothing was written — an answer can be lost
+    // after the insert committed. Look before putting the money back.
+    const { data: present } = await admin
+      .from("booking_line_items")
+      .select("fee_id")
+      .eq("booking_id", booking.id)
+      .in("fee_id", feeIds);
+    if ((present ?? []).length > 0) return "written";
+
+    const money = charges.reduce(
+      (sum, charge) => sum + charge.unitPrice * charge.quantity,
+      0,
+    );
+    const { data: restored } = await admin
+      .from("bookings")
+      .update({
+        total_cost:
+          Math.round((Number(booking.total_cost) + money) * 100) / 100,
+      })
+      .eq("id", booking.id)
+      .select("id");
+    return (restored ?? []).length > 0 ? "in_price" : "lost";
+  } catch {
+    return "lost";
   }
 }
 

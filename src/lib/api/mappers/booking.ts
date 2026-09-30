@@ -92,6 +92,12 @@ export function rowToBooking(row: BookingRow): BookingWithRowId {
     // Absent on a row read before the column existed, which is not a decision
     // to stop charging tax.
     taxable: (row as { taxable?: boolean | null }).taxable !== false,
+    // Every charge was stated by the estimate it was made from, so no
+    // automatic fee is added to it (20260930231159). Absent reads as false:
+    // the facility's fees apply, as they always did.
+    serviceChargesIncluded:
+      (row as { service_charges_included?: boolean | null })
+        .service_charges_included === true,
     // What it COSTS, price plus extras. Not the same as totalCost the moment
     // anything is added at the counter — see 20260806820000.
     amountDue: Number(row.amount_due),
@@ -158,6 +164,13 @@ const COLUMN_FIELDS = [
   // (lib/payments/booking-service-tax.ts) — a PATCH sends only the columns it
   // changed, and a screen never changes this one.
   "taxable",
+  // The same: written once, by the create route, for staff converting an
+  // estimate (20260930231159). A copy in `details` would be a customer's to
+  // write, which is the whole reason it is a column.
+  "serviceChargesIncluded",
+  // NOT a column: what an estimate's conversion sends, which the create route
+  // writes as fee lines. Listed so no copy of it is ever filed in `details`.
+  "serviceCharges",
   "startDate",
   "endDate",
   "checkInTime",

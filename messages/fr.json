@@ -9707,7 +9707,7 @@
       "datesAndTimes": "Dates et heures",
       "cartSeriesLine": "Chaque {day} · {time} · {weeks} semaines · début le {date}",
       "dropInBadge": "À l’unité",
-      "estimateLineFees": "Frais et ajustements",
+      "estimateLineOtherCharges": "Autres frais",
       "estimateSaveFailed": "L’estimation n’a pas été enregistrée",
       "trainingEnrolled": "{count} inscription(s) — chaque chien est réservé pour toutes les séances restantes",
       "trainingEnrolFailed": "Tous les chiens n’ont pas été inscrits",

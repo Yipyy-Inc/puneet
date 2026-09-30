@@ -1,4 +1,9 @@
-import type { Estimate, ExtraService, NewBooking } from "@/types/booking";
+import type {
+  Estimate,
+  ExtraService,
+  NewBooking,
+  StatedServiceCharge,
+} from "@/types/booking";
 
 // ============================================================================
 // An estimate, as the booking it becomes.
@@ -38,21 +43,25 @@ function round2(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
+interface AddOnLine {
+  ref: string;
+  petId: number;
+  quantity: number;
+  amount: number;
+  /** Of `quantity`, the units the service attaches by itself. */
+  included: number;
+}
+
 /**
- * The estimate's add-on lines as a booking's add-ons, and the money they
- * come to. A line is one when it names its add-on (`addOnRef`), in a whole
- * quantity, and there is a pet to put it on: the one it names, or — when it
- * names none, or one the estimate no longer has — the estimate's first.
- * Anything else — an estimate written before lines named their add-ons, one
- * line of "Add-ons" — stays in the booking's price, as it always did.
+ * The estimate's add-on lines. A line is one when it names its add-on
+ * (`addOnRef`), in a whole quantity, and there is a pet to put it on: the one
+ * it names, or — when it names none, or one the estimate no longer has — the
+ * estimate's first. Anything else — an estimate written before lines named
+ * their add-ons, one line of "Add-ons" — stays in the booking's price, as it
+ * always did.
  */
-export function estimateAddOns(estimate: Estimate): {
-  extraServices: ExtraService[];
-  money: number;
-} {
-  const extraServices: ExtraService[] = [];
-  let money = 0;
-  for (const line of estimate.lineItems) {
+function addOnLinesOf(estimate: Estimate): AddOnLine[] {
+  return estimate.lineItems.flatMap((line) => {
     const petId =
       line.petRef !== undefined && estimate.petIds.includes(line.petRef)
         ? line.petRef
@@ -63,16 +72,108 @@ export function estimateAddOns(estimate: Estimate): {
       !Number.isInteger(line.quantity) ||
       line.quantity < 1
     ) {
+      return [];
+    }
+    return [
+      {
+        ref: line.addOnRef,
+        petId,
+        quantity: line.quantity,
+        amount: line.amount,
+        included: Math.min(
+          line.quantity,
+          Math.max(0, line.includedQuantity ?? 0),
+        ),
+      },
+    ];
+  });
+}
+
+/** The estimate's add-on lines as a booking's add-ons, and their money. */
+export function estimateAddOns(estimate: Estimate): {
+  extraServices: ExtraService[];
+  money: number;
+} {
+  const lines = addOnLinesOf(estimate);
+  return {
+    extraServices: lines.map((line) => ({
+      serviceId: line.ref,
+      quantity: line.quantity,
+      petId: line.petId,
+    })),
+    money: round2(
+      lines.reduce((sum, line) => sum + line.amount * line.quantity, 0),
+    ),
+  };
+}
+
+/**
+ * The estimate's fee lines as they go onto the booking's bill, and their
+ * money. A line is one when it names the rule that charged it (`feeId`), in a
+ * whole quantity. A second line for the same rule stays in the booking's
+ * price, because a bill carries each fee once — and so does anything written
+ * before fees had lines of their own: the one "Fees and adjustments" line.
+ */
+export function estimateFees(estimate: Estimate): {
+  serviceCharges: StatedServiceCharge[];
+  money: number;
+} {
+  const serviceCharges: StatedServiceCharge[] = [];
+  const named = new Set<string>();
+  let money = 0;
+  for (const line of estimate.lineItems) {
+    if (
+      !line.feeId ||
+      named.has(line.feeId) ||
+      !Number.isInteger(line.quantity) ||
+      line.quantity < 1
+    ) {
       continue;
     }
-    extraServices.push({
-      serviceId: line.addOnRef,
+    named.add(line.feeId);
+    serviceCharges.push({
+      feeId: line.feeId,
+      name: line.label,
+      unitPrice: line.amount,
       quantity: line.quantity,
-      petId,
+      taxable: line.taxable !== false,
     });
     money += line.amount * line.quantity;
   }
-  return { extraServices, money: round2(money) };
+  return { serviceCharges, money: round2(money) };
+}
+
+/**
+ * What "Edit" hands the booking form, so staff redo the booking from the
+ * estimate rather than from nothing: every pet on it, and the add-ons it sold
+ * — a groom's into the groom's own list, anything else as chosen add-ons. Less
+ * the units a service attaches by itself (`includedQuantity`): the form
+ * derives those again, and would bill them twice. The form prices everything
+ * itself; the estimate's own prices and fees stay with the estimate.
+ */
+export function estimateFormPreselection(estimate: Estimate): {
+  petIds: number[];
+  extraServices: ExtraService[];
+  groomingAddOnIds: string[];
+} {
+  const lines = addOnLinesOf(estimate);
+  if (estimate.service === "grooming") {
+    return {
+      petIds: [...estimate.petIds],
+      extraServices: [],
+      groomingAddOnIds: [...new Set(lines.map((line) => line.ref))],
+    };
+  }
+  return {
+    petIds: [...estimate.petIds],
+    extraServices: lines.flatMap((line) => {
+      const chosen = line.quantity - line.included;
+      return chosen > 0
+        ? [{ serviceId: line.ref, quantity: chosen, petId: line.petId }]
+        : [];
+    }),
+    groomingAddOnIds: [],
+  };
 }
 
 /** Map an estimate onto the booking-create shape (NewBooking) — no re-entry. */
@@ -87,7 +188,8 @@ export function buildBookingDataFromEstimate(estimate: Estimate): NewBooking {
   // assignable to somebody, named on the receipt. Their money comes out of
   // `total_cost`, which is the service alone (2026-09-30).
   const addOns = estimateAddOns(estimate);
-  const service = round2(estimate.subtotal - addOns.money);
+  const fees = estimateFees(estimate);
+  const service = round2(estimate.subtotal - addOns.money - fees.money);
 
   return {
     clientId: estimate.clientId,
@@ -112,14 +214,22 @@ export function buildBookingDataFromEstimate(estimate: Estimate): NewBooking {
     //
     // `subtotal` is the gross line sum, which is exactly what `total_cost`
     // means: `amount_due = total_cost + extras_total - discount` — less the
-    // add-ons, which the server bills as lines.
+    // add-ons and the fees, which the server bills as lines.
     totalCost: service,
     ...(addOns.extraServices.length > 0
       ? { extraServices: addOns.extraServices }
       : {}),
-    // The estimate listed every charge, and those are what the customer
-    // accepted. The facility's automatic service charges went on top of them
-    // — its fees, twice — until 2026-09-30.
+    // ── THE FEES ARE FEE LINES, AND THE ONLY ONES ───────────────────────
+    //
+    // Each fee the estimate listed is written onto the bill as that fee's
+    // line, at the amount quoted. And no automatic fee is added — not when the
+    // booking is created, not at the till: the estimate listed every charge,
+    // and those are what the customer accepted (`service_charges_included`,
+    // 20260930231159). Until 2026-09-30 the fees were folded into the price,
+    // and an at-checkout fee was then charged again at the till.
+    ...(fees.serviceCharges.length > 0
+      ? { serviceCharges: fees.serviceCharges }
+      : {}),
     serviceChargesIncluded: true,
     kennel: estimate.roomType,
     specialRequests: notes || undefined,

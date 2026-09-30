@@ -211,6 +211,10 @@ export const lineItemSchema = z.object({
   addOnRef: z.string().trim().min(1).max(200).optional(),
   /** Which pet the add-on is for, by the pet's number. */
   petRef: z.number().int().positive().optional(),
+  /** How many of an add-on line's units come with the service itself. */
+  includedQuantity: z.number().int().min(0).max(10_000).optional(),
+  /** The custom fee this line charges. See EstimateLineItem. */
+  feeId: z.string().trim().min(1).max(200).optional(),
 });
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);

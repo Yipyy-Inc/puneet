@@ -486,6 +486,43 @@ exception when others then
   reset role; perform pg_temp.t('B11 foreign uuid', false, sqlerrm);
 end $$;
 
+-- ── B12: the booking keeps what staff said about its charges ────────────────
+--
+-- 20260930231159: converting an estimate creates its booking with
+-- `service_charges_included`, and the insert's fixed column list dropped it
+-- without a word — the booking would then take the facility's automatic fees
+-- on top of the ones the estimate stated. Not sent, it is false.
+do $$
+declare
+  v_stated uuid; v_plain uuid;
+  v_stated_flag boolean; v_plain_flag boolean;
+begin
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000190001', 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select booking_id into v_stated from public.create_booking(
+    pg_temp.booking('00000000-0000-0000-0000-000000190040')
+      || jsonb_build_object('service_charges_included', true),
+    array['00000000-0000-0000-0000-000000190050']::uuid[],
+    jsonb_build_object('serviceId', 'cb-svc-1')
+  );
+  select booking_id into v_plain from public.create_booking(
+    pg_temp.booking('00000000-0000-0000-0000-000000190040'),
+    array['00000000-0000-0000-0000-000000190050']::uuid[],
+    jsonb_build_object('serviceId', 'cb-svc-1')
+  );
+  reset role;
+
+  select service_charges_included into v_stated_flag
+    from public.bookings where id = v_stated;
+  select service_charges_included into v_plain_flag
+    from public.bookings where id = v_plain;
+  perform pg_temp.t('B12 create_booking keeps what staff said about the charges',
+    v_stated_flag is true and v_plain_flag is false,
+    format('stated=%s plain=%s', v_stated_flag, v_plain_flag));
+exception when others then
+  reset role; perform pg_temp.t('B12 stated charges', false, sqlerrm);
+end $$;
+
 -- ── Report ──────────────────────────────────────────────────────────────────
 select case when ok then '  PASS  ' else '> FAIL <' end as result, name, detail
   from tap order by n;

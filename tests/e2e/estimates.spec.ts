@@ -21,8 +21,9 @@ import { ACCOUNTS, signIn } from "./_auth";
 //   - send, accept on behalf, decline and delete are each a write, and a sent
 //     estimate cannot be deleted
 //   - converting creates a real booking and points the estimate at it
-//   - an estimate's add-on converts to an add-on line of the booking, and the
-//     facility's automatic fees are not added on top of the ones it listed
+//   - an estimate's add-on converts to an add-on line of the booking, its fee
+//     to that fee's line at the amount quoted, and the facility's automatic
+//     fees are not added on top of the ones it listed
 //   - the list screen shows what the route holds
 //   - a caretaker, who has no view_estimates, reads none
 //
@@ -296,7 +297,7 @@ test.describe("estimates", () => {
     expect(body.convertedBookingId).toBe(bookingRef);
   });
 
-  test("an estimate's add-on is a line of the booking, and no fee is added twice", async ({
+  test("an estimate's add-on and fee are lines of the booking, and no other fee is added", async ({
     page,
   }) => {
     await signIn(page, ACCOUNTS.owner);
@@ -310,7 +311,8 @@ test.describe("estimates", () => {
     const nailTrim = ((await madeAddOn.json()) as { addOn: { id: string } })
       .addOn.id;
 
-    // An automatic fee the estimate did not list: converting must not add it.
+    // Two automatic fees: one the estimate lists, which must land once, as
+    // quoted; one it does not, which must not land at all.
     const settings = await page.request.get("/api/facility/settings");
     const rules = (
       (await settings.json()) as Record<string, { value?: unknown } | undefined>
@@ -326,6 +328,16 @@ test.describe("estimates", () => {
           id: "e2e-estimates-fee",
           name: `${MARKER} Cleaning fee`,
           amount: 15,
+          feeType: "flat",
+          scope: "per_booking",
+          autoApply: "at_checkout",
+          applicableServices: ["all"],
+          isActive: true,
+        },
+        {
+          id: "e2e-estimates-unlisted",
+          name: `${MARKER} Late fee`,
+          amount: 9,
           feeType: "flat",
           scope: "per_booking",
           autoApply: "at_checkout",
@@ -353,6 +365,12 @@ test.describe("estimates", () => {
               addOnRef: nailTrim,
               petRef: pet,
             },
+            {
+              label: "Cleaning fee",
+              amount: 15,
+              quantity: 1,
+              feeId: "e2e-estimates-fee",
+            },
           ],
           discount: 0,
           taxRate: 0,
@@ -367,6 +385,9 @@ test.describe("estimates", () => {
       ).json()) as Estimate;
       expect(estimate.lineItems[1]?.addOnRef, "the line keeps its add-on").toBe(
         nailTrim,
+      );
+      expect(estimate.lineItems[2]?.feeId, "the line keeps its fee").toBe(
+        "e2e-estimates-fee",
       );
 
       // Converted the way the review dialog converts it.
@@ -388,21 +409,29 @@ test.describe("estimates", () => {
         name: string;
         quantity: number;
         price: number;
+        feeId?: string;
       }>;
       const addOnLine = bill.find((l) => l.kind === "add_on");
       expect(addOnLine?.quantity).toBe(2);
       expect(addOnLine?.price).toBe(24);
+      const feeLines = bill.filter((l) => l.feeId);
       expect(
-        bill.filter((l) => l.name.includes("Cleaning fee")),
-        "the estimate is the whole bill it states",
-      ).toHaveLength(0);
+        feeLines.map((l) => [l.feeId, l.kind, l.price]),
+        "the fee the estimate listed, once and as quoted — and no other",
+      ).toEqual([["e2e-estimates-fee", "fee", 15]]);
 
       const [row] = (await (
         await page.request.get(`/api/bookings?ref=${addOnBookingRef}`)
-      ).json()) as Array<{ totalCost?: number; amountDue?: number }>;
-      // The day alone; the nail trims are their own line.
+      ).json()) as Array<{
+        totalCost?: number;
+        amountDue?: number;
+        serviceChargesIncluded?: boolean;
+      }>;
+      // The day alone; the nail trims and the fee are lines of their own.
       expect(row.totalCost).toBe(38);
-      expect(row.amountDue).toBe(62);
+      expect(row.amountDue).toBe(77);
+      // What the till reads: it adds no fee to this booking at checkout.
+      expect(row.serviceChargesIncluded).toBe(true);
     } finally {
       const restored = await writeRules(rules ?? {});
       expect(restored.ok(), await restored.text()).toBe(true);

@@ -25,6 +25,8 @@ interface BookingModalConfig {
   facilityName: string;
   preSelectedClientId?: number;
   preSelectedPetId?: number;
+  /** Every pet to start with; wins over `preSelectedPetId`. */
+  preSelectedPetIds?: number[];
   preSelectedService?: string;
   /** Training-only: deep-link the booking flow to a Course Type so Step 3
    *  skips the course-type picker and scopes its series to this course. */
@@ -41,6 +43,8 @@ interface BookingModalConfig {
   preSelectedRoomId?: string;
   preSelectedDaycareSectionId?: string;
   preSelectedExtraServices?: ExtraService[];
+  /** A groom's add-ons to start with, by the ids the groom's list uses. */
+  preSelectedGroomingAddOnIds?: string[];
   preSelectedFeedingSchedule?: FeedingScheduleItem[];
   preSelectedMedications?: MedicationItem[];
   preSelectedSpecialRequests?: string;
@@ -132,6 +136,7 @@ export function BookingModalProvider({ children }: { children: ReactNode }) {
           onCreateBooking={config.onCreateBooking}
           preSelectedClientId={config.preSelectedClientId}
           preSelectedPetId={config.preSelectedPetId}
+          preSelectedPetIds={config.preSelectedPetIds}
           preSelectedService={config.preSelectedService}
           preSelectedCourseTypeId={config.preSelectedCourseTypeId}
           lockService={config.lockService ?? false}
@@ -143,6 +148,7 @@ export function BookingModalProvider({ children }: { children: ReactNode }) {
           preSelectedRoomId={config.preSelectedRoomId}
           preSelectedDaycareSectionId={config.preSelectedDaycareSectionId}
           preSelectedExtraServices={config.preSelectedExtraServices}
+          preSelectedGroomingAddOnIds={config.preSelectedGroomingAddOnIds}
           preSelectedFeedingSchedule={config.preSelectedFeedingSchedule}
           preSelectedMedications={config.preSelectedMedications}
           preSelectedSpecialRequests={config.preSelectedSpecialRequests}

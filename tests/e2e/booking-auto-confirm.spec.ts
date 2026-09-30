@@ -148,9 +148,15 @@ async function bookGroomingAsCustomer(page: Page, total: number) {
   });
 }
 
-async function bookAsCustomer(page: Page, total: number, discount = 0) {
+async function bookAsCustomer(
+  page: Page,
+  total: number,
+  discount = 0,
+  extra: Record<string, unknown> = {},
+) {
   return page.request.post("/api/bookings", {
     data: {
+      ...extra,
       clientId: ALICE.client,
       petId: ALICE.pet,
       service: "daycare",
@@ -486,6 +492,59 @@ test.describe("a facility decides which services need its approval", () => {
       data: { status: "confirmed" },
     });
     expect(tried.ok(), "only cancelling is theirs to do").toBe(false);
+  });
+
+  // An estimate's conversion says its charges were all stated, and writes the
+  // fees it quoted as lines — through the server's own client, past RLS. So a
+  // customer saying the same must be heard by nothing: no fee line of their
+  // making, and the facility's fees still theirs to pay (2026-09-30).
+  test("a customer cannot say their charges were stated, or state their own", async ({
+    page,
+  }) => {
+    const staff = await page.context().browser()!.newPage();
+    try {
+      await signIn(staff, ACCOUNTS.owner);
+      await setAutoConfirm(staff, { daycare: true });
+    } finally {
+      await staff.close();
+    }
+
+    await signIn(page, ACCOUNTS.customer);
+    const res = await bookAsCustomer(page, FULL_DAY, 0, {
+      serviceChargesIncluded: true,
+      serviceCharges: [
+        {
+          feeId: "e2e-forged-credit",
+          name: `${MARKER} Forged credit`,
+          unitPrice: -50,
+          quantity: 1,
+          taxable: false,
+        },
+      ],
+    });
+    expect(res.ok(), await res.text()).toBe(true);
+    const booking = (await res.json()) as { id: number; status: string };
+    made.push(booking.id);
+    // Priced right, so confirmed like any other: what it claimed changed nothing.
+    expect(booking.status).toBe("confirmed");
+
+    await signIn(page, ACCOUNTS.owner);
+    const [row] = (await (
+      await page.request.get(`/api/bookings?ref=${booking.id}`)
+    ).json()) as Array<{ serviceChargesIncluded?: boolean }>;
+    expect(row.serviceChargesIncluded, "the facility's fees still apply").toBe(
+      false,
+    );
+    const bill = (await (
+      await page.request.get(`/api/bookings/${booking.id}/line-items`)
+    ).json()) as Array<{ feeId?: string; name: string }>;
+    expect(
+      bill.filter(
+        (line) =>
+          line.feeId === "e2e-forged-credit" || line.name.includes("Forged"),
+      ),
+      "no line of the customer's making",
+    ).toHaveLength(0);
   });
 });
 

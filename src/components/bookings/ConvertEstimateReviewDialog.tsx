@@ -20,6 +20,7 @@ import { useStaffText } from "@/lib/staff/use-staff-text";
 import {
   buildBookingDataFromEstimate,
   estimateBookingNotes,
+  estimateFormPreselection,
 } from "@/lib/estimates/convert-estimate";
 import type { Estimate, NewBooking } from "@/types/booking";
 
@@ -121,20 +122,25 @@ export function ConvertEstimateReviewDialog({
   };
 
   // "Edit" reuses the booking wizard, pre-filled from the estimate — no
-  // re-entry. Completing it converts.
+  // re-entry. Completing it converts. Every pet and every add-on the estimate
+  // sold come with it (2026-09-30); the form prices them itself.
   const handleEdit = () => {
+    const preselection = estimateFormPreselection(estimate);
     openBookingModal({
       clients: allClients ?? [],
       facilityId: FACILITY_LABEL,
       facilityName: profile.businessName,
       preSelectedClientId: estimate.clientId,
       preSelectedPetId: estimate.petIds[0],
+      preSelectedPetIds: preselection.petIds,
       preSelectedService: estimate.service,
       preSelectedStartDate: estimate.startDate,
       preSelectedEndDate: estimate.endDate,
       preSelectedCheckInTime: estimate.checkInTime,
       preSelectedCheckOutTime: estimate.checkOutTime,
       preSelectedSpecialRequests: notes,
+      preSelectedExtraServices: preselection.extraServices,
+      preSelectedGroomingAddOnIds: preselection.groomingAddOnIds,
       onCreateBooking: run,
     });
     onOpenChange(false);

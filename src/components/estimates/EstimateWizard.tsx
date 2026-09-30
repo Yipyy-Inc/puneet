@@ -561,6 +561,8 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
       ...(li.taxable === false ? { taxable: false } : {}),
       ...(li.addOnRef ? { addOnRef: li.addOnRef } : {}),
       ...(li.petRef ? { petRef: li.petRef } : {}),
+      ...(li.includedQuantity ? { includedQuantity: li.includedQuantity } : {}),
+      ...(li.feeId ? { feeId: li.feeId } : {}),
     })),
     discount: discountAmount,
     discountReason: discountType
@@ -703,6 +705,8 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
         // What a booking names it by: the booking made from this estimate
         // bills it as an add-on line, for the first pet on the estimate.
         addOnRef: addOnRef(addon),
+        // Taxed as the add-on is, which is how the booking's line will be.
+        ...(addon.taxable === false ? { taxable: false } : {}),
       },
     ]);
     setAddonSearch("");

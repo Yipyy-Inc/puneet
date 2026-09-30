@@ -233,6 +233,25 @@ export function serviceChargeLines(
     .filter((line): line is ServiceChargeLine => line !== null);
 }
 
+/**
+ * What the till adds at checkout: the facility's at-checkout and care-type
+ * fees the bill does not carry yet — and nothing at all on a booking whose
+ * charges an estimate stated (`serviceChargesIncluded`, 20260930231159). The
+ * estimate's fees are on its bill already, as quoted, and the customer
+ * accepted no others; a fee staff want to add is theirs to add by hand.
+ */
+export function serviceChargesAtTheTill(input: {
+  fees: CustomFee[] | undefined;
+  context: ServiceChargeContext;
+  chargesStated: boolean;
+  alreadyCharged: ReadonlySet<string>;
+}): ServiceChargeLine[] {
+  if (input.chargesStated) return [];
+  return serviceChargeLines(input.fees, input.context).filter(
+    (line) => !input.alreadyCharged.has(line.feeId),
+  );
+}
+
 // ── EVERY TRIGGER, FROM THE FACTS OF ONE REQUEST ──────────────────────────
 
 /** A client's segment, as the client record holds it. */

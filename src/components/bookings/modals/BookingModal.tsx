@@ -109,6 +109,7 @@ import { planKennels, type KennelChange } from "@/lib/boarding/kennel-changes";
 import { lodgingTypesServing } from "@/lib/pricing/boarding-service-choice";
 import { defaultAddOnLines } from "@/lib/pricing/boarding-default-addons";
 import { estimateAddOnLines } from "@/lib/estimates/add-on-lines";
+import { estimateFeeLines } from "@/lib/estimates/fee-lines";
 import { toast } from "sonner";
 import { useEstimateMutations, type EstimateCreate } from "@/lib/api/estimates";
 import {
@@ -219,6 +220,12 @@ export interface NewBookingModalProps {
   preSelectedRoomId?: string;
   preSelectedDaycareSectionId?: string;
   preSelectedExtraServices?: ExtraService[];
+  /**
+   * A groom's add-ons to start with, by the ids the groom's own list uses —
+   * an estimate reopened as a booking ("Edit" in the convert dialog). Kept
+   * as chosen ones: a package's rules only ever swap what they attached.
+   */
+  preSelectedGroomingAddOnIds?: string[];
   preSelectedFeedingSchedule?: FeedingScheduleItem[];
   preSelectedMedications?: MedicationItem[];
   preSelectedSpecialRequests?: string;
@@ -346,6 +353,7 @@ export function BookingModal({
   preSelectedRoomId,
   preSelectedDaycareSectionId,
   preSelectedExtraServices,
+  preSelectedGroomingAddOnIds,
   preSelectedFeedingSchedule,
   preSelectedMedications,
   preSelectedSpecialRequests,
@@ -912,7 +920,7 @@ export function BookingModal({
   // facility-wide service add-ons (different catalog, per-pet quantities).
   const [groomingSelectedAddOnIds, setGroomingSelectedAddOnIds] = useState<
     string[]
-  >([]);
+  >(preSelectedGroomingAddOnIds ?? []);
   // Grooming-only: subset of `groomingSelectedAddOnIds` that came from the
   // package's default-rules (vs explicitly chosen by staff). Tracked so the
   // rule engine can swap out only the auto picks when the package or pet changes.
@@ -2515,6 +2523,9 @@ export function BookingModal({
     const addOnLines = estimateAddOnLines({
       lines: price.effectiveExtraServices,
       catalogue: storedAddOns,
+      // The share of those lines the boarding service attached by itself,
+      // which "Edit" must not hand back to a form that derives it again.
+      included: boardingDefaultLines,
       groom:
         selectedService === "grooming" && firstPet != null
           ? {
@@ -2528,9 +2539,27 @@ export function BookingModal({
     const addOnMoney = cents(
       addOnLines.reduce((sum, line) => sum + line.amount * line.quantity, 0),
     );
-    const rest = cents(gross - price.basePrice - addOnMoney);
+    // One line per fee as well, naming the rule that charged it, so a
+    // booking made from the estimate carries each as that fee's line on its
+    // bill (lib/estimates/fee-lines.ts). They were inside one "Fees and
+    // adjustments" line, which converted into money inside the price.
+    const feeLines = estimateFeeLines({
+      adjustments: price.adjustments,
+      fees: pricingRules.customFees,
+    });
+    lines.push(...feeLines);
+    const feeMoney = cents(
+      feeLines.reduce((sum, line) => sum + line.amount * line.quantity, 0),
+    );
+    // What is left is what a booking made in this form keeps inside its
+    // price: surcharges and the care fees.
+    const rest = cents(gross - price.basePrice - addOnMoney - feeMoney);
     if (Math.abs(rest) >= 0.01) {
-      lines.push({ label: t("estimateLineFees"), amount: rest, quantity: 1 });
+      lines.push({
+        label: t("estimateLineOtherCharges"),
+        amount: rest,
+        quantity: 1,
+      });
     }
     const dates = estimateDates();
     setEstimateBusy(true);

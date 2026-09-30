@@ -1,5 +1,6 @@
 import { NextResponse, after, type NextRequest } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
 
 import { getViewer } from "@/lib/auth/viewer";
 import { notifyStaff } from "@/lib/notifications/notify-staff";
@@ -32,10 +33,14 @@ import {
   parseBookingListParams,
   shiftDay,
 } from "@/lib/api/booking-list-params";
-import type { NewBooking } from "@/types/booking";
+import { statedServiceChargeSchema, type NewBooking } from "@/types/booking";
 import { autoConfirmCustomerBookings } from "@/lib/bookings/auto-confirm";
 import { stampBookingTaxable } from "@/lib/payments/booking-service-tax";
-import { applyBookingServiceCharges } from "@/lib/payments/booking-service-charges";
+import {
+  applyBookingServiceCharges,
+  writeStatedServiceCharges,
+} from "@/lib/payments/booking-service-charges";
+import { hasServiceRoleKey } from "@/lib/supabase/admin";
 import { requestAddOnLines } from "@/lib/pricing/add-on-lines";
 import {
   FORM_OVERRIDE_REASON_REQUIRED,
@@ -246,6 +251,43 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Facility not found." }, { status: 500 });
   }
 
+  // ── CHARGES AN ESTIMATE STATED ──────────────────────────────────────────
+  //
+  // Converting an estimate says its lines were every charge the customer
+  // accepted: its fees go onto the bill as they were quoted, and no automatic
+  // fee is added — now or at the till (`service_charges_included`,
+  // 20260930231159). Heard from STAFF only. A customer saying so is not heard,
+  // and the integrity trigger pins the column for them regardless.
+  const chargesStated =
+    input.serviceChargesIncluded === true &&
+    Boolean(viewer && viewer.memberships.length > 0);
+  const stated = chargesStated
+    ? z
+        .array(statedServiceChargeSchema)
+        .max(50)
+        .refine(
+          (charges) =>
+            new Set(charges.map((c) => c.feeId)).size === charges.length,
+          "A fee can be on a bill once.",
+        )
+        .safeParse(input.serviceCharges ?? [])
+    : null;
+  if (stated && !stated.success) {
+    return NextResponse.json(
+      { error: "The estimate's fees could not be read." },
+      { status: 422 },
+    );
+  }
+  const statedCharges = stated?.data ?? [];
+  // Refused before anything is written: without the server's own client the
+  // fee lines cannot be, and the booking would owe less than it was quoted.
+  if (statedCharges.length > 0 && !hasServiceRoleKey()) {
+    return NextResponse.json(
+      { error: "This server cannot write an estimate's fees onto a bill." },
+      { status: 500 },
+    );
+  }
+
   // Pets are resolved and checked BEFORE the booking is written.
   //
   // booking_pets refuses a pet that does not belong to the booking's client
@@ -323,8 +365,9 @@ export async function POST(request: NextRequest) {
     ({
       initialDeposit: _deposit,
       formOverrideReason: _reason,
-      // Read below, for staff, and never filed in `details`.
+      // Read above, for staff: a column and fee lines, never `details`.
       serviceChargesIncluded: _chargesIncluded,
+      serviceCharges: _statedCharges,
       // Made in the same transaction by create_bookings, not filed in
       // `details`, where a copy would go stale the first time a move changed.
       kennelMoves,
@@ -336,6 +379,7 @@ export async function POST(request: NextRequest) {
         locationId: facility.locationId,
         timeZone: facility.timeZone,
       });
+      if (chargesStated) row.service_charges_included = true;
       if (stylist) {
         row.assigned_staff_id = stylist.staffId;
         row.assigned_staff_name ??= stylist.name;
@@ -508,17 +552,25 @@ export async function POST(request: NextRequest) {
   // per day (daycare) or per room (boarding), so applying a fee to each row
   // would turn a $15 cleaning fee into $75 on a five-day block.
   //
-  // Never fails the booking, same contract as the tax stamp above.
+  // Never fails the booking, same contract as the tax stamp above. A booking
+  // whose charges an estimate stated is skipped inside, on its column.
   //
-  // NOT when staff say the price already holds every charge: an estimate's
-  // conversion, whose accepted lines include the fees it quoted. A customer
-  // saying so is not heard.
-  const chargesIncluded =
-    input.serviceChargesIncluded === true &&
-    Boolean(viewer && viewer.memberships.length > 0);
-  if (!chargesIncluded) {
-    await applyBookingServiceCharges([created[0].booking_id]);
+  // The estimate's own fees go on first, as quoted. When they cannot, their
+  // money goes back into the price; only when neither happened is the answer
+  // an error, because the booking would owe less than the estimate said.
+  const statedOutcome = await writeStatedServiceCharges(
+    created[0].booking_id,
+    statedCharges,
+  );
+  if (statedOutcome === "lost") {
+    return NextResponse.json(
+      {
+        error: `Booking #${created[0].booking_ref} was saved, but the estimate's fees were not. Open it and add them to its bill.`,
+      },
+      { status: 500 },
+    );
   }
+  await applyBookingServiceCharges([created[0].booking_id]);
 
   const { data: full } = await supabase
     .from("bookings")

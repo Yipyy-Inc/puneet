@@ -578,6 +578,63 @@ begin
             v_bad is null, coalesce(v_bad, 'all four columns correct'));
 end $$;
 
+-- ── T22-T24: a customer does not decide that their fees were all stated ─────
+--
+-- 20260930231159: a booking made from an estimate carries
+-- `service_charges_included`, and then no automatic fee is added to it — not
+-- when it is created, not at the till. A column for the reason `taxable` is
+-- one (T19/T20): a customer's `details` pass through the trigger untouched, so
+-- a key there would be believed and would switch the facility's fees off.
+--
+-- The negative control was run: with the column added and the trigger left as
+-- it was, T22 and T23 kept the customer's `true`.
+do $$
+declare r record; v_booking uuid; v_staff_booking uuid;
+begin
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c1', 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  insert into public.bookings
+    (facility_id, client_id, service, start_at, end_at, service_charges_included)
+  values
+    ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000d1',
+     'daycare', now() + interval '4 days', now() + interval '4 days 4 hours', true)
+  returning id into v_booking;
+  reset role;
+
+  select * into r from public.bookings where id = v_booking;
+  perform pg_temp.t('T22 a customer cannot insert their booking with its fees said to be stated',
+            r.service_charges_included is false,
+            format('service_charges_included=%s status=%s', r.service_charges_included, r.status));
+
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c1', 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  update public.bookings set service_charges_included = true where id = v_booking;
+  reset role;
+
+  select * into r from public.bookings where id = v_booking;
+  perform pg_temp.t('T23 a customer cannot say so afterwards either',
+            r.service_charges_included is false,
+            format('service_charges_included=%s', r.service_charges_included));
+
+  -- Staff can: it is what converting an estimate writes.
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a1', 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  insert into public.bookings
+    (facility_id, client_id, service, status, start_at, end_at, service_charges_included)
+  values
+    ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000d1',
+     'daycare', 'confirmed', now() + interval '5 days', now() + interval '5 days 4 hours', true)
+  returning id into v_staff_booking;
+  reset role;
+
+  select * into r from public.bookings where id = v_staff_booking;
+  perform pg_temp.t('T24 staff can say a booking''s charges were all stated',
+            r.service_charges_included is true,
+            format('service_charges_included=%s', r.service_charges_included));
+exception when others then
+  reset role; perform pg_temp.t('T22-T24 stated charges', false, sqlerrm);
+end $$;
+
 -- ── Report ─────────────────────────────────────────────────────────────────
 select case when ok then '  PASS  ' else '> FAIL <' end as result,
        name, detail
