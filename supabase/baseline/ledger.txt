@@ -391,3 +391,4 @@
 20260926232440	the_schema_names_no_other_product
 20260930153912	an_add_on_is_a_line_on_the_bill
 20260930184018	nothing_reads_the_old_add_on_stores
+20260930190455	the_old_add_on_stores_are_dropped

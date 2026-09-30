@@ -3550,28 +3550,6 @@ COMMENT ON FUNCTION "private"."grooming_line_names_a_grooming_service"() IS 'A p
 
 
 
-CREATE OR REPLACE FUNCTION "private"."grooming_line_same_facility"() RETURNS "trigger"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO ''
-    AS $$
-declare
-  v_facility uuid;
-begin
-  if new.add_on_id is null then
-    return new;
-  end if;
-  select facility_id into v_facility from public.grooming_add_ons where id = new.add_on_id;
-  if v_facility is distinct from new.facility_id then
-    raise exception 'That add-on belongs to a different facility.' using errcode = '42501';
-  end if;
-  return new;
-end;
-$$;
-
-
-ALTER FUNCTION "private"."grooming_line_same_facility"() OWNER TO "postgres";
-
-
 CREATE OR REPLACE FUNCTION "private"."grooming_note_author"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
@@ -20472,79 +20450,6 @@ COMMENT ON COLUMN "public"."gift_card_transactions"."booking_id" IS 'Which booki
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."service_add_ons" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "facility_id" "uuid" NOT NULL,
-    "legacy_id" "text",
-    "category_id" "uuid",
-    "name" "text" NOT NULL,
-    "description" "text" DEFAULT ''::"text" NOT NULL,
-    "is_active" boolean DEFAULT true NOT NULL,
-    "image_url" "text",
-    "color_code" "text",
-    "location_ids" "uuid"[] DEFAULT '{}'::"uuid"[] NOT NULL,
-    "price" numeric(10,2) DEFAULT 0 NOT NULL,
-    "taxable" boolean DEFAULT true NOT NULL,
-    "duration_min" integer DEFAULT 0 NOT NULL,
-    "requires_staff" boolean DEFAULT false NOT NULL,
-    "applies_to_all_services" boolean DEFAULT true NOT NULL,
-    "service_refs" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
-    "eligible_species" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
-    "eligible_breeds" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
-    "eligible_weight_tiers" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
-    "eligible_coat_types" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
-    "display_order" integer DEFAULT 0 NOT NULL,
-    "archived_at" timestamp with time zone,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "service_add_ons_color_code_check" CHECK ((("color_code" IS NULL) OR ("length"("color_code") <= 32))),
-    CONSTRAINT "service_add_ons_description_check" CHECK (("length"("description") <= 2000)),
-    CONSTRAINT "service_add_ons_duration_min_check" CHECK ((("duration_min" >= 0) AND ("duration_min" <= 1440))),
-    CONSTRAINT "service_add_ons_eligible_coat_types_check" CHECK (("eligible_coat_types" <@ ARRAY['short'::"text", 'medium'::"text", 'long'::"text", 'wire'::"text", 'curly'::"text", 'hairless'::"text"])),
-    CONSTRAINT "service_add_ons_eligible_weight_tiers_check" CHECK (("eligible_weight_tiers" <@ ARRAY['small'::"text", 'medium'::"text", 'large'::"text", 'giant'::"text"])),
-    CONSTRAINT "service_add_ons_image_url_check" CHECK ((("image_url" IS NULL) OR ("length"("image_url") <= 2048))),
-    CONSTRAINT "service_add_ons_name_check" CHECK ((("length"("btrim"("name")) >= 1) AND ("length"("btrim"("name")) <= 120))),
-    CONSTRAINT "service_add_ons_price_check" CHECK (("price" >= (0)::numeric)),
-    CONSTRAINT "service_add_ons_service_refs_check" CHECK ((("cardinality"("service_refs") = 0) OR ("array_to_string"("service_refs", ','::"text") ~ '^((boarding|daycare|grooming):[0-9a-f-]{36}|training|evaluation|custom:[a-z0-9_-]+)(,((boarding|daycare|grooming):[0-9a-f-]{36}|training|evaluation|custom:[a-z0-9_-]+))*$'::"text")))
-);
-
-
-ALTER TABLE "public"."service_add_ons" OWNER TO "postgres";
-
-
-COMMENT ON TABLE "public"."service_add_ons" IS 'One add-ons list for every service (Settings > Services > Add-ons). Replaced the facility_settings service_addons JSON and grooming_add_ons on 2026-09-26; grooming_add_ons is now a view over it. Delete = archive (archived_at).';
-
-
-
-COMMENT ON COLUMN "public"."service_add_ons"."service_refs" IS 'When applies_to_all_services is false: boarding:<uuid> | daycare:<uuid> | grooming:<uuid> | training | evaluation | custom:<slug>.';
-
-
-
-CREATE OR REPLACE VIEW "public"."grooming_add_ons" WITH ("security_invoker"='true') AS
- SELECT "id",
-    "facility_id",
-    "legacy_id",
-    "name",
-    "description",
-    "price",
-    "duration_min",
-    "is_active",
-    "display_order",
-    "created_at",
-    "updated_at"
-   FROM "public"."service_add_ons" "a"
-  WHERE (("archived_at" IS NULL) AND ("applies_to_all_services" OR (EXISTS ( SELECT 1
-           FROM "unnest"("a"."service_refs") "r"("ref")
-          WHERE ("r"."ref" ~~ 'grooming:%'::"text")))));
-
-
-ALTER VIEW "public"."grooming_add_ons" OWNER TO "postgres";
-
-
-COMMENT ON VIEW "public"."grooming_add_ons" IS 'The add-ons that apply to grooming, from service_add_ons (2026-09-26). Kept so create_booking and /api/grooming/add-ons read the one list unchanged; goes when they read it directly.';
-
-
-
 CREATE TABLE IF NOT EXISTS "public"."grooming_alert_notes" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "booking_id" "uuid" NOT NULL,
@@ -20563,24 +20468,6 @@ ALTER TABLE "public"."grooming_alert_notes" OWNER TO "postgres";
 
 COMMENT ON TABLE "public"."grooming_alert_notes" IS 'At-a-glance safety alerts on a grooming booking. Carry-forward is DERIVED at render, never copied — see Decision 1 in 20260806140000.';
 
-
-
-CREATE TABLE IF NOT EXISTS "public"."grooming_appointment_add_ons" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "booking_id" "uuid" NOT NULL,
-    "facility_id" "uuid" NOT NULL,
-    "add_on_id" "uuid",
-    "name" "text" NOT NULL,
-    "price" numeric(10,2) DEFAULT 0 NOT NULL,
-    "duration_min" integer DEFAULT 0 NOT NULL,
-    "auto_attached" boolean DEFAULT false NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "grooming_appointment_add_ons_duration_min_check" CHECK (("duration_min" >= 0)),
-    CONSTRAINT "grooming_appointment_add_ons_price_check" CHECK (("price" >= (0)::numeric))
-);
-
-
-ALTER TABLE "public"."grooming_appointment_add_ons" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."grooming_appointment_history" (
@@ -23047,6 +22934,54 @@ COMMENT ON TABLE "public"."service_add_on_location_overrides" IS 'Override by bu
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."service_add_ons" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "facility_id" "uuid" NOT NULL,
+    "legacy_id" "text",
+    "category_id" "uuid",
+    "name" "text" NOT NULL,
+    "description" "text" DEFAULT ''::"text" NOT NULL,
+    "is_active" boolean DEFAULT true NOT NULL,
+    "image_url" "text",
+    "color_code" "text",
+    "location_ids" "uuid"[] DEFAULT '{}'::"uuid"[] NOT NULL,
+    "price" numeric(10,2) DEFAULT 0 NOT NULL,
+    "taxable" boolean DEFAULT true NOT NULL,
+    "duration_min" integer DEFAULT 0 NOT NULL,
+    "requires_staff" boolean DEFAULT false NOT NULL,
+    "applies_to_all_services" boolean DEFAULT true NOT NULL,
+    "service_refs" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "eligible_species" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "eligible_breeds" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "eligible_weight_tiers" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "eligible_coat_types" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "display_order" integer DEFAULT 0 NOT NULL,
+    "archived_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "service_add_ons_color_code_check" CHECK ((("color_code" IS NULL) OR ("length"("color_code") <= 32))),
+    CONSTRAINT "service_add_ons_description_check" CHECK (("length"("description") <= 2000)),
+    CONSTRAINT "service_add_ons_duration_min_check" CHECK ((("duration_min" >= 0) AND ("duration_min" <= 1440))),
+    CONSTRAINT "service_add_ons_eligible_coat_types_check" CHECK (("eligible_coat_types" <@ ARRAY['short'::"text", 'medium'::"text", 'long'::"text", 'wire'::"text", 'curly'::"text", 'hairless'::"text"])),
+    CONSTRAINT "service_add_ons_eligible_weight_tiers_check" CHECK (("eligible_weight_tiers" <@ ARRAY['small'::"text", 'medium'::"text", 'large'::"text", 'giant'::"text"])),
+    CONSTRAINT "service_add_ons_image_url_check" CHECK ((("image_url" IS NULL) OR ("length"("image_url") <= 2048))),
+    CONSTRAINT "service_add_ons_name_check" CHECK ((("length"("btrim"("name")) >= 1) AND ("length"("btrim"("name")) <= 120))),
+    CONSTRAINT "service_add_ons_price_check" CHECK (("price" >= (0)::numeric)),
+    CONSTRAINT "service_add_ons_service_refs_check" CHECK ((("cardinality"("service_refs") = 0) OR ("array_to_string"("service_refs", ','::"text") ~ '^((boarding|daycare|grooming):[0-9a-f-]{36}|training|evaluation|custom:[a-z0-9_-]+)(,((boarding|daycare|grooming):[0-9a-f-]{36}|training|evaluation|custom:[a-z0-9_-]+))*$'::"text")))
+);
+
+
+ALTER TABLE "public"."service_add_ons" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."service_add_ons" IS 'One add-ons list for every service (Settings > Services > Add-ons). Replaced the facility_settings service_addons JSON and the grooming_add_ons table on 2026-09-26; both, and the view that stood in for the second, were dropped on 2026-09-30. Delete = archive (archived_at).';
+
+
+
+COMMENT ON COLUMN "public"."service_add_ons"."service_refs" IS 'When applies_to_all_services is false: boarding:<uuid> | daycare:<uuid> | grooming:<uuid> | training | evaluation | custom:<slug>.';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."shift_swap_requests" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "facility_id" "uuid" NOT NULL,
@@ -24488,16 +24423,6 @@ ALTER TABLE ONLY "public"."grooming_alert_notes"
 
 
 
-ALTER TABLE ONLY "public"."grooming_appointment_add_ons"
-    ADD CONSTRAINT "grooming_appointment_add_on_unique" UNIQUE ("booking_id", "add_on_id");
-
-
-
-ALTER TABLE ONLY "public"."grooming_appointment_add_ons"
-    ADD CONSTRAINT "grooming_appointment_add_ons_pkey" PRIMARY KEY ("id");
-
-
-
 ALTER TABLE ONLY "public"."grooming_appointment_history"
     ADD CONSTRAINT "grooming_appointment_history_pkey" PRIMARY KEY ("id");
 
@@ -25880,10 +25805,6 @@ CREATE INDEX "grooming_alert_notes_booking_idx" ON "public"."grooming_alert_note
 
 
 
-CREATE INDEX "grooming_appointment_add_ons_booking_idx" ON "public"."grooming_appointment_add_ons" USING "btree" ("booking_id");
-
-
-
 CREATE INDEX "grooming_appointment_history_booking_id_idx" ON "public"."grooming_appointment_history" USING "btree" ("booking_id");
 
 
@@ -27173,10 +27094,6 @@ CREATE OR REPLACE TRIGGER "grooming_alert_notes_facility" BEFORE INSERT OR UPDAT
 
 
 
-CREATE OR REPLACE TRIGGER "grooming_appointment_add_ons_facility" BEFORE INSERT OR UPDATE ON "public"."grooming_appointment_add_ons" FOR EACH ROW EXECUTE FUNCTION "private"."grooming_appointment_facility"();
-
-
-
 CREATE OR REPLACE TRIGGER "grooming_appointment_history_facility" BEFORE INSERT ON "public"."grooming_appointment_history" FOR EACH ROW EXECUTE FUNCTION "private"."grooming_appointment_facility"();
 
 
@@ -27270,10 +27187,6 @@ CREATE OR REPLACE TRIGGER "grooming_waitlist_same_facility" BEFORE INSERT OR UPD
 
 
 CREATE OR REPLACE TRIGGER "grooming_waitlist_touch" BEFORE UPDATE ON "public"."grooming_waitlist_entries" FOR EACH ROW EXECUTE FUNCTION "private"."set_updated_at"();
-
-
-
-CREATE OR REPLACE TRIGGER "grooming_zz_add_on_line_same_facility" BEFORE INSERT OR UPDATE ON "public"."grooming_appointment_add_ons" FOR EACH ROW EXECUTE FUNCTION "private"."grooming_line_same_facility"();
 
 
 
@@ -28554,21 +28467,6 @@ ALTER TABLE ONLY "public"."grooming_alert_notes"
 
 ALTER TABLE ONLY "public"."grooming_alert_notes"
     ADD CONSTRAINT "grooming_alert_notes_facility_id_fkey" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY "public"."grooming_appointment_add_ons"
-    ADD CONSTRAINT "grooming_appointment_add_ons_add_on_id_fkey" FOREIGN KEY ("add_on_id") REFERENCES "public"."service_add_ons"("id") ON DELETE SET NULL;
-
-
-
-ALTER TABLE ONLY "public"."grooming_appointment_add_ons"
-    ADD CONSTRAINT "grooming_appointment_add_ons_booking_id_fkey" FOREIGN KEY ("booking_id") REFERENCES "public"."grooming_appointments"("booking_id") ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY "public"."grooming_appointment_add_ons"
-    ADD CONSTRAINT "grooming_appointment_add_ons_facility_id_fkey" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE CASCADE;
 
 
 
@@ -31015,27 +30913,6 @@ CREATE POLICY "grooming_alert_notes_insert" ON "public"."grooming_alert_notes" F
 
 
 CREATE POLICY "grooming_alert_notes_read" ON "public"."grooming_alert_notes" FOR SELECT TO "authenticated" USING (("private"."is_platform_admin"() OR "private"."has_permission"("facility_id", 'view_bookings'::"text")));
-
-
-
-ALTER TABLE "public"."grooming_appointment_add_ons" ENABLE ROW LEVEL SECURITY;
-
-
-CREATE POLICY "grooming_appointment_add_ons_delete" ON "public"."grooming_appointment_add_ons" FOR DELETE TO "authenticated" USING ("private"."can_write_booking"("booking_id"));
-
-
-
-CREATE POLICY "grooming_appointment_add_ons_insert" ON "public"."grooming_appointment_add_ons" FOR INSERT TO "authenticated" WITH CHECK ("private"."can_write_booking"("booking_id"));
-
-
-
-CREATE POLICY "grooming_appointment_add_ons_read" ON "public"."grooming_appointment_add_ons" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
-   FROM "public"."bookings" "b"
-  WHERE ("b"."id" = "grooming_appointment_add_ons"."booking_id"))));
-
-
-
-CREATE POLICY "grooming_appointment_add_ons_update" ON "public"."grooming_appointment_add_ons" FOR UPDATE TO "authenticated" USING ("private"."can_write_booking"("booking_id")) WITH CHECK ("private"."can_write_booking"("booking_id"));
 
 
 
@@ -35710,25 +35587,9 @@ GRANT ALL ON TABLE "public"."gift_card_transactions" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."service_add_ons" TO "authenticated";
-GRANT ALL ON TABLE "public"."service_add_ons" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."grooming_add_ons" TO "authenticated";
-GRANT ALL ON TABLE "public"."grooming_add_ons" TO "service_role";
-
-
-
 GRANT ALL ON TABLE "public"."grooming_alert_notes" TO "anon";
 GRANT ALL ON TABLE "public"."grooming_alert_notes" TO "authenticated";
 GRANT ALL ON TABLE "public"."grooming_alert_notes" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."grooming_appointment_add_ons" TO "anon";
-GRANT ALL ON TABLE "public"."grooming_appointment_add_ons" TO "authenticated";
-GRANT ALL ON TABLE "public"."grooming_appointment_add_ons" TO "service_role";
 
 
 
@@ -36236,6 +36097,11 @@ GRANT ALL ON TABLE "public"."service_add_on_categories" TO "service_role";
 
 GRANT ALL ON TABLE "public"."service_add_on_location_overrides" TO "authenticated";
 GRANT ALL ON TABLE "public"."service_add_on_location_overrides" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."service_add_ons" TO "authenticated";
+GRANT ALL ON TABLE "public"."service_add_ons" TO "service_role";
 
 
 
