@@ -265,6 +265,7 @@ CREATE TABLE IF NOT EXISTS "public"."bookings" (
     "taxable" boolean DEFAULT true NOT NULL,
     "taxable_extras_total" numeric(10,2) DEFAULT 0 NOT NULL,
     "add_ons_total" numeric(10,2) DEFAULT 0 NOT NULL,
+    "service_charges_included" boolean DEFAULT false NOT NULL,
     CONSTRAINT "bookings_discount_within_price" CHECK (("discount" <= "base_price")),
     CONSTRAINT "bookings_ends_after_start" CHECK (("end_at" >= "start_at")),
     CONSTRAINT "bookings_money_non_negative" CHECK ((("base_price" >= (0)::numeric) AND ("discount" >= (0)::numeric) AND ("total_cost" >= (0)::numeric) AND (("tip_amount" IS NULL) OR ("tip_amount" >= (0)::numeric)))),
@@ -304,6 +305,10 @@ COMMENT ON COLUMN "public"."bookings"."taxable_extras_total" IS 'DERIVED from pu
 
 
 COMMENT ON COLUMN "public"."bookings"."add_ons_total" IS 'The booking''s add_on lines — derived with extras_total, and inside it. What total_cost held for add-ons before 2026-09-30, so a reader that counted them reads total_cost + add_ons_total.';
+
+
+
+COMMENT ON COLUMN "public"."bookings"."service_charges_included" IS 'True when every charge on this booking was stated by the estimate it was converted from, so no automatic fee is added to it — at creation or at the till. Staff and the server set it; enforce_booking_integrity pins it for anybody else.';
 
 
 
@@ -2624,6 +2629,10 @@ begin
     new.assigned_staff_id   := null;
     new.assigned_staff_name := null;
 
+    -- Whether every charge was stated by an estimate, so that no automatic
+    -- fee is added, is the facility's to say and never the payer's.
+    new.service_charges_included := false;
+
     return new;
   end if;
 
@@ -2693,6 +2702,7 @@ begin
   new.total_cost          := old.total_cost;
   new.tip_amount          := old.tip_amount;
   new.taxable             := old.taxable;
+  new.service_charges_included := old.service_charges_included;
   new.start_at            := old.start_at;
   new.end_at              := old.end_at;
   new.assigned_staff_id   := old.assigned_staff_id;
@@ -9220,7 +9230,7 @@ declare
     'assigned_staff_id', 'assigned_staff_name',
     'base_price', 'discount', 'total_cost', 'tip_amount',
     'special_requests', 'details', 'training_series_session_id',
-    'form_override_reason'
+    'form_override_reason', 'service_charges_included'
   ];
   v_unknown      text[];
   v_booking_id   uuid;
@@ -9314,7 +9324,8 @@ begin
     status, start_at, end_at,
     assigned_staff_id, assigned_staff_name,
     base_price, discount, total_cost, tip_amount,
-    special_requests, details, training_series_session_id
+    special_requests, details, training_series_session_id,
+    service_charges_included
   )
   select
     b.facility_id, b.location_id, b.client_id, b.service, b.service_type,
@@ -9323,7 +9334,8 @@ begin
     b.assigned_staff_id, b.assigned_staff_name,
     coalesce(b.base_price, 0), coalesce(b.discount, 0),
     coalesce(b.total_cost, 0), b.tip_amount,
-    b.special_requests, coalesce(b.details, '{}'::jsonb), b.training_series_session_id
+    b.special_requests, coalesce(b.details, '{}'::jsonb), b.training_series_session_id,
+    coalesce(b.service_charges_included, false)
     from jsonb_populate_record(null::public.bookings, p_booking) b
   returning id, ref, facility_id, start_at, end_at
        into v_booking_id, v_ref, v_facility_id, v_start, v_end;
