@@ -308,9 +308,9 @@ end $$;
 
 -- ── T8: view_services alone writes nothing ──────────────────────────────────
 -- Into service_add_ons, where `authenticated` HOLDS the insert grant, so the
--- refusal is the write policy's. grooming_add_ons became a view on 2026-09-26
--- with select only, and an insert there would be refused by the missing grant
--- whatever the policy said.
+-- refusal is the write policy's. This wrote into grooming_add_ons until that
+-- became a select-only view on 2026-09-26 (dropped 2026-09-30), where the
+-- missing grant would have refused an insert whatever the policy said.
 do $$
 declare ok boolean;
 begin

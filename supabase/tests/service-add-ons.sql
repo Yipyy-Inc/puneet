@@ -16,12 +16,15 @@
 -- A3  A client of the facility sees its LIVE add-ons: not an inactive one, not
 --     an archived (deleted) one.
 -- A4  A member of another facility sees none of them.
--- A5  anon holds no privilege on any of the three tables or the view.
+-- A5  anon holds no privilege on any of the three tables.
 -- A6  A category, a location or an override location from ANOTHER facility is
 --     refused — a foreign key cannot say "the same facility".
 -- A7  A malformed service reference is refused.
--- A8  `grooming_add_ons` (now a view) shows what applies to grooming: an
---     all-services add-on yes, a boarding-only one no, an archived one no.
+-- A8  What the one list replaced is gone (20260930190455): the
+--     `grooming_add_ons` view, the `grooming_appointment_add_ons` table and
+--     its trigger function, and the `service_addons` settings rows. Which
+--     grooming add-ons a groom offers is `/api/grooming/add-ons`'s, by the
+--     add-on rules' own `appliesToService`.
 --
 -- The actors are ordinary members: `has_permission` lets a platform admin
 -- through everything, so measuring RLS as one measures nothing.
@@ -237,13 +240,13 @@ declare v_held text;
 begin
   select string_agg(t.rel || ':' || t.priv, ', ') into v_held
     from (values ('public.service_add_ons'), ('public.service_add_on_categories'),
-                 ('public.service_add_on_location_overrides'), ('public.grooming_add_ons')) r(rel)
+                 ('public.service_add_on_location_overrides')) r(rel)
     cross join (values ('select'), ('insert'), ('update'), ('delete')) p(priv)
     cross join lateral (select r.rel, p.priv) t
    where has_table_privilege('anon', r.rel, p.priv);
 
   perform pg_temp.t(5,
-    'anon holds no privilege on the add-on tables or the grooming view',
+    'anon holds no privilege on the add-on tables',
     v_held is null,
     coalesce('anon holds ' || v_held, 'none held'));
 end $$;
@@ -309,27 +312,31 @@ begin
     case when v_refused then 'refused' else 'ACCEPTED' end);
 end $$;
 
--- ── A8 the grooming view shows what applies to grooming ────────────────────
+-- ── A8 what the one list replaced is gone ─────────────────────────────────
 
 do $$
-declare v_a uuid; v_boarding uuid; v_seen text;
+declare v_left text;
 begin
-  select id into v_a from public.facilities where slug = 'add-on-pets-sad';
-  select id into v_boarding from public.boarding_services where facility_id = v_a and legacy_id = 'sad-bd';
+  select string_agg(name, ', ') into v_left
+    from (
+      select 'the grooming_add_ons view' as name
+       where to_regclass('public.grooming_add_ons') is not null
+      union all
+      select 'the grooming_appointment_add_ons table'
+       where to_regclass('public.grooming_appointment_add_ons') is not null
+      union all
+      select 'private.grooming_line_same_facility()'
+       where to_regprocedure('private.grooming_line_same_facility()') is not null
+      union all
+      select 'service_addons settings rows'
+       where exists (select 1 from public.facility_settings
+                      where domain = 'service_addons')
+    ) left_over;
 
-  insert into public.service_add_ons (facility_id, legacy_id, name, price, applies_to_all_services, service_refs)
-  values (v_a, 'sad-boarding-only', 'SAD Late checkout', 20, false, array['boarding:' || v_boarding::text]);
-
-  select string_agg(legacy_id, ',' order by legacy_id) into v_seen
-    from public.grooming_add_ons where facility_id = v_a;
-
-  -- sad-live (all services) and sad-off (all services, paused — staff still
-  -- see a paused one) are grooming's; sad-gone is archived and
-  -- sad-boarding-only is not grooming's.
   perform pg_temp.t(8,
-    'the grooming view shows what applies to grooming, and nothing archived',
-    v_seen = 'sad-live,sad-off',
-    format('grooming view shows %s', coalesce(v_seen, 'nothing')));
+    'the view, the table and the settings the one list replaced are gone',
+    v_left is null,
+    coalesce('still there: ' || v_left, 'nothing left'));
 end $$;
 
 -- ── Report ──────────────────────────────────────────────────────────────────
