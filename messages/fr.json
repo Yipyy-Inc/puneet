@@ -9870,7 +9870,7 @@
       "medsNameLabel": "Nom du médicament",
       "medsNamePlaceholder": "p. ex. Apoquel",
       "medsStrengthLabel": "Concentration",
-      "medsOptional": "Facultatif",
+      "medsOptional": "(facultatif)",
       "medsStrengthPlaceholder": "p. ex. 16 mg",
       "medsFormLabel": "Forme",
       "medsFormTablet": "Comprimé",

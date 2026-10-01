@@ -9870,7 +9870,7 @@
       "medsNameLabel": "Medication name",
       "medsNamePlaceholder": "e.g., Apoquel",
       "medsStrengthLabel": "Strength",
-      "medsOptional": "Optional",
+      "medsOptional": "(optional)",
       "medsStrengthPlaceholder": "e.g., 16 mg",
       "medsFormLabel": "Form",
       "medsFormTablet": "Tablet",
