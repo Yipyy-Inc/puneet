@@ -1,6 +1,7 @@
 -- Storage buckets and policies, read from production by `bun run db:local:pull`.
 -- `supabase db dump` leaves the storage schema out. Generated; do not edit.
 
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values ('booking-medication-photos', 'booking-medication-photos', false, 10485760, array['image/png','image/jpeg','image/heic']::text[]) on conflict (id) do nothing;
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values ('client-documents', 'client-documents', false, 10485760, array['application/pdf','image/png','image/jpeg','image/heic']::text[]) on conflict (id) do nothing;
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values ('facility-logos', 'facility-logos', true, 2097152, array['image/png','image/jpeg','image/webp']::text[]) on conflict (id) do nothing;
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values ('grooming-photos', 'grooming-photos', false, 10485760, array['image/png','image/jpeg','image/heic']::text[]) on conflict (id) do nothing;
@@ -10,6 +11,9 @@ insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values ('staff-documents', 'staff-documents', false, 10485760, array['application/pdf','image/png','image/jpeg','image/heic']::text[]) on conflict (id) do nothing;
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values ('yipyy-go-photos', 'yipyy-go-photos', false, 10485760, array['image/png','image/jpeg','image/heic']::text[]) on conflict (id) do nothing;
 
+create policy "booking_medication_photos_object_delete" on storage.objects as permissive for delete to "authenticated" using (((bucket_id = 'booking-medication-photos'::text) AND private.medication_photo_object_may(name, 'remove'::text)));
+create policy "booking_medication_photos_object_insert" on storage.objects as permissive for insert to "authenticated" with check (((bucket_id = 'booking-medication-photos'::text) AND private.medication_photo_object_may(name, 'attach'::text)));
+create policy "booking_medication_photos_object_read" on storage.objects as permissive for select to "authenticated" using (((bucket_id = 'booking-medication-photos'::text) AND private.medication_photo_object_may(name, 'read'::text)));
 create policy "client_documents_object_delete" on storage.objects as permissive for delete to "authenticated" using (((bucket_id = 'client-documents'::text) AND ((storage.foldername(name))[1] IN ( SELECT (f.id)::text AS id
    FROM public.facilities f
   WHERE private.has_permission(f.id, 'edit_clients'::text)))));

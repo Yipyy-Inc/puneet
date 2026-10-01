@@ -1466,6 +1466,36 @@ $$;
 ALTER FUNCTION "private"."booking_extras_total"("p_booking_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "private"."booking_medication_photo_derive"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_medications jsonb;
+begin
+  select b.facility_id,
+         case when jsonb_typeof(b.details -> 'medications') = 'array'
+              then b.details -> 'medications' else '[]'::jsonb end
+    into new.facility_id, v_medications
+    from public.bookings b
+   where b.id = new.booking_id;
+  if new.facility_id is null then
+    raise exception 'That booking does not exist.' using errcode = '23503';
+  end if;
+  if not exists (
+    select 1 from jsonb_array_elements(v_medications) m
+     where m ->> 'id' = new.medication_id
+  ) then
+    raise exception 'That medication is not on this booking.' using errcode = '23503';
+  end if;
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "private"."booking_medication_photo_derive"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "private"."booking_moves_the_client"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
@@ -4550,6 +4580,64 @@ ALTER FUNCTION "private"."may_send_report_card"("p_facility_id" "uuid", "p_servi
 
 COMMENT ON FUNCTION "private"."may_send_report_card"("p_facility_id" "uuid", "p_service_type" "text") IS 'Whether the caller may create, amend or attach photos to a report card for this service at this facility. The service-specific permission, not a flattened "can send updates".';
 
+
+
+CREATE OR REPLACE FUNCTION "private"."medication_photo_may"("p_booking_id" "uuid", "p_action" "text") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select exists (
+    select 1 from public.bookings b
+     where b.id = p_booking_id
+       and case p_action
+             when 'read' then
+               private.is_platform_admin()
+               or private.has_permission(b.facility_id, 'view_bookings')
+               or b.client_id in (select private.own_client_ids())
+             when 'attach' then
+               private.has_permission(b.facility_id, 'create_bookings')
+               or private.has_permission(b.facility_id, 'edit_bookings')
+               or (
+                 b.client_id in (select private.own_client_ids())
+                 and b.status in ('pending', 'request_submitted', 'estimate_sent', 'waitlisted', 'confirmed')
+               )
+             when 'remove' then
+               private.has_permission(b.facility_id, 'create_bookings')
+               or private.has_permission(b.facility_id, 'edit_bookings')
+             else false
+           end
+  );
+$$;
+
+
+ALTER FUNCTION "private"."medication_photo_may"("p_booking_id" "uuid", "p_action" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."medication_photo_object_may"("p_name" "text", "p_action" "text") RETURNS boolean
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_folders text[] := storage.foldername(p_name);
+  v_booking uuid;
+begin
+  if coalesce(array_length(v_folders, 1), 0) <> 2 then
+    return false;
+  end if;
+  begin
+    v_booking := v_folders[2]::uuid;
+  exception when invalid_text_representation then
+    return false;
+  end;
+  return exists (
+    select 1 from public.bookings b
+     where b.id = v_booking and b.facility_id::text = v_folders[1]
+  ) and private.medication_photo_may(v_booking, p_action);
+end;
+$$;
+
+
+ALTER FUNCTION "private"."medication_photo_object_may"("p_name" "text", "p_action" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "private"."member_facility_ids"() RETURNS SETOF "uuid"
@@ -19016,6 +19104,31 @@ COMMENT ON COLUMN "public"."booking_line_items"."duration_min" IS 'For kind add_
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."booking_medication_photos" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "facility_id" "uuid" NOT NULL,
+    "booking_id" "uuid" NOT NULL,
+    "medication_id" "text" NOT NULL,
+    "storage_path" "text" NOT NULL,
+    "content_type" "text" NOT NULL,
+    "size_bytes" integer NOT NULL,
+    "created_by" "text" DEFAULT ("auth"."jwt"() ->> 'sub'::"text"),
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "booking_medication_photos_content_type_check" CHECK (("content_type" = ANY (ARRAY['image/png'::"text", 'image/jpeg'::"text", 'image/heic'::"text"]))),
+    CONSTRAINT "booking_medication_photos_medication_id_check" CHECK ((("length"("medication_id") >= 1) AND ("length"("medication_id") <= 100))),
+    CONSTRAINT "booking_medication_photos_path_is_its_own" CHECK ((("split_part"("storage_path", '/'::"text", 1) = ("facility_id")::"text") AND ("split_part"("storage_path", '/'::"text", 2) = ("booking_id")::"text"))),
+    CONSTRAINT "booking_medication_photos_size_bytes_check" CHECK ((("size_bytes" > 0) AND ("size_bytes" <= 10485760))),
+    CONSTRAINT "booking_medication_photos_storage_path_check" CHECK ((("length"("storage_path") >= 1) AND ("length"("storage_path") <= 500)))
+);
+
+
+ALTER TABLE "public"."booking_medication_photos" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."booking_medication_photos" IS 'A photo of a medication''s pharmacy label, taken on the booking form''s Medications step where the facility asks for one. The file lives in the private booking-medication-photos bucket at {facility_id}/{booking_id}/…; this row names the booking and the medication (details.medications[].id) it shows (2026-10-01).';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."booking_pets" (
     "booking_id" "uuid" NOT NULL,
     "pet_id" "uuid" NOT NULL
@@ -24133,6 +24246,16 @@ ALTER TABLE ONLY "public"."booking_line_items"
 
 
 
+ALTER TABLE ONLY "public"."booking_medication_photos"
+    ADD CONSTRAINT "booking_medication_photos_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."booking_medication_photos"
+    ADD CONSTRAINT "booking_medication_photos_storage_path_key" UNIQUE ("storage_path");
+
+
+
 ALTER TABLE ONLY "public"."booking_pets"
     ADD CONSTRAINT "booking_pets_pkey" PRIMARY KEY ("booking_id", "pet_id");
 
@@ -25559,6 +25682,10 @@ CREATE INDEX "booking_line_items_fee_idx" ON "public"."booking_line_items" USING
 
 
 
+CREATE INDEX "booking_medication_photos_booking_idx" ON "public"."booking_medication_photos" USING "btree" ("booking_id", "medication_id", "created_at" DESC);
+
+
+
 CREATE INDEX "booking_pets_pet_idx" ON "public"."booking_pets" USING "btree" ("pet_id");
 
 
@@ -26956,6 +27083,10 @@ CREATE OR REPLACE TRIGGER "booking_line_items_stamp_author" BEFORE INSERT ON "pu
 
 
 
+CREATE OR REPLACE TRIGGER "booking_medication_photo_derive" BEFORE INSERT ON "public"."booking_medication_photos" FOR EACH ROW EXECUTE FUNCTION "private"."booking_medication_photo_derive"();
+
+
+
 CREATE OR REPLACE TRIGGER "booking_tip_allocations_set_updated_at" BEFORE UPDATE ON "public"."booking_tip_allocations" FOR EACH ROW EXECUTE FUNCTION "private"."touch_tip_allocation"();
 
 
@@ -27987,6 +28118,16 @@ ALTER TABLE ONLY "public"."booking_line_items"
 
 ALTER TABLE ONLY "public"."booking_line_items"
     ADD CONSTRAINT "booking_line_items_staff_id_fkey" FOREIGN KEY ("staff_id") REFERENCES "public"."staff"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."booking_medication_photos"
+    ADD CONSTRAINT "booking_medication_photos_booking_id_fkey" FOREIGN KEY ("booking_id") REFERENCES "public"."bookings"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."booking_medication_photos"
+    ADD CONSTRAINT "booking_medication_photos_facility_id_fkey" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE CASCADE;
 
 
 
@@ -30286,6 +30427,21 @@ CREATE POLICY "booking_line_items_read" ON "public"."booking_line_items" FOR SEL
 
 
 CREATE POLICY "booking_line_items_update" ON "public"."booking_line_items" FOR UPDATE USING ("private"."has_permission"("facility_id", 'retail_process_sale'::"text")) WITH CHECK ((("kind" <> 'add_on'::"text") AND "private"."has_permission"("facility_id", 'retail_process_sale'::"text")));
+
+
+
+ALTER TABLE "public"."booking_medication_photos" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "booking_medication_photos_delete" ON "public"."booking_medication_photos" FOR DELETE TO "authenticated" USING ("private"."medication_photo_may"("booking_id", 'remove'::"text"));
+
+
+
+CREATE POLICY "booking_medication_photos_insert" ON "public"."booking_medication_photos" FOR INSERT TO "authenticated" WITH CHECK ("private"."medication_photo_may"("booking_id", 'attach'::"text"));
+
+
+
+CREATE POLICY "booking_medication_photos_read" ON "public"."booking_medication_photos" FOR SELECT TO "authenticated" USING ("private"."medication_photo_may"("booking_id", 'read'::"text"));
 
 
 
@@ -33749,6 +33905,10 @@ REVOKE ALL ON FUNCTION "private"."booking_extras_total"("p_booking_id" "uuid") F
 
 
 
+REVOKE ALL ON FUNCTION "private"."booking_medication_photo_derive"() FROM PUBLIC;
+
+
+
 REVOKE ALL ON FUNCTION "private"."booking_recovers_unfinished"() FROM PUBLIC;
 
 
@@ -33908,6 +34068,16 @@ REVOKE ALL ON FUNCTION "private"."locations_single_primary"() FROM PUBLIC;
 
 GRANT ALL ON FUNCTION "private"."may_send_report_card"("p_facility_id" "uuid", "p_service_type" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "private"."may_send_report_card"("p_facility_id" "uuid", "p_service_type" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "private"."medication_photo_may"("p_booking_id" "uuid", "p_action" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "private"."medication_photo_may"("p_booking_id" "uuid", "p_action" "text") TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "private"."medication_photo_object_may"("p_name" "text", "p_action" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "private"."medication_photo_object_may"("p_name" "text", "p_action" "text") TO "authenticated";
 
 
 
@@ -35372,6 +35542,11 @@ GRANT ALL ON TABLE "public"."booking_commission_allocations" TO "service_role";
 GRANT ALL ON TABLE "public"."booking_line_items" TO "anon";
 GRANT ALL ON TABLE "public"."booking_line_items" TO "authenticated";
 GRANT ALL ON TABLE "public"."booking_line_items" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."booking_medication_photos" TO "service_role";
+GRANT SELECT,INSERT,DELETE ON TABLE "public"."booking_medication_photos" TO "authenticated";
 
 
 
