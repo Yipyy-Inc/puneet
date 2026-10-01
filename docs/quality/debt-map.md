@@ -22069,3 +22069,27 @@ so `booking-medications.spec.ts` accepts either.
 - Bookings made before 2026-10-01 have no care lines, and a later staff edit
   adds only the charges the edit itself introduces. No facility had care fees
   or supplied items configured when it shipped, so nothing went unbilled.
+
+## 2026-10-01 — Google sign-in on a facility's address was refused for a month
+
+Signing in with Google at `<slug>.app.yipyy.com` ended on WorkOS's hosted
+"Couldn't sign in … contact your organization admin" page. WorkOS's own event
+log named the cause in one line — `authentication.oauth_failed`,
+`redirect_uri_invalid`: "The redirect_uri
+'https://doggieville-mtl.app.yipyy.com/auth/callback' is not on your allow
+list."
+
+Production's allow list held `https://*.yipyy.com/auth/callback`, and a WorkOS
+wildcard matches ONE label. It covered every facility while they lived at
+`<slug>.yipyy.com`; it stopped covering any of them on 2026-08-26, when they
+moved to `<slug>.app.yipyy.com` (`src/lib/app-host.ts`). Password sign-in does
+not go through that redirect, which is why nothing said so for a month.
+
+**Fixed:** `https://*.app.yipyy.com/auth/callback` added to the production
+environment's redirect URIs beside the four already there (set as a full list
+through WorkOS's `setRedirectUris`, dry-run first).
+
+**When a sign-in fails at WorkOS, read its events before reading code** —
+`authentication.*_failed` in the production environment carries the error code.
+And a new host shape (another level, another domain) needs its own allow-list
+entry in the same change that introduces it.
