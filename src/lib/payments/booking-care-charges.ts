@@ -1,12 +1,7 @@
 import "server-only";
 
-import { cookies } from "next/headers";
-
-import {
-  loadLanguageSettingsFromCookies,
-  resolveLocaleForSettings,
-  type AppLocale,
-} from "@/lib/language-settings";
+import { callerLocale } from "@/lib/i18n/caller-locale";
+import type { AppLocale } from "@/lib/language-settings";
 import {
   careChargeLines,
   type CareChargeLine,
@@ -21,6 +16,11 @@ import {
   NO_CARE_FEES,
   type CareFees,
 } from "@/lib/settings/care-fees";
+import {
+  feedingInstructionsSchema,
+  SHIPPED_FEEDING_INSTRUCTIONS,
+  type FeedingInstructions,
+} from "@/lib/settings/feeding-instructions";
 import {
   medicationInstructionsSchema,
   SHIPPED_MEDICATION_INSTRUCTIONS,
@@ -60,6 +60,11 @@ import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
 // own days (on the facility's calendar) and its own pets' medications, so the
 // parts add up to the form's figure. A medication for a pet on none of them
 // counts on the first.
+//
+// Each booking is read from its OWN `details` (2026-10-01): an edit is saved
+// on one booking of a request, so the others may not carry it yet, and the
+// first booking's list is not the request's. House food (Settings → Care
+// tasks) is counted per booking like what is supplied for a medication.
 //
 // ── AN EDIT MOVES WHAT THE EDIT CHANGED ───────────────────────────────────
 //
@@ -132,6 +137,7 @@ type Admin = ReturnType<typeof createAdminClient>;
 interface FacilityCare {
   fees: CareFees;
   settings: MedicationInstructions;
+  feeding: FeedingInstructions;
 }
 
 /**
@@ -233,7 +239,6 @@ async function planRequest(
   }
   const care = careByFacility.get(first.facility_id) as FacilityCare;
 
-  const medications = medicationsOf(first.details);
   const petsOf = (part: CareRow) =>
     new Set(
       (part.booking_pets ?? [])
@@ -251,20 +256,30 @@ async function planRequest(
         start: wallClockParts(part.start_at, timeZone).date,
         end: wallClockParts(part.end_at, timeZone).date,
       }),
-      // Its own pets' medications; one for a pet on no booking of the
-      // request, or for no pet, counts once, on the first.
-      medications: medications.filter((item) =>
+      // Its own pets' medications, from its own record; one for a pet on no
+      // booking of the request, or for no pet, counts once, on the first.
+      medications: medicationsOf(part.details).filter((item) =>
         item.petId !== undefined && anywhere.has(item.petId)
           ? partPets[index].has(item.petId)
           : index === 0,
       ),
-      feeding: index === 0 ? feedingOf(first.details) : undefined,
+      // Its own pets' feeding plans. A plan with no pet is the one pet's of an
+      // older single-pet booking, fed on every booking of the request; one for
+      // a pet on none of them counts on the first.
+      feeding: feedingOf(part.details).filter((item) =>
+        item.petId === undefined
+          ? true
+          : anywhere.has(item.petId)
+            ? partPets[index].has(item.petId)
+            : index === 0,
+      ),
     };
   });
 
   const lines = careChargeLines({
     fees: care.fees,
     settings: care.settings,
+    feedingSettings: care.feeding,
     service: first.service,
     parts: careParts,
   });
@@ -294,6 +309,8 @@ async function planRequest(
 function lineName(t: (key: string) => string, line: CareChargeLine): string {
   if (line.kind === "medication_fee") return t("feeMedicationAdmin");
   if (line.kind === "meals") return t("feeDaycareFeeding");
+  // The facility's own name for its house food, as its settings say it.
+  if (line.kind === "house_food") return line.label || t("feedHouseFood");
   return providedLineName(t, line.method ?? "");
 }
 
@@ -326,7 +343,7 @@ function feedingOf(
   );
 }
 
-/** The facility's care fees and medication settings, or what ships. */
+/** The facility's care fees, medication and feeding settings, or what ships. */
 async function readFacilityCare(
   admin: Admin,
   facilityId: string,
@@ -335,7 +352,11 @@ async function readFacilityCare(
     .from("facility_settings")
     .select("domain, value")
     .eq("facility_id", facilityId)
-    .in("domain", ["care_fees", "medication_instructions"]);
+    .in("domain", [
+      "care_fees",
+      "medication_instructions",
+      "feeding_instructions",
+    ]);
   const rows = (data ?? []) as Array<{ domain: string; value: unknown }>;
   const valueOf = (domain: string) =>
     rows.find((row) => row.domain === domain)?.value;
@@ -346,11 +367,15 @@ async function readFacilityCare(
   const settings = medicationInstructionsSchema.safeParse(
     valueOf("medication_instructions"),
   );
+  const feeding = feedingInstructionsSchema.safeParse(
+    valueOf("feeding_instructions"),
+  );
   return {
     fees: fees.success ? fees.data : NO_CARE_FEES,
     settings: settings.success
       ? settings.data
       : SHIPPED_MEDICATION_INSTRUCTIONS,
+    feeding: feeding.success ? feeding.data : SHIPPED_FEEDING_INSTRUCTIONS,
   };
 }
 
@@ -366,22 +391,6 @@ function localeOf(
   if (preferred?.startsWith("fr")) return "fr";
   if (preferred?.startsWith("en")) return "en";
   return fallback;
-}
-
-async function callerLocale(): Promise<AppLocale> {
-  try {
-    const jar = await cookies();
-    const cookieString = jar
-      .getAll()
-      .map(({ name, value }) => `${name}=${value}`)
-      .join("; ");
-    return resolveLocaleForSettings(
-      jar.get("NEXT_LOCALE")?.value,
-      loadLanguageSettingsFromCookies(cookieString),
-    );
-  } catch {
-    return "en";
-  }
 }
 
 // ── WRITING THEM ──────────────────────────────────────────────────────────

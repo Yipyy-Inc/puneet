@@ -27,7 +27,13 @@ import {
 } from "@/components/facility/BookingRequestActions";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { namesAddOn } from "@/lib/add-ons/bookable";
-import { useServiceAddOns } from "@/lib/api/facility-settings";
+import {
+  useFeedingInstructions,
+  useServiceAddOns,
+} from "@/lib/api/facility-settings";
+import { describeFeeding } from "@/lib/feeding/describe";
+import { bookingStay } from "@/lib/medications/schedule";
+import { useShellLocale, useShellText } from "@/lib/shell/use-shell-text";
 import { facilityRooms } from "@/data/rooms";
 import { cn } from "@/lib/utils";
 
@@ -145,6 +151,10 @@ export function BookingRequestDetailDialog({
   // looked the id up in the shipped fixture, so an add-on the business had
   // added itself displayed as a raw id.
   const { addOns: facilityAddOns } = useServiceAddOns();
+  // The owner's feeding plan in the reader's words (2026-10-01).
+  const words = useShellText("booking");
+  const locale = useShellLocale();
+  const { instructions: feedingSettings } = useFeedingInstructions();
   if (!request) return null;
 
   const initial = request.petName.charAt(0).toUpperCase();
@@ -343,52 +353,41 @@ export function BookingRequestDetailDialog({
             <Section icon={Utensils} title="Feeding">
               <ul className="divide-border/50 -my-3 divide-y">
                 {request.feedingSchedule.map((fs) => {
-                  const occasions = fs.occasions.length;
-                  const sourceLabel =
-                    fs.source === "parent_brings"
-                      ? "Parent brings food"
-                      : fs.source === "facility_provides"
-                        ? "Facility provides"
-                        : "Mixed";
+                  const service = request.services.includes("boarding")
+                    ? "boarding"
+                    : (request.services[0] ?? "");
+                  const lines = describeFeeding(fs, {
+                    t: words,
+                    locale,
+                    stay: bookingStay({
+                      service,
+                      startDate: request.startDate,
+                      endDate: request.endDate,
+                    }),
+                    settings: feedingSettings,
+                    service,
+                  });
                   return (
-                    <li key={fs.id} className="space-y-2 py-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-foreground text-sm font-medium">
-                          {occasions} {occasions === 1 ? "meal" : "meals"} / day
-                          · {fs.frequency.replace(/_/g, " ")}
-                        </span>
-                        <span className="text-muted-foreground text-xs">
-                          {sourceLabel}
-                        </span>
+                    <li key={fs.id} className="space-y-1 py-3">
+                      <div className="text-foreground text-sm font-medium">
+                        {lines.meals}
                       </div>
-                      <div className="space-y-1">
-                        {fs.occasions.map((occ) => (
-                          <div
-                            key={occ.id}
-                            className="text-muted-foreground flex items-baseline gap-2 text-xs"
-                          >
-                            <span className="text-foreground tabular-nums">
-                              {occ.time}
-                            </span>
-                            <span>{occ.label}</span>
-                            <span className="truncate">
-                              {occ.components
-                                .map((c) => `${c.amount} ${c.unit} ${c.name}`)
-                                .join(" + ")}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                      {fs.allergies.length > 0 && (
-                        <div className="text-destructive text-xs">
-                          ⚠ Allergies: {fs.allergies.join(", ")}
+                      {lines.foods.map((food, index) => (
+                        <div
+                          key={`${index}-${food}`}
+                          className="text-muted-foreground text-xs"
+                        >
+                          {food}
                         </div>
-                      )}
-                      {fs.notes && (
-                        <div className="text-muted-foreground line-clamp-2 text-xs italic">
-                          “{fs.notes}”
+                      ))}
+                      {lines.extras.map((extra) => (
+                        <div
+                          key={extra}
+                          className="text-muted-foreground text-xs italic"
+                        >
+                          {extra}
                         </div>
-                      )}
+                      ))}
                     </li>
                   );
                 })}

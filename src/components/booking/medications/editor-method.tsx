@@ -18,8 +18,11 @@ import { providedFor } from "@/lib/settings/medication-instructions";
 import { useShellLocale, useShellText } from "@/lib/shell/use-shell-text";
 import type { MedSide } from "@/types/base";
 
-import { EditorSection, FieldLabel } from "./editor-section";
-import { OptionCards } from "./option-cards";
+import {
+  EditorSection,
+  FieldLabel,
+} from "@/components/booking/care/editor-section";
+import { OptionCards } from "@/components/booking/care/option-cards";
 import type { MedicationStepState } from "./use-medication-step";
 
 // ============================================================================

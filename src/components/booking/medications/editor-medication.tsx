@@ -21,8 +21,11 @@ import {
 } from "@/lib/medications/vocabulary";
 import { useShellLocale, useShellText } from "@/lib/shell/use-shell-text";
 
-import { AmountStepper } from "./amount-stepper";
-import { EditorSection, FieldLabel } from "./editor-section";
+import { AmountStepper } from "@/components/booking/care/amount-stepper";
+import {
+  EditorSection,
+  FieldLabel,
+} from "@/components/booking/care/editor-section";
 import type { MedicationStepState } from "./use-medication-step";
 
 // ============================================================================
@@ -181,7 +184,9 @@ export function EditorMedication({ step }: { step: MedicationStepState }) {
               </ChoicePill>
             ))}
           </div>
-          <span aria-hidden className="bg-line mx-1 h-7 w-px" />
+          {/* Below 640px the stepper wraps under the picks, and a divider
+              would be left at the end of their row. */}
+          <span aria-hidden className="bg-line mx-1 h-7 w-px max-sm:hidden" />
           <AmountStepper
             amount={draft.amount}
             label={formatAmount(draft.amount, spec.fraction, locale)}

@@ -13,7 +13,7 @@ Shared components in this folder are **controlled**: they receive state and call
    - Dates/times: `startDate`, `endDate`, `checkInTime`, `checkOutTime`, `daycareSelectedDates`, `daycareDateTimes`, etc.
 
 2. **Pet stay instructions**  
-   From `FeedingScheduleForm` and `MedicationForm`:
+   From the Feeding and Medications steps (`src/components/booking/feeding/`, `src/components/booking/medications/`):
    - `feedingSchedule`: `FeedingScheduleItem[]` → booking.`feedingSchedule`
    - `medications`: `MedicationItem[]` → booking.`medications`  
      These are part of the same booking payload; link by `petId` on each item.

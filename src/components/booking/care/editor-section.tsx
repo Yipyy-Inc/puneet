@@ -1,6 +1,8 @@
 // ============================================================================
-// One of the editor's four parts — Medication, Schedule, How it's given,
-// Supply & notes — headed by its micro label (§4), as the design groups them.
+// One part of a care step's card — the Medications editor's Medication,
+// Schedule, How it's given, Supply & notes; the Feeding plan's Meal times,
+// What it eats, How it eats, Allergies & notes — headed by its micro label
+// (§4), as the client's designs group them.
 // ============================================================================
 
 export function EditorSection({

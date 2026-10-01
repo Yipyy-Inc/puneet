@@ -18,7 +18,9 @@ import {
   activeFacilityIdForStaff,
   inFacility,
 } from "@/lib/api/facility-context";
+import { callerLocale } from "@/lib/i18n/caller-locale";
 import { stayOf } from "@/lib/medications/schedule";
+import { shellText } from "@/lib/shell/text";
 import { DEFAULT_TIMEZONE, wallClockParts } from "@/lib/time/facility-time";
 
 // ============================================================================
@@ -149,6 +151,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // The meals in the language of whoever is looking at the board.
+  const locale = await callerLocale();
+  const words = {
+    t: (key: string) => shellText(locale, "booking", key),
+    locale,
+  };
+
   const petIdsByGuest = new Map<string, string[]>();
   const guests = (data as unknown as Row[])
     .filter((row) => {
@@ -173,6 +182,9 @@ export async function GET(request: NextRequest) {
           id: String(row.ref),
           petId: pets[0]?.ref ?? 0,
           petNames: pets.map((pet) => pet.name),
+          petNamesByRef: Object.fromEntries(
+            pets.map((pet) => [pet.ref, pet.name]),
+          ),
           ownerName: row.clients?.name ?? "",
           ownerPhone: row.clients?.phone ?? null,
           roomName:
@@ -197,6 +209,7 @@ export async function GET(request: NextRequest) {
           }),
         },
         row.details ?? {},
+        words,
       );
     });
 

@@ -47,9 +47,11 @@ import { bookableLookup, type BookableAddOn } from "@/lib/add-ons/bookable";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
 import {
   useBookingApproval,
+  useFeedingInstructions,
   useMedicationInstructions,
 } from "@/lib/api/facility-settings";
 import { responseHoursFor } from "@/lib/settings/booking-approval";
+import { describeFeeding } from "@/lib/feeding/describe";
 import { describeMedication } from "@/lib/medications/describe";
 import type { MedStay } from "@/lib/medications/schedule";
 import { staffQueries } from "@/lib/api/staff";
@@ -170,39 +172,6 @@ interface ConfirmStepProps {
 
 const fmtTime = formatTimeOfDay;
 
-/**
- * A feeding unit as a WORD, in the reader's language.
- *
- * The switch used to return "Scoop" and "Tbsp" outright, which is the
- * twenty-fourth module-level label table this conversion has found: no gate
- * can see it, because a bare `return "Cup"` is a return of prose from a
- * function, not a string in a rendered tree. It takes the translator rather
- * than reading one, so it stays a pure function callable from the render.
- *
- * An unrecognised unit comes back UNCHANGED — it is whatever the facility
- * typed, and §5q keeps a value a person typed out of the locale layer.
- */
-function formatFoodUnitLabel(unit: string, t: (key: string) => string): string {
-  switch (unit.trim().toLowerCase()) {
-    case "scoop":
-      return t("unitScoop");
-    case "cup":
-    case "cups":
-      return t("unitCup");
-    case "oz":
-      return t("unitOz");
-    case "tbsp":
-      return t("unitTbsp");
-    case "gram":
-    case "grams":
-      return t("unitGrams");
-    case "other":
-      return t("unitOther");
-    default:
-      return unit;
-  }
-}
-
 function fmtDateLong(d: Date | string, locale: AppLocale) {
   const date = typeof d === "string" ? new Date(d + "T00:00:00") : d;
   return formatDateLong(date, locale);
@@ -321,6 +290,7 @@ export function ConfirmStep({
     id;
   const { approval } = useBookingApproval();
   const { instructions: medicationSettings } = useMedicationInstructions();
+  const { instructions: feedingSettings } = useFeedingInstructions();
   const { data: staffProfiles } = useQuery(staffQueries.profiles());
   const locale = useShellLocale();
   // Who an add-on may be given to: everybody working here now, and whoever
@@ -1003,69 +973,49 @@ export function ConfirmStep({
               }
             />
             {feedingSchedule.length > 0 ? (
-              feedingSchedule.map((item, idx) => {
-                const unitsFromOccasions = Array.from(
-                  new Set(
-                    item.occasions.reduce<string[]>((labels, occasion) => {
-                      const unit = occasion.components[0]?.unit;
-                      if (unit) {
-                        labels.push(formatFoodUnitLabel(unit, t));
-                      }
-                      return labels;
-                    }, []),
-                  ),
-                );
-                const unitLabels =
-                  unitsFromOccasions.length > 0
-                    ? unitsFromOccasions
-                    : item.feedingUnit
-                      ? [formatFoodUnitLabel(item.feedingUnit, t)]
-                      : [];
-
-                return (
-                  <div key={idx} className="space-y-1.5">
-                    {item.occasions.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {item.occasions.map((occ) => (
-                          <span
-                            key={occ.id}
-                            className="rounded-md bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-700"
-                          >
-                            {occ.label} · {fmtTime(occ.time, locale)}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {(unitLabels.length > 0 || item.feedingInstruction) && (
-                      <div className="flex flex-wrap gap-1">
-                        {unitLabels.map((unitLabel) => (
-                          <span
-                            key={unitLabel}
-                            className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600"
-                          >
-                            {unitLabel}
-                          </span>
-                        ))}
-                        {item.feedingInstruction && (
-                          <span className="rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
-                            {item.feedingInstruction}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    {item.allergies && item.allergies.length > 0 && (
-                      <p className="text-[11px] text-red-600">
-                        {t("allergiesLabel")} {item.allergies.join(", ")}
+              <div className="space-y-3">
+                {feedingSchedule.map((item, idx) => {
+                  // The step's own words for the plan — its meals, each food
+                  // and how to serve it, what the facility provides — so
+                  // this reads exactly as the plan the owner wrote.
+                  const lines = describeFeeding(item, {
+                    t,
+                    locale,
+                    stay: medicationStay ?? { days: [], overnight: false },
+                    settings: feedingSettings,
+                    service: selectedService,
+                  });
+                  const petName =
+                    selectedPets.length > 1
+                      ? selectedPets.find((pet) => pet.id === item.petId)?.name
+                      : undefined;
+                  return (
+                    <div key={item.id || idx} className="space-y-0.5">
+                      {petName ? (
+                        <p className="text-body-strong text-body-ink">
+                          {petName}
+                        </p>
+                      ) : null}
+                      <p className="text-meta text-ink-secondary">
+                        {lines.meals}
                       </p>
-                    )}
-                    {item.notes && (
-                      <p className="text-muted-foreground text-[11px] italic">
-                        {item.notes}
-                      </p>
-                    )}
-                  </div>
-                );
-              })
+                      {lines.foods.map((food, index) => (
+                        <p
+                          key={`${index}-${food}`}
+                          className="text-meta text-ink-secondary"
+                        >
+                          {food}
+                        </p>
+                      ))}
+                      {lines.extras.map((extra) => (
+                        <p key={extra} className="text-meta text-ink-tertiary">
+                          {extra}
+                        </p>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
               /* #1 — empty state */
               <p className="text-muted-foreground flex items-center gap-1 text-xs">

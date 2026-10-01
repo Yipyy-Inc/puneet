@@ -19,7 +19,10 @@ import { useShellLocale, useShellText } from "@/lib/shell/use-shell-text";
 import type { AppLocale } from "@/lib/language-settings";
 
 import { AllergyInput } from "./allergy-input";
-import { EditorSection, FieldLabel } from "./editor-section";
+import {
+  EditorSection,
+  FieldLabel,
+} from "@/components/booking/care/editor-section";
 import type { MedicationStepState } from "./use-medication-step";
 
 // ============================================================================

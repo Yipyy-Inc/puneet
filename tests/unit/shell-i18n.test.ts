@@ -125,6 +125,23 @@ const SAME_IN_BOTH = new Set([
   "booking.medsPanelRange", // {range} · {length}
   "booking.medsAddonRow", // {count} × {items} ({name})
   "booking.medsLineDetail", // {name} ({quantity} × {price})
+  // The Feeding step (2026-10-01): units that are abbreviations in both, and
+  // "portion", which French spells the same way.
+  "booking.feedUnitGOne", // g
+  "booking.feedUnitGOther", // g
+  "booking.feedUnitOzOne", // oz
+  "booking.feedUnitOzOther", // oz
+  "booking.feedUnitLbOne", // lb
+  "booking.feedUnitLbOther", // lb
+  "booking.feedUnitMlOne", // ml
+  "booking.feedUnitMlOther", // ml
+  "booking.feedUnitOptionOz", // oz
+  "booking.feedUnitOptionLb", // lb
+  "booking.feedUnitOptionMl", // ml
+  "booking.feedUnitPortionOne", // portion / portion
+  "booking.feedUnitPortionOther", // portions / portions
+  "booking.feedPortionsOne", // {count} portion
+  "booking.feedPortionsOther", // {count} portions
   // The points history's column heads: French spells these the same.
   "loyalty.date", // Date / Date
   "loyalty.type", // Type / Type

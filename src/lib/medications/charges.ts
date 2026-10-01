@@ -8,6 +8,10 @@ import {
   type MedicationInstructions,
   type ProvidedPer,
 } from "@/lib/settings/medication-instructions";
+import {
+  recordHouseFoodCharges,
+  type HouseFoodSettings,
+} from "@/lib/feeding/charges";
 import { round2 } from "@/lib/medications/dose";
 import {
   activeDays,
@@ -15,6 +19,7 @@ import {
   type MedStay,
 } from "@/lib/medications/schedule";
 import type { ProvidableMethod } from "@/lib/medications/vocabulary";
+import type { HouseFoodPricing } from "@/lib/settings/feeding-instructions";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
 
 // ============================================================================
@@ -34,8 +39,13 @@ import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
 // day, a boarding one per room), and every booking carries the whole
 // medication list. So the medication fee and the meals fee are worked out ONCE,
 // over the request, and land on its first booking. What the facility supplies
-// is counted per booking, over that booking's own days and pets, and the
-// parts add up to what the form showed for the whole.
+// — pill pockets, and house food (2026-10-01) — is counted per booking, over
+// that booking's own days and pets, and the parts add up to what the form
+// showed for the whole.
+//
+// The meals fee "per meal" counts every meal served over the request — meal
+// times × the days each plan is served — not one day's meals, which is what it
+// counted until feeding had days of its own (2026-10-01).
 //
 // ── ONE LINE PER THING SUPPLIED ───────────────────────────────────────────
 //
@@ -47,16 +57,19 @@ import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
 export interface CarePart {
   stay: MedStay;
   medications: MedicationItem[];
-  /** Read for the daycare meals fee, from the request's first part only. */
+  /** This booking's pets' feeding plans, over its own days. */
   feeding?: FeedingScheduleItem[];
 }
 
 export interface CareChargeLine {
   feeId: string;
-  kind: "medication_fee" | "meals" | "provided";
+  kind: "medication_fee" | "meals" | "provided" | "house_food";
   /** For `provided`: what is supplied. */
   method?: ProvidableMethod;
-  per?: ProvidedPer;
+  /** For `house_food`: which, and the facility's own name for it. */
+  houseFoodId?: string;
+  label?: string;
+  per?: ProvidedPer | HouseFoodPricing;
   quantity: number;
   unitPrice: number;
   amount: number;
@@ -70,6 +83,8 @@ export interface CareChargeLine {
 export const MEDICATION_FEE_ID = "care:medication-fee";
 export const MEALS_FEE_ID = "care:meals";
 export const providedFeeId = (method: string) => `care:provided:${method}`;
+export const houseFoodFeeId = (houseFoodId: string) =>
+  `care:house-food:${houseFoodId}`;
 
 /** Every care fee id starts with this, and nothing else's does. */
 export const CARE_FEE_PREFIX = "care:";
@@ -127,6 +142,8 @@ export function providedCharge(
 export function careChargeLines(input: {
   fees: CareFees;
   settings: Pick<MedicationInstructions, "provided">;
+  /** The facility's house food. None: nothing to charge for it. */
+  feedingSettings?: HouseFoodSettings;
   service: string;
   parts: CarePart[];
 }): CareChargeLine[][] {
@@ -159,18 +176,23 @@ export function careChargeLines(input: {
     });
   }
 
-  const feeding = uniqueById(input.parts[0].feeding ?? []);
-  const meals = feeding.reduce((sum, item) => sum + item.occasions.length, 0);
+  // Every meal served over the request: each part's plans over its own days.
+  let meals = 0;
+  const fedPets = new Set<number | undefined>();
+  for (const part of input.parts) {
+    for (const item of uniqueById(part.feeding ?? [])) {
+      const served = mealsADay(item) * activeDays(item, part.stay).length;
+      if (served <= 0) continue;
+      meals += served;
+      fedPets.add(item.petId);
+    }
+  }
   if (meals > 0 && feedingFeeApplies(input.fees, input.service)) {
     const { scope } = input.fees.daycareFeeding;
     const amount = round2(input.fees.daycareFeeding.amount);
     const quantity =
       scope === "per_pet"
-        ? new Set(
-            feeding
-              .filter((item) => item.occasions.length > 0)
-              .map((item) => item.petId),
-          ).size || 1
+        ? fedPets.size || 1
         : scope === "per_meal"
           ? meals
           : 1;
@@ -212,9 +234,63 @@ export function careChargeLines(input: {
         taxedAs: "goods",
       });
     }
+
+    // House food: one line per house food, summed over the part's pets.
+    if (!input.feedingSettings) return;
+    const byFood = new Map<
+      string,
+      {
+        label: string;
+        per: HouseFoodPricing;
+        quantity: number;
+        unitPrice: number;
+      }
+    >();
+    for (const item of uniqueById(part.feeding ?? [])) {
+      for (const charge of recordHouseFoodCharges(
+        item,
+        part.stay,
+        input.feedingSettings,
+        input.service,
+      )) {
+        if (charge.waived || charge.included || charge.quantity <= 0) continue;
+        const sum = byFood.get(charge.houseFoodId);
+        byFood.set(charge.houseFoodId, {
+          label: charge.name,
+          per: charge.per,
+          quantity: (sum?.quantity ?? 0) + charge.quantity,
+          unitPrice: charge.unitPrice,
+        });
+      }
+    }
+    for (const [houseFoodId, sum] of byFood) {
+      lines[index].push({
+        feeId: houseFoodFeeId(houseFoodId),
+        kind: "house_food",
+        houseFoodId,
+        label: sum.label,
+        per: sum.per,
+        quantity: sum.quantity,
+        unitPrice: sum.unitPrice,
+        amount: round2(sum.quantity * sum.unitPrice),
+        taxedAs: "goods",
+      });
+    }
   });
 
   return lines;
+}
+
+/** A plan's meals a day: its occasions with a time, each time once. */
+function mealsADay(item: FeedingScheduleItem): number {
+  const occasions = Array.isArray(item.occasions) ? item.occasions : [];
+  return new Set(
+    occasions
+      .map((occasion) => occasion?.time)
+      .filter(
+        (time): time is string => typeof time === "string" && time !== "",
+      ),
+  ).size;
 }
 
 /** Every line of a request, flattened — what the booking form shows. */

@@ -171,8 +171,9 @@ export async function requireCareLogged(
     }),
   );
 
-  // The booking's own days, on the facility's calendar: a dose that is not
-  // given on the checkout day, or only on chosen dates, is not due today.
+  // The booking's own days, on the facility's calendar: a dose or a meal that
+  // is not given on the checkout day, or only on chosen dates, is not due
+  // today.
   const timeZone = booking.facilities?.timezone ?? DEFAULT_TIMEZONE;
   const entries = bookingCareEntries(
     {

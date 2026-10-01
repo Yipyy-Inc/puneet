@@ -721,6 +721,102 @@ exception when others then
   reset role; perform pg_temp.t('T25-T28 supply waivers', false, sqlerrm);
 end $$;
 
+-- ── T29-T33: a waived house food is staff's ──────────────────────────────────
+--
+-- 2026-10-01: the Feeding step lets STAFF waive the house-food charge on a
+-- food of a feeding plan (`waivedFoods` on the plan, in `details`), and the
+-- server prices that charge from what is stored. The same guard as the
+-- medications': dropped from a customer's insert, restored from the row on a
+-- customer's update — and the function itself is nobody's to call.
+do $$
+declare r record; v_booking uuid; v_staff_booking uuid;
+begin
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c1', 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  insert into public.bookings
+    (facility_id, client_id, service, start_at, end_at, details)
+  values
+    ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000d1',
+     'boarding', now() + interval '12 days', now() + interval '14 days',
+     jsonb_build_object('feedingSchedule', jsonb_build_array(
+       jsonb_build_object('id', 'p1', 'notes', '', 'waivedFoods', jsonb_build_array('food-1'),
+                          'foods', jsonb_build_array(jsonb_build_object(
+                            'id', 'food-1', 'source', 'house', 'houseFoodId', 'hf-std'))),
+       jsonb_build_object('id', 'p2', 'notes', 'Second pet'))))
+  returning id into v_booking;
+  reset role;
+
+  select * into r from public.bookings where id = v_booking;
+  perform pg_temp.t('T29 a customer cannot insert a booking with house food waived',
+            not (r.details->'feedingSchedule'->0 ? 'waivedFoods')
+              and r.details->'feedingSchedule'->0->'foods'->0->>'id' = 'food-1'
+              and jsonb_array_length(r.details->'feedingSchedule') = 2,
+            r.details->>'feedingSchedule');
+
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c1', 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  update public.bookings
+     set details = jsonb_set(details, '{feedingSchedule,0,waivedFoods}', '["food-1"]'::jsonb)
+   where id = v_booking;
+  reset role;
+
+  select * into r from public.bookings where id = v_booking;
+  perform pg_temp.t('T30 a customer cannot waive it afterwards either',
+            not (r.details->'feedingSchedule'->0 ? 'waivedFoods'),
+            r.details->>'feedingSchedule');
+
+  -- Staff can: it is the checkbox the staff booking form offers.
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a1', 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  update public.bookings
+     set details = jsonb_set(details, '{feedingSchedule,0,waivedFoods}', '["food-1"]'::jsonb)
+   where id = v_booking;
+  insert into public.bookings
+    (facility_id, client_id, service, status, start_at, end_at, details)
+  values
+    ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000d1',
+     'boarding', 'confirmed', now() + interval '15 days', now() + interval '17 days',
+     jsonb_build_object('feedingSchedule', jsonb_build_array(
+       jsonb_build_object('id', 'p1', 'waivedFoods', jsonb_build_array('food-1')))))
+  returning id into v_staff_booking;
+  reset role;
+
+  select * into r from public.bookings where id = v_staff_booking;
+  perform pg_temp.t('T31 staff can waive it',
+            r.details->'feedingSchedule'->0->'waivedFoods' = '["food-1"]'::jsonb,
+            r.details->>'feedingSchedule');
+
+  -- The customer edits the plan on a booking staff waived house food on: the
+  -- waiver stays, whatever their copy of the plan says.
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c1', 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  update public.bookings
+     set details = jsonb_set(
+           jsonb_set(details, '{feedingSchedule,0}',
+                     (details->'feedingSchedule'->0) - 'waivedFoods'),
+           '{feedingSchedule,0,notes}', '"Soak the kibble"'::jsonb)
+   where id = v_booking;
+  reset role;
+
+  select * into r from public.bookings where id = v_booking;
+  perform pg_temp.t('T32 a customer''s edit keeps the house-food waiver staff granted',
+            r.details->'feedingSchedule'->0->'waivedFoods' = '["food-1"]'::jsonb
+              and r.details->'feedingSchedule'->0->>'notes' = 'Soak the kibble',
+            r.details->>'feedingSchedule');
+exception when others then
+  reset role; perform pg_temp.t('T29-T32 house-food waivers', false, sqlerrm);
+end $$;
+
+do $$
+begin
+  perform pg_temp.t('T33 nobody calls the house-food waiver guard directly',
+            not has_function_privilege('anon', 'private.keep_feeding_waivers(jsonb,jsonb)', 'execute')
+              and not has_function_privilege('authenticated', 'private.keep_feeding_waivers(jsonb,jsonb)', 'execute'),
+            'anon / authenticated execute');
+exception when others then
+  perform pg_temp.t('T33 house-food waiver guard privileges', false, sqlerrm);
+end $$;
+
 -- ── Report ─────────────────────────────────────────────────────────────────
 select case when ok then '  PASS  ' else '> FAIL <' end as result,
        name, detail

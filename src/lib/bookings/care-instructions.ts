@@ -58,8 +58,8 @@ function humanise(value: string | null | undefined): string {
 function describeAmount(
   components: FeedingScheduleItem["occasions"][number]["components"],
 ): string {
-  return components
-    .map((c) => [c.amount, c.unit].filter(Boolean).join(" ").trim())
+  return (Array.isArray(components) ? components : [])
+    .map((c) => [c?.amount, c?.unit].filter(Boolean).join(" ").trim())
     .filter(Boolean)
     .join(" + ");
 }
@@ -68,7 +68,9 @@ function describeFood(
   components: FeedingScheduleItem["occasions"][number]["components"],
   source: FeedingScheduleItem["source"],
 ): string {
-  const named = components.map((c) => c.name.trim()).filter(Boolean);
+  const named = (Array.isArray(components) ? components : [])
+    .map((c) => (typeof c?.name === "string" ? c.name.trim() : ""))
+    .filter(Boolean);
   if (named.length > 0) return [...new Set(named)].join(", ");
   // `source` is the fallback rather than a blank: "owner" or "facility" still
   // tells the person at the desk where the food comes from.
@@ -81,22 +83,37 @@ function describeFood(
  * A schedule is "breakfast and dinner, this food, these allergies" — one item
  * covering the whole stay. The panel lists meals, so a two-occasion schedule
  * becomes two rows. Collapsing them into one would hide the second meal.
+ *
+ * @param day the stay day these meals belong to, `YYYY-MM-DD`. A plan served
+ *   "every day except checkout", or on chosen dates (2026-10-01), has no meals
+ *   on the other days — so the checkout gate, which reads these rows, never
+ *   holds a pet back over a meal nobody was meant to serve. Without a day,
+ *   every meal is listed, as before.
+ * @param stay the booking's days, which those rules are read against.
  */
 export function feedingEntriesFromSchedule(
   schedule: FeedingScheduleItem[] | undefined,
+  day?: string,
+  stay?: MedStay,
 ): FeedingEntry[] {
   if (!schedule?.length) return [];
 
-  return schedule.flatMap((item) =>
-    item.occasions.map((occasion) => {
+  return schedule.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    if (day && !isActiveOn(item, day, stay)) return [];
+    const occasions = (
+      Array.isArray(item.occasions) ? item.occasions : []
+    ).filter(
+      (occasion) => Boolean(occasion) && typeof occasion.id === "string",
+    );
+    const allergies = Array.isArray(item.allergies) ? item.allergies : [];
+    return occasions.map((occasion) => {
       // Everything the owner said that a meal row can carry, in the order
       // somebody feeding the dog would want it.
       const notes = [
         item.prepNotes?.trim(),
         item.feedingInstruction?.trim(),
-        item.allergies.length > 0
-          ? `Allergies: ${item.allergies.join(", ")}`
-          : "",
+        allergies.length > 0 ? `Allergies: ${allergies.join(", ")}` : "",
         item.refusalNotes?.trim()
           ? `If refused: ${item.refusalNotes.trim()}`
           : "",
@@ -114,9 +131,13 @@ export function feedingEntriesFromSchedule(
         instructions: notes || undefined,
         // Asked for, not yet done. The panel's own status vocabulary.
         status: "pending" as FeedingEntry["status"],
+        // The plan itself, so the panel can say the meal in its reader's
+        // words: the foods, how much, how to serve them.
+        item,
+        occasionId: occasion.id,
       };
-    }),
-  );
+    });
+  });
 }
 
 /**

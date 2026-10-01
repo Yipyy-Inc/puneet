@@ -6,6 +6,7 @@ import {
   useCareFees,
   useMedicationInstructions,
 } from "@/lib/api/facility-settings";
+import { itemsForOtherPets } from "@/lib/bookings/care-pets";
 import { providedCharge } from "@/lib/medications/charges";
 import {
   blankDraft,
@@ -74,6 +75,11 @@ export interface MedicationStepInput {
   fromProfiles: boolean;
   /** Staff may waive what the facility supplies. */
   staff: boolean;
+  /**
+   * Keep the medications of pets the form did not load — an edit, which
+   * opens a booking with its first pet only (lib/bookings/care-pets.ts).
+   */
+  keepOtherPets?: boolean;
 }
 
 export interface MedicationPanelAddon {
@@ -125,6 +131,8 @@ export interface MedicationStepState {
       | ((draft: MedicationDraft) => Partial<MedicationDraft>),
   ) => void;
   save: () => void;
+  /** Back to nothing touched, for a form that starts again. */
+  reset: () => void;
 }
 
 export function useMedicationStep(
@@ -177,9 +185,9 @@ export function useMedicationStep(
     return itemFromDraft(editor.draft, { ...context, t, locale });
   };
 
-  const effectiveMedications = pets.flatMap((pet) => {
-    const saved = savedByPet.get(pet.id) ?? [];
-    const editor = editors[pet.id];
+  const bookedFor = (petId: number): MedicationItem[] => {
+    const saved = savedByPet.get(petId) ?? [];
+    const editor = editors[petId];
     if (!editor) return saved;
     const booked = draftItem(editor);
     if (editor.original) {
@@ -188,7 +196,33 @@ export function useMedicationStep(
       );
     }
     return booked ? [...saved, booked] : saved;
-  });
+  };
+  // In the stored order, so a booking nobody changed books what it held —
+  // and, on an edit, with the medications of the pets it did not load.
+  const effectiveMedications: MedicationItem[] = (() => {
+    const petIds = pets.map((pet) => pet.id);
+    const others = new Set(
+      input.keepOtherPets ? itemsForOtherPets(medications, petIds) : [],
+    );
+    const out: MedicationItem[] = [];
+    const placed = new Set<number>();
+    for (const item of medications) {
+      if (others.has(item)) {
+        out.push(item);
+        continue;
+      }
+      const owner = item.petId ?? firstPetId;
+      if (owner === null || !petIds.includes(owner) || placed.has(owner)) {
+        continue;
+      }
+      placed.add(owner);
+      out.push(...bookedFor(owner));
+    }
+    for (const pet of pets) {
+      if (!placed.has(pet.id)) out.push(...bookedFor(pet.id));
+    }
+    return out;
+  })();
 
   const blocking = pets.some((pet) => {
     const editor = editors[pet.id];
@@ -357,6 +391,11 @@ export function useMedicationStep(
       if (draftProblem(activeEditor.draft, context) !== null) return;
       commit(active, settle(active, activeSaved));
       setEditor(active, null);
+    },
+    reset: () => {
+      setEditors({});
+      setTouched([]);
+      setChosenPetId(null);
     },
   };
 }

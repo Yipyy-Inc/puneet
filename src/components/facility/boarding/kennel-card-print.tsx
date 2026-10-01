@@ -318,9 +318,15 @@ export function KennelCardTemplate({
                   {label} — {time}
                 </span>
                 <ul className="ml-4 list-disc text-blue-700">
-                  <li>
-                    {guest.feedingAmount} {guest.foodBrand}
-                  </li>
+                  {guest.feedingMeals ? (
+                    guest.feedingMeals
+                      .filter((meal) => meal.time === time)
+                      .map((meal, index) => <li key={index}>{meal.what}</li>)
+                  ) : (
+                    <li>
+                      {guest.feedingAmount} {guest.foodBrand}
+                    </li>
+                  )}
                   {guest.feedingInstructions && (
                     <li className="italic">{guest.feedingInstructions}</li>
                   )}
@@ -490,9 +496,17 @@ export function DoorCardTemplate({
                 Feeding:{" "}
               </span>
               <span className="text-xs text-blue-900">
-                {guest.feedingAmount} {guest.foodBrand}
-                {guest.feedingTimes.length > 0 && (
-                  <> · {guest.feedingTimes.join(", ")}</>
+                {guest.feedingMeals ? (
+                  guest.feedingMeals
+                    .map((meal) => `${meal.time} ${meal.what}`)
+                    .join(" · ")
+                ) : (
+                  <>
+                    {guest.feedingAmount} {guest.foodBrand}
+                    {guest.feedingTimes.length > 0 && (
+                      <> · {guest.feedingTimes.join(", ")}</>
+                    )}
+                  </>
                 )}
               </span>
               {guest.feedingInstructions && (

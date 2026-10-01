@@ -55,10 +55,11 @@ const meal = (
 ): FeedingScheduleItem => ({
   id,
   petId,
+  // A meal at a time of its own: two meals at one time are one meal.
   occasions: Array.from({ length: meals }, (_, i) => ({
     id: `${id}-${i}`,
-    label: "AM",
-    time: "09:00",
+    label: "Meal",
+    time: `${String(9 + i * 4).padStart(2, "0")}:00`,
     components: [],
   })),
   source: "parent_brings",
@@ -119,7 +120,9 @@ describe("care fees", () => {
 
   test("feeding is charged at daycare only, by meal or by pet", () => {
     expect(amountOf(charge(FEES, "boarding"), MEALS_FEE_ID)).toBe(0);
-    expect(amountOf(charge(FEES, "daycare"), MEALS_FEE_ID)).toBe(9);
+    // Per meal is every meal served: 3 a day over the 3 days, $3 each
+    // (2026-10-01 — it counted one day's meals before).
+    expect(amountOf(charge(FEES, "daycare"), MEALS_FEE_ID)).toBe(27);
     const perPet = {
       ...FEES,
       daycareFeeding: { ...FEES.daycareFeeding, scope: "per_pet" as const },

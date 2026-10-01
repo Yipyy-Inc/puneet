@@ -1,7 +1,7 @@
 /**
  * Shared booking components used in both facility and customer flows.
  * Use these to keep portals consistent (service cards, room cards, add-ons,
- * time slider, feeding/medication forms, requirements gate, tip step).
+ * time slider, requirements gate, tip step).
  */
 
 export { ServiceCard } from "./ServiceCard";
@@ -16,9 +16,6 @@ export type {
   AddonCardProps,
   PetOption as AddonPetOption,
 } from "./AddonCard";
-
-export { FeedingScheduleForm } from "./FeedingScheduleForm";
-export type { PetOption as FeedingPetOption } from "./FeedingScheduleForm";
 
 export { RequirementsGateStep } from "./RequirementsGateStep";
 export type { MissingRequirement } from "./RequirementsGateStep";

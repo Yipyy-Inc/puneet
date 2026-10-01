@@ -54,9 +54,46 @@ export const feedingOccasionSchema = z.object({
   id: z.string(),
   label: z.string(),
   time: z.string(),
+  /**
+   * The meal time it was picked as — breakfast, lunch, dinner, snack — so a
+   * screen can name it in its reader's language (2026-10-01). Absent on a
+   * custom time and on older rows, which are named by `label`.
+   */
+  slot: z.string().optional(),
   components: z.array(mealComponentSchema),
 });
 export type FeedingOccasion = z.infer<typeof feedingOccasionSchema>;
+
+/**
+ * One food of a pet's feeding plan, as the Feeding step writes it
+ * (2026-10-01). Its words come from lib/feeding/vocabulary.ts; `occasions`
+ * still carries each meal's foods as components for the screens that read
+ * those.
+ */
+export const feedingFoodSchema = z.object({
+  id: z.string(),
+  /** The owner's food, or one of the facility's house foods. */
+  source: z.enum(["own", "house"]),
+  /** kibble, wet, raw… — the kind of food the owner picked. */
+  type: z.string(),
+  brand: z.string().optional(),
+  houseFoodId: z.string().optional(),
+  /**
+   * The house food's name as it was booked, so a food the facility renames
+   * or stops offering still reads.
+   */
+  houseFoodName: z.string().optional(),
+  /** cup, scoop, g, oz, can, tbsp… or custom (then `customUnit`). */
+  unit: z.string(),
+  customUnit: z.string().optional(),
+  /** One portion. */
+  amount: z.number(),
+  /** The meals (occasion ids) it is served at; absent means every meal. */
+  servedAt: z.array(z.string()).optional(),
+  prep: z.array(z.string()).optional(),
+  pack: z.string().optional(),
+});
+export type FeedingFood = z.infer<typeof feedingFoodSchema>;
 
 export const feedingScheduleItemSchema = z.object({
   id: z.string(),
@@ -74,8 +111,47 @@ export const feedingScheduleItemSchema = z.object({
   feedingUnit: z.string().optional(),
   feedingInstruction: z.string().optional(),
   saveToProfile: z.boolean().optional(),
+
+  // ── The Feeding step's own answers (2026-10-01) ─────────────────────────
+  //
+  // All optional: a row written before them still reads, and `occasions`,
+  // `source`, `frequency` and `allergies` above are still written beside
+  // them for every screen that reads those.
+  /** The days of the stay it is served — the medications' rule and names. */
+  dayRule: medDayRuleEnum.optional(),
+  specificDays: z.array(z.string()).optional(),
+  foods: z.array(feedingFoodSchema).optional(),
+  styles: z.array(z.string()).optional(),
+  habits: z.array(z.string()).optional(),
+  /** What staff do when a meal is skipped. */
+  skipMeal: z.string().optional(),
+  treats: z.string().optional(),
+  /**
+   * Foods (by id) whose house-food charge is waived. Staff only — the
+   * integrity trigger strips it from anything a customer writes.
+   */
+  waivedFoods: z.array(z.string()).optional(),
+  /** The pet-profile plan this came from, or became. */
+  profileId: z.string().optional(),
 });
 export type FeedingScheduleItem = z.infer<typeof feedingScheduleItemSchema>;
+
+/**
+ * A pet's feeding plan kept on its profile (`pets.details.feedingPlan`) so the
+ * next booking starts with it: the plan, without what belonged to one stay —
+ * its days, a waiver, the booking's own ids.
+ */
+export const savedFeedingPlanSchema = feedingScheduleItemSchema
+  .omit({
+    id: true,
+    petId: true,
+    dayRule: true,
+    specificDays: true,
+    waivedFoods: true,
+    saveToProfile: true,
+  })
+  .extend({ profileId: z.string().min(1) });
+export type SavedFeedingPlan = z.infer<typeof savedFeedingPlanSchema>;
 
 // ============================================================================
 // Medication Types — Per-Med Card Builder
@@ -861,6 +937,13 @@ export const feedingEntrySchema = z.object({
   completedBy: z.string().optional(),
   completedAt: z.string().optional(),
   notes: z.string().optional(),
+  /**
+   * The owner's plan this meal row was made from, and which of its meals, so
+   * a panel can say the foods and how to serve them in the reader's language
+   * (2026-10-01).
+   */
+  item: feedingScheduleItemSchema.optional(),
+  occasionId: z.string().optional(),
 });
 export type FeedingEntry = z.infer<typeof feedingEntrySchema>;
 

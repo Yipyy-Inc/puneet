@@ -227,6 +227,13 @@ export const boardingGuestSchema = z
     foodBrand: z.string(),
     feedingTimes: z.array(z.string()),
     feedingAmount: z.string(),
+    /**
+     * Each meal worded by the Feeding step (2026-10-01) — what goes in the bowl
+     * at that time. Absent on the fixture guests and older bookings.
+     */
+    feedingMeals: z
+      .array(z.object({ time: z.string(), what: z.string() }))
+      .optional(),
     medications: z.array(medicationScheduleSchema),
     addOns: z.array(addonScheduleSchema).optional(),
     postSurgery: postSurgeryInfoSchema.optional(),

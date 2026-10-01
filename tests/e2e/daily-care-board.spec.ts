@@ -41,6 +41,11 @@ interface CareGuest {
   ownerName: string;
   kennelName: string;
   feedingTimes: string[];
+  feedingMeals?: {
+    time: string;
+    rule?: { type: string; dates?: string[] };
+    what: string;
+  }[];
   feedingInstructions: string;
   allergies: string[];
   medications: {
@@ -157,6 +162,36 @@ test.describe("the daily care board", () => {
               allergies: ["chicken"],
               notes: "",
             },
+            // A plan the Feeding step wrote, served every day but the
+            // checkout day — and today IS the checkout day (2026-10-01).
+            {
+              id: "feed-e2e-not-checkout",
+              occasions: [
+                {
+                  id: "occ-noon",
+                  label: "Second lunch",
+                  time: "12:15",
+                  components: [],
+                },
+              ],
+              source: "parent_brings",
+              prepInstructions: [],
+              ifRefuses: [],
+              frequency: "daily",
+              allergies: [],
+              notes: "",
+              dayRule: "except_checkout",
+              foods: [
+                {
+                  id: "food-noon",
+                  source: "own",
+                  type: "kibble",
+                  brand: "Orijen Original",
+                  unit: "cup",
+                  amount: 0.5,
+                },
+              ],
+            },
           ],
           medications: [
             {
@@ -246,7 +281,19 @@ test.describe("the daily care board", () => {
 
     // One entry per OCCASION. A two-meal schedule collapsing into one is how a
     // dog gets fed once, and it is the specific thing the adapter guards.
-    expect(mine!.feedingTimes, "both meals").toEqual(["08:00", "17:30"]);
+    expect(mine!.feedingTimes, "every meal of the stay").toEqual([
+      "08:00",
+      "12:15",
+      "17:30",
+    ]);
+    // Each meal in words, with its days: the plan served every day but the
+    // checkout day carries that day as a date the board leaves out today.
+    const noon = (mine!.feedingMeals ?? []).find((m) => m.time === "12:15");
+    expect(noon?.rule).toEqual({ type: "except_dates", dates: [today] });
+    expect(noon?.what).toContain("Orijen Original");
+    expect(
+      (mine!.feedingMeals ?? []).find((m) => m.time === "08:00")?.rule,
+    ).toBeUndefined();
     expect(mine!.allergies).toContain("chicken");
     expect(mine!.feedingInstructions).toContain("Half a scoop");
     expect(mine!.medications.map((m) => m.medicationName)).toContain("Rimadyl");
@@ -410,6 +457,10 @@ test.describe("the daily care board", () => {
     // the checkout day, so it cannot hold the pet back on it.
     expect(
       (body.pending ?? []).filter((item) => item.label.includes("Galliprant")),
+    ).toEqual([]);
+    // …nor a meal the plan does not serve on the checkout day.
+    expect(
+      (body.pending ?? []).filter((item) => item.label === "Second lunch"),
     ).toEqual([]);
 
     // Still here. A refusal that let the pet go anyway would be worse than no

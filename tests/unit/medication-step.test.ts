@@ -615,9 +615,11 @@ describe("what the medications add to the bill", () => {
       service: "daycare",
       parts,
     });
+    // The meals fee counts every meal served over the request — one a day,
+    // three days — still once, on the first booking (2026-10-01).
     expect(lines[0].map((line) => [line.feeId, line.quantity])).toEqual([
       [MEDICATION_FEE_ID, 1],
-      [MEALS_FEE_ID, 1],
+      [MEALS_FEE_ID, 3],
       [providedFeeId("pill_pocket"), 2],
     ]);
     expect(lines[1].map((line) => line.feeId)).toEqual([

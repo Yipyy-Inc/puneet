@@ -22093,3 +22093,96 @@ through WorkOS's `setRedirectUris`, dry-run first).
 `authentication.*_failed` in the production environment carries the error code.
 And a new host shape (another level, another domain) needs its own allow-list
 entry in the same change that introduces it.
+
+## 2026-10-01 — The Feeding step is the client's page, and the facility's house food is a line on the bill
+
+The client sent the Feeding page they wanted (`docs/Feeding_Step.html`, kept
+as the reference) the same day as the Medications one, and asked for nothing
+in it to be missed: meal times with one tap and custom times, which days, a
+card per food (who provides it, its type, brand, how it is packed, the
+portion with quick picks and a stepper sized to the unit, which meals it is
+served at, how to prepare it), a packing or cost summary per food, how the pet
+eats, allergies and notes, saving to the pet's profile, and a panel with the
+stay's meals, the packing list and what the feeding adds to the bill. The
+booking form's Feeding sub-step (Details, id 3, boarding and daycare) is now
+that page, laid out as the mock and drawn in the design system
+(`src/components/booking/feeding/`, logic in `src/lib/feeding/`). Before it,
+`SimpleFeedingForm` was English-only, wrote one free-text food line per meal,
+and its "Save to pet profile" saved nothing.
+
+**What is real now.**
+
+- **The setting decides the page.** `feeding_instructions` (Care tasks ›
+  Feeding instructions) is no longer nine free-text lists: it holds which of
+  the eleven food types are offered, the four meal times (on or off, and when)
+  and whether custom times are allowed, the choices of days, the facility's
+  house foods (name, description, type, unit, price per meal and per day; at
+  most 30), whether house food is priced per meal or per day and whether
+  boarding or daycare includes it, and which parts of the page show. No
+  facility had stored the old shape (checked 2026-10-01), so nothing was
+  migrated. Shipped, it is the mock's whole page with no house food — so no
+  "Facility provides" and nothing charged until a facility lists one.
+- **House food is a bill line.** `care:house-food:<id>`, a `fee` line per
+  booking part, named with the facility's own name for the food and taxed as
+  goods, worked out by `careChargeLines` and written by
+  `booking-care-charges.ts` exactly as the medication lines are (create,
+  approval, a staff edit reconciled before → after). Per meal: active days ×
+  the meals it is served at. Per day: the days it is served, once a day even
+  when two foods use the same house food. No line when the service includes
+  it, the price is 0, the facility no longer lists it, or staff waived it.
+- **The daycare meals fee "per meal" counts every meal served** — meal times
+  × the days each plan is served, over the request — where it counted one
+  day's meals. Still once per request, on its first booking. No facility had
+  the fee set, so nothing anyone paid changed.
+- **"Waive charge for this booking" is staff-only in the database**, as it is
+  for medications: `private.keep_feeding_waivers` nests into the integrity
+  trigger beside `keep_medication_waivers`
+  (`20261001120744_the_feeding_page_is_the_facilitys_own.sql`), and the create
+  route strips `waivedFoods` for non-staff. SQL T29–T33 in
+  `booking-write-integrity.sql`.
+- **Each booking part is priced from its own details.** The server writer read
+  the FIRST part's medications for every part, so an edit saved on one booking
+  of a multi-booking request was priced from another booking's list. Each part
+  now reads its own `details`, for its own pets.
+- **A meal's days are honoured where it is served.** `feedingEntriesFromSchedule`
+  takes the day and the stay, so the booking page and the checkout care gate
+  skip a meal not served that day. The Daily Care board, the reservation
+  journal and the kennel card read `feedingMeals` from the guest, with the day
+  rule as dates on the facility's calendar, and the scheduler drops a meal on
+  a day its rule excludes.
+- **The pet's profile keeps the plan** — `pets.details.feedingPlan`, written
+  after the booking and never instead of it, in ONE request per pet that
+  carries the medications too (two would race on `details`). The next new
+  booking starts with it.
+- **Editing a multi-pet booking no longer drops the other pets' care.** The
+  edit wizard loads only the booking's first pet, and since the Medications
+  step that morning booked only the pets it showed, an edit wiped the other
+  pets' medications. Both steps now pass the other pets' items through
+  untouched in edit mode.
+
+**Adapted on purpose, not oversights.** Every value is a token — the mock's
+purple, its font, its tinted banners and summary boxes are not ported;
+selected is the 2px ring; "Plan added" is a `confirmed` chip with its glyph.
+The stay panel sits in the wizard's left rail (≥1024px) and after the plan
+below it, and Back / Continue are the wizard's. Plurals are real ("1 meal" —
+the mock says "1 meals"). Daycare offers "Every day of the booking" and
+certain dates, with no checkout option. Next waits while a plan has no meal,
+no day, a blank custom time or a portion of 0. A booking made before this
+opens in the new page: its `am`/`pm` meals keep their ids (care-log keys
+survive), per-meal food lines become foods with "Served at", and what the page
+does not show is carried through untouched.
+
+**Still open.**
+
+- The per-service "feeding required / disabled" setting is still ignored by
+  the booking form.
+- A saved feeding plan shows nowhere on the pet's own pages — only in the
+  booking form.
+- The pre-arrival (Yipyy Go) form's feeding section is unchanged.
+- The Daily Care board and the booking page log a meal under different keys,
+  as they do doses. Older than this change.
+- The edit wizard still loads only a multi-pet booking's first pet: the other
+  pets' feeding and medications now survive an edit, but cannot be changed
+  from it.
+- The checkout gate names a pending meal by the label stored with the plan,
+  in the language of whoever booked it.

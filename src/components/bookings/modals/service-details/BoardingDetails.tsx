@@ -8,9 +8,10 @@ import { Check, PawPrint, Bed, X, AlertCircle, Gift } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
-import type { ExtraService, FeedingScheduleItem } from "@/types/booking";
+import type { ExtraService } from "@/types/booking";
 import type { Pet } from "@/types/pet";
-import { SimpleFeedingForm } from "@/components/booking/shared/SimpleFeedingForm";
+import { FeedingStep } from "@/components/booking/feeding/feeding-step";
+import type { FeedingStepState } from "@/components/booking/feeding/use-feeding-step";
 import { MedicationsStep } from "@/components/booking/medications/medications-step";
 import type { MedicationStepState } from "@/components/booking/medications/use-medication-step";
 import { useOfferedAddOns } from "@/lib/add-ons/use-offered-add-ons";
@@ -83,12 +84,12 @@ interface BoardingDetailsProps {
   setRoomAssignments: (
     assignments: Array<{ petId: number; roomId: string }>,
   ) => void;
-  feedingSchedule: FeedingScheduleItem[];
-  setFeedingSchedule: (schedule: FeedingScheduleItem[]) => void;
+  /** The Feeding step (2026-10-01): its state, held by BookingModal. */
+  feedingStep: FeedingStepState;
   /** The Medications step (2026-10-01): its state, held by BookingModal. */
   medicationStep: MedicationStepState;
-  /** "Step 3 of 4", as the rail counts. */
-  medicationStepLabel: string;
+  /** "Step 3 of 4", as the rail counts — both care steps show it. */
+  careStepLabel: string;
 
   extraServices: Array<{ serviceId: string; quantity: number; petId: number }>;
   setExtraServices: (
@@ -136,10 +137,9 @@ export function BoardingDetails({
   setServiceType,
   roomAssignments,
   setRoomAssignments,
-  feedingSchedule,
-  setFeedingSchedule,
+  feedingStep,
   medicationStep,
-  medicationStepLabel,
+  careStepLabel,
   extraServices,
   setExtraServices,
   selectedPets,
@@ -351,15 +351,6 @@ export function BoardingDetails({
 
         {currentSubStep === 3 && (
           <div className="space-y-4">
-            <div>
-              <h3 className="text-base font-semibold">
-                {t("feedingSchedule")}
-              </h3>
-              <p className="text-muted-foreground mt-1 text-xs">
-                {t("feedingScheduleHint")}
-              </p>
-            </div>
-
             {!isStepAccessible(3) && (
               <div className="bg-muted/50 rounded-lg border border-dashed p-8 text-center">
                 <p className="text-muted-foreground">
@@ -368,19 +359,10 @@ export function BoardingDetails({
               </div>
             )}
 
+            {/* The client's Feeding design (2026-10-01): its own heading,
+                its pets, and each pet's plan. */}
             {isStepAccessible(3) && (
-              <div className="space-y-4">
-                <SimpleFeedingForm
-                  feedingSchedule={feedingSchedule}
-                  setFeedingSchedule={setFeedingSchedule}
-                  selectedPets={selectedPets.map((p) => ({
-                    id: p.id,
-                    name: p.name,
-                    type: p.type,
-                  }))}
-                  serviceType="boarding"
-                />
-              </div>
+              <FeedingStep step={feedingStep} stepLabel={careStepLabel} />
             )}
           </div>
         )}
@@ -400,7 +382,7 @@ export function BoardingDetails({
             {isStepAccessible(4) && (
               <MedicationsStep
                 step={medicationStep}
-                stepLabel={medicationStepLabel}
+                stepLabel={careStepLabel}
               />
             )}
           </div>

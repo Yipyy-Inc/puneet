@@ -8,7 +8,16 @@ import type {
   PostSurgeryInfo,
 } from "@/types/boarding";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
+import { mealPrep, mealWhat, planExtras } from "@/lib/feeding/describe";
+import { planFromItem } from "@/lib/feeding/plan";
+import { sortedMeals } from "@/lib/feeding/schedule";
+import type { AppLocale } from "@/lib/language-settings";
+import type { Translate } from "@/lib/medications/dose";
 import { dayRuleOn, type MedStay } from "@/lib/medications/schedule";
+import {
+  SHIPPED_FEEDING_INSTRUCTIONS,
+  type FeedingInstructions,
+} from "@/lib/settings/feeding-instructions";
 
 // ============================================================================
 // A guest, as the Daily Care scheduler needs one.
@@ -55,9 +64,16 @@ export interface CareGuest {
   allergies: string[];
   feedingInstructions: string;
   foodBrand: string;
-  /** "HH:MM", one per meal occasion. */
+  /** "HH:MM", one per meal occasion, every day of the stay. */
   feedingTimes: string[];
   feedingAmount: string;
+  /**
+   * Each meal in words, with the days it is served (2026-10-01): what to put
+   * in the bowl at that time — naming the pet when the guest is several — and
+   * the day rule the board checks against the day it shows, as a dose's.
+   * Present when the caller could word it; the fields above stand in when not.
+   */
+  feedingMeals?: CareMeal[];
   medications: MedicationSchedule[];
   addOns?: AddonSchedule[];
   postSurgery?: PostSurgeryInfo;
@@ -68,6 +84,24 @@ export interface CareGuest {
   careNote?: string;
   /** Active in-stay care from this pet's incidents, one entry per incident. */
   incidentCare?: GuestIncidentCare[];
+}
+
+/** One meal of a guest's plans, as the board serves it. */
+export interface CareMeal {
+  /** "HH:MM". */
+  time: string;
+  /** The days it is served; none is every day. */
+  rule?: MedFrequencyRule;
+  /** "Bella: 1 cup Orijen Original (dry kibble) · Serve dry". */
+  what: string;
+}
+
+/** What the board words a guest's meals with. */
+export interface CareWords {
+  t: Translate;
+  locale: AppLocale;
+  /** The facility's feeding settings, or what ships. */
+  settings?: FeedingInstructions;
 }
 
 /** One incident's care still to give — read by pet, see /api/daily-care. */
@@ -101,9 +135,44 @@ export interface BookingCareDetails {
  */
 function feedingTimesFrom(schedule: FeedingScheduleItem[]): string[] {
   const times = schedule.flatMap((item) =>
-    item.occasions.map((occasion) => occasion.time).filter(Boolean),
+    (Array.isArray(item?.occasions) ? item.occasions : [])
+      .map((occasion) => occasion?.time)
+      .filter((time): time is string => Boolean(time)),
   );
   return [...new Set(times)].sort();
+}
+
+/**
+ * Every meal of every plan, in words, with its days. A plan with no pet is
+ * the one pet's of an older single-pet booking, so it names nobody.
+ */
+function feedingMealsFrom(
+  schedule: FeedingScheduleItem[],
+  stay: MedStay | undefined,
+  words: CareWords,
+  petNames: Map<number, string>,
+): CareMeal[] {
+  const settings = words.settings ?? SHIPPED_FEEDING_INSTRUCTIONS;
+  const named = petNames.size > 1;
+  return schedule.flatMap((item) => {
+    if (!item || !Array.isArray(item.occasions)) return [];
+    const plan = planFromItem(item, {
+      settings,
+      stay: stay ?? { days: [], overnight: true },
+    });
+    const rule = dayRuleFrom(item, stay);
+    const pet =
+      named && item.petId !== undefined ? petNames.get(item.petId) : undefined;
+    return sortedMeals(plan.meals).map((meal) => {
+      const text = [
+        mealWhat(words.t, plan, meal.id, words.locale, settings),
+        ...mealPrep(words.t, plan, meal.id),
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      return { time: meal.time, rule, what: pet ? `${pet}: ${text}` : text };
+    });
+  });
 }
 
 /** Every allergy named across the schedule, once each. */
@@ -118,7 +187,35 @@ function allergiesFrom(schedule: FeedingScheduleItem[]): string[] {
  * if the dog refuses are three different things somebody at the bowl needs, and
  * choosing one of them to show is choosing which two to hide.
  */
-function feedingInstructionsFrom(schedule: FeedingScheduleItem[]): string {
+function feedingInstructionsFrom(
+  schedule: FeedingScheduleItem[],
+  words?: CareWords,
+): string {
+  if (words) {
+    // The owner's whole plan in the reader's words — style, habits, what
+    // to do about a skipped meal, treats, notes — but not allergies, which
+    // the board shows on a line of their own.
+    const settings = words.settings ?? SHIPPED_FEEDING_INSTRUCTIONS;
+    return schedule
+      .flatMap((item) =>
+        item && typeof item === "object"
+          ? planExtras(
+              words.t,
+              planFromItem(item, {
+                settings,
+                stay: { days: [], overnight: true },
+              }),
+              words.locale,
+              {
+                skip: typeof item.skipMeal === "string",
+                treats: typeof item.treats === "string",
+                allergies: false,
+              },
+            )
+          : [],
+      )
+      .join(" · ");
+  }
   return schedule
     .flatMap((item) => [
       item.prepNotes?.trim(),
@@ -138,7 +235,7 @@ function feedingInstructionsFrom(schedule: FeedingScheduleItem[]): string {
  * days of a stay from a check-in read in UTC.
  */
 function dayRuleFrom(
-  med: MedicationItem,
+  med: Pick<MedicationItem, "dayRule" | "specificDays">,
   stay: MedStay | undefined,
 ): MedFrequencyRule | undefined {
   if (!stay || stay.days.length === 0) {
@@ -214,12 +311,16 @@ function medicationsFrom(
  * @param arrival the stay, from the boarding attendance read; `stay` is its
  *   days on the facility's calendar, which a medication's days are read against
  * @param details the booking's own `details` jsonb
+ * @param words what to word its meals with — the caller's language. Without
+ *   them the meals are the stored times and the first meal's amount, as before.
  */
 export function careGuestFromBooking(
   arrival: {
     id: string;
     petId: number;
     petNames: string[];
+    /** Each pet's name by its ref, to say whose a meal is. */
+    petNamesByRef?: Record<number, string>;
     ownerName: string;
     ownerPhone?: string | null;
     roomName: string | null;
@@ -229,8 +330,14 @@ export function careGuestFromBooking(
     stay?: MedStay;
   },
   details: BookingCareDetails,
+  words?: CareWords,
 ): CareGuest {
-  const schedule = details.feedingSchedule ?? [];
+  const schedule = Array.isArray(details.feedingSchedule)
+    ? details.feedingSchedule.filter(
+        (item): item is FeedingScheduleItem =>
+          Boolean(item) && typeof item === "object",
+      )
+    : [];
 
   return {
     id: arrival.id,
@@ -250,7 +357,7 @@ export function careGuestFromBooking(
     checkInDate: arrival.scheduledArrival.slice(0, 10),
     checkOutDate: arrival.scheduledDeparture.slice(0, 10),
     allergies: allergiesFrom(schedule),
-    feedingInstructions: feedingInstructionsFrom(schedule),
+    feedingInstructions: feedingInstructionsFrom(schedule, words),
     // The booking flow records the food SOURCE (owner's / facility's), not a
     // brand. Saying "Owner's food" is true; inventing a brand would not be.
     foodBrand:
@@ -261,7 +368,20 @@ export function careGuestFromBooking(
           : "",
     feedingTimes: feedingTimesFrom(schedule),
     feedingAmount:
-      schedule[0]?.occasions[0]?.components?.[0]?.amount?.toString() ?? "",
+      schedule[0]?.occasions?.[0]?.components?.[0]?.amount?.toString() ?? "",
+    feedingMeals: words
+      ? feedingMealsFrom(
+          schedule,
+          arrival.stay,
+          words,
+          new Map(
+            Object.entries(arrival.petNamesByRef ?? {}).map(([ref, name]) => [
+              Number(ref),
+              name,
+            ]),
+          ),
+        )
+      : undefined,
     medications: medicationsFrom(details.medications ?? [], arrival.stay),
     addOns: details.addOns,
     postSurgery: details.postSurgery,

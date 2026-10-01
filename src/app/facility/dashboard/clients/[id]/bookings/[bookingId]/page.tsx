@@ -83,6 +83,7 @@ import { bookingTotals } from "@/lib/payments/booking-totals";
 import type { Booking } from "@/types/booking";
 import { usePortalHref } from "@/lib/nav/use-portal-href";
 import { useStaffText } from "@/lib/staff/use-staff-text";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import { useServiceName } from "@/lib/staff/use-service-name";
 import { CancelBookingModal } from "@/components/bookings/modals/CancelBookingModal";
 import { CheckOutDialog } from "@/components/facility/dashboard/check-out-dialog";
@@ -283,6 +284,8 @@ export default function ClientBookingDetailPage({
     fill: detailFill,
     locale: detailLocale,
   } = useStaffText("bookingDetail");
+  // The booking form's own words, for the owner's feeding plan.
+  const bookingWords = useShellText("booking");
   const serviceName = useServiceName();
   // /employee renders this page too; its links stay in the portal it is in.
   const { href } = usePortalHref();
@@ -486,6 +489,8 @@ export default function ClientBookingDetailPage({
         medications: booking.medications,
         specialRequests: booking.specialRequests,
       },
+      // Its meals in this reader's words, as the board says them.
+      { t: bookingWords, locale: detailLocale },
     );
     const allergyList = [
       ...new Set([
@@ -530,6 +535,10 @@ export default function ClientBookingDetailPage({
       foodBrand: care.foodBrand,
       feedingTimes: care.feedingTimes,
       feedingAmount: care.feedingAmount,
+      feedingMeals: care.feedingMeals?.map(({ time, what }) => ({
+        time,
+        what,
+      })),
       medications: care.medications,
       tags: [],
       notes: booking.specialRequests ?? "",
@@ -1414,6 +1423,7 @@ export default function ClientBookingDetailPage({
                       <FeedingSection
                         key={`feed-${careLogStamp(careLog)}`}
                         entries={careEntries.feeding}
+                        planned={(booking.feedingSchedule?.length ?? 0) > 0}
                         required={feedingMode === "required"}
                         onLog={
                           departing

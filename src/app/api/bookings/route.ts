@@ -303,6 +303,13 @@ export async function POST(request: NextRequest) {
       ({ aidWaived: _waived, ...item }) => item,
     );
   }
+  // The same for house food a customer's request says is waived (2026-10-01):
+  // the facility's to grant. The integrity trigger strips it too.
+  if (!asStaff && input.feedingSchedule?.length) {
+    input.feedingSchedule = input.feedingSchedule.map(
+      ({ waivedFoods: _waived, ...item }) => item,
+    );
+  }
 
   // Pets are resolved and checked BEFORE the booking is written.
   //

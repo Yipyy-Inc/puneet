@@ -16,6 +16,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useStaffText } from "@/lib/staff/use-staff-text";
+import { useShellText } from "@/lib/shell/use-shell-text";
+import { mealLabel } from "@/lib/feeding/labels";
+import { isMealSlot } from "@/lib/feeding/vocabulary";
 import {
   formatDateLong,
   formatDateShort,
@@ -116,6 +119,7 @@ export function BookingJournal({
   careLog: CareLogEntry[] | undefined;
 }) {
   const { t, fill, locale } = useStaffText("bookingDetail");
+  const words = useShellText("booking");
   const [today] = useState(() => new Date().toISOString().slice(0, 10));
   const days = useMemo(
     () => daysOf(booking.startDate, booking.endDate ?? booking.startDate),
@@ -135,16 +139,23 @@ export function BookingJournal({
     [booking.service, booking.startDate, booking.endDate],
   );
 
-  // What the owner's schedule asks for, every day of the stay.
+  // What the owner's schedule asks for, on the days it asks for it. A meal
+  // picked as a meal time is named in this reader's words; a custom one, or an
+  // older row's, as stored.
   const planned = useMemo(() => {
     const meals: Omit<Row, "entry">[] = (booking.feedingSchedule ?? []).flatMap(
       (item) =>
-        item.occasions.map((occasion) => ({
-          key: `sched-${item.id}-${occasion.id}`,
-          taskType: "feeding",
-          label: occasion.label,
-          time: occasion.time,
-        })),
+        (Array.isArray(item?.occasions) ? item.occasions : []).map(
+          (occasion) => ({
+            key: `sched-${item.id}-${occasion.id}`,
+            taskType: "feeding",
+            label: isMealSlot(occasion.slot)
+              ? mealLabel(words, occasion, locale)
+              : occasion.label,
+            time: occasion.time,
+            dueOn: (d: string) => isActiveOn(item, d, stay),
+          }),
+        ),
     );
     const doses: Omit<Row, "entry">[] = (booking.medications ?? []).flatMap(
       (med) =>
@@ -157,7 +168,7 @@ export function BookingJournal({
         })),
     );
     return [...meals, ...doses];
-  }, [booking.feedingSchedule, booking.medications, stay]);
+  }, [booking.feedingSchedule, booking.medications, stay, words, locale]);
 
   const log = useMemo(() => careLog ?? [], [careLog]);
   const labelFor = (entry: CareLogEntry) =>

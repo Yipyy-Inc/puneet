@@ -21,9 +21,10 @@ import type { Booking } from "@/types/booking";
 // fixture fields stay first so the two hand-written demo bookings still read.
 //
 // The booking's own days come too, when the caller has them: a medication
-// given "every day except checkout" or on chosen dates has nothing due on the
-// other days, and a gate that asked for it would hold the pet back over a dose
-// the owner said not to give (2026-10-01).
+// given — or a feeding plan served — "every day except checkout" or on chosen
+// dates has nothing due on the other days, and a gate that asked for it would
+// hold the pet back over a dose or a meal the owner said not to give
+// (2026-10-01).
 // ============================================================================
 
 export function bookingCareEntries(
@@ -37,21 +38,18 @@ export function bookingCareEntries(
   careLog: CareLogEntry[] | undefined,
   day: string,
 ) {
+  const stay = booking.startDate ? bookingStay(booking) : undefined;
   const feeding = applyFeedingLog(
     booking.feedingInstructions?.length
       ? booking.feedingInstructions
-      : feedingEntriesFromSchedule(booking.feedingSchedule),
+      : feedingEntriesFromSchedule(booking.feedingSchedule, day, stay),
     careLog,
     day,
   );
   const medication = applyMedicationLog(
     booking.medicationInstructions?.length
       ? booking.medicationInstructions
-      : medicationEntriesFromItems(
-          booking.medications,
-          day,
-          booking.startDate ? bookingStay(booking) : undefined,
-        ),
+      : medicationEntriesFromItems(booking.medications, day, stay),
     careLog,
     day,
   );

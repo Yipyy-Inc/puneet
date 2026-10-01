@@ -97,6 +97,19 @@ export function shouldGiveMedToday(
   }
 }
 
+/**
+ * Whether a meal is served on `today` — its plan's days as the board carries
+ * them: chosen dates, or every day but some. No rule is every day.
+ */
+function servedOn(rule: MedFrequencyRule | undefined, today: Date): boolean {
+  if (!rule) return true;
+  if (rule.type === "specific_dates")
+    return rule.dates.includes(todayIso(today));
+  if (rule.type === "except_dates")
+    return !rule.dates.includes(todayIso(today));
+  return true;
+}
+
 export function getFrequencyLabel(rule: MedFrequencyRule): string {
   switch (rule.type) {
     case "daily":
@@ -375,22 +388,56 @@ export function generateScheduledTasks(
     // this guest regardless of facility schedule).
     // Held back from `tasks` until the medication loop has had a chance to fold
     // with-food doses into them.
+    //
+    // A plan served "every day except checkout", or on chosen dates
+    // (2026-10-01), carries its days as dates on the facility's calendar,
+    // like a dose: a meal not served on this day is not on its board — nor in
+    // the journal, which builds every day of the stay from this guest.
+    const mealsToday = guest.feedingMeals?.filter((meal) =>
+      servedOn(meal.rule, today),
+    );
+    const feedingTimes = mealsToday
+      ? [...new Set(mealsToday.map((meal) => meal.time))].sort()
+      : guest.feedingTimes;
+    const whatAt = (time: string) =>
+      mealsToday
+        ?.filter((meal) => meal.time === time)
+        .map((meal) => meal.what)
+        .filter(Boolean);
     const meals: ScheduledTask[] = [];
     const matchedTimes = new Set<string>();
     for (const step of feedingSteps) {
       if (!guestMatchesAppliesTo(guest, step.appliesTo, guestTags)) continue;
-      const time = guest.feedingTimes.find((t) => t === step.time) ?? step.time;
+      const time = feedingTimes.find((t) => t === step.time) ?? step.time;
       // Only emit if guest actually has a meal at this time, OR step is a generic feeding step
-      if (!guest.feedingTimes.includes(step.time)) continue;
+      if (!feedingTimes.includes(step.time)) continue;
       matchedTimes.add(step.time);
       meals.push(
-        feedingTask(guest, time, alertTags, step.name, step.id, baseTask),
+        feedingTask(
+          guest,
+          time,
+          alertTags,
+          step.name,
+          step.id,
+          baseTask,
+          feedingTimes.length,
+          whatAt(time),
+        ),
       );
     }
-    for (const time of guest.feedingTimes) {
+    for (const time of feedingTimes) {
       if (matchedTimes.has(time)) continue;
       meals.push(
-        feedingTask(guest, time, alertTags, undefined, undefined, baseTask),
+        feedingTask(
+          guest,
+          time,
+          alertTags,
+          undefined,
+          undefined,
+          baseTask,
+          feedingTimes.length,
+          whatAt(time),
+        ),
       );
     }
 
@@ -614,10 +661,16 @@ function feedingTask(
   stepLabel: string | undefined,
   stepId: string | undefined,
   base: BaseTaskFields,
+  mealsADay: number,
+  /** What goes in the bowl at this time, worded — when the guest has it. */
+  what?: string[],
 ): ScheduledTask {
   const h = parseInt(time.split(":")[0] ?? "0", 10);
   const defaultLabel = h < 11 ? "Breakfast" : h < 15 ? "Lunch" : "Dinner";
-  const subDetails: string[] = [`${guest.feedingAmount} ${guest.foodBrand}`];
+  const subDetails: string[] =
+    what && what.length > 0
+      ? [...what]
+      : [`${guest.feedingAmount} ${guest.foodBrand}`];
   if (guest.feedingInstructions) subDetails.push(guest.feedingInstructions);
   // Allergens now render as a dedicated red "Avoid: …" line via task.avoidList
   // (see baseTask), consistently across every task type.
@@ -631,10 +684,7 @@ function feedingTask(
     subDetails,
     // Read-only "frequency" for the feeding log's plan zone (A4.4), derived
     // from how many meals the booking schedules per day.
-    frequencyNote:
-      guest.feedingTimes.length > 0
-        ? `${guest.feedingTimes.length}× daily`
-        : undefined,
+    frequencyNote: mealsADay > 0 ? `${mealsADay}× daily` : undefined,
     alertTags:
       guest.allergies.length > 0
         ? ["Allergy", ...alertTags.filter((t) => t !== "Allergy")]
