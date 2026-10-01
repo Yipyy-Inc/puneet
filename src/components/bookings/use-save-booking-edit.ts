@@ -45,6 +45,8 @@ const EDITABLE: (keyof NewBooking)[] = [
   "feedingSchedule",
   "walkSchedule",
   "medications",
+  "noMedication",
+  "vetContacts",
   "extraServices",
   "daycareSelectedDates",
   "daycareDateTimes",

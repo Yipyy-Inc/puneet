@@ -1,7 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
+import { writeEnrolmentCare } from "@/lib/api/enrolment-care";
 import { writeFailure } from "@/lib/api/write-failure";
+import { applyBookingCareCharges } from "@/lib/payments/booking-care-charges";
+import { bookingCareSchema, type BookingCare } from "@/types/booking";
 import type { RealTrainingSeriesEnrollment } from "@/types/training-series";
 
 export const dynamic = "force-dynamic";
@@ -61,6 +64,13 @@ interface EnrollInput {
   clientId: number;
   petId: number;
   joinWaitlist?: boolean;
+  /** The pet's feeding and medications for the class (2026-10-01). */
+  care?: unknown;
+}
+
+interface EnrollRpcResult {
+  enrollment: { id: string };
+  bookings?: { bookingId: string }[];
 }
 
 /**
@@ -86,6 +96,20 @@ export async function POST(
       { error: "A client and a pet are both required." },
       { status: 422 },
     );
+  }
+
+  // The booking form's care steps, for every session the enrolment books —
+  // the four care fields and nothing else (lib/api/enrolment-care.ts).
+  let care: BookingCare | undefined;
+  if (input.care !== undefined && input.care !== null) {
+    const parsed = bookingCareSchema.safeParse(input.care);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "The feeding or medication instructions could not be read." },
+        { status: 422 },
+      );
+    }
+    care = parsed.data;
   }
 
   const supabase = await createServerClient();
@@ -138,6 +162,31 @@ export async function POST(
       denied: "Not allowed to enroll in training classes at this facility.",
       duplicate: "This pet is already enrolled (or waitlisted) in this series.",
     });
+  }
+
+  // ── THE PET'S CARE, ON EVERY SESSION IT WAS BOOKED INTO ────────────────
+  //
+  // Then the care charges, from the facility's settings and those sessions —
+  // the medication fee once for the enrolment, by the same function the
+  // booking form quoted with (lib/payments/booking-care-charges.ts). The
+  // enrolment stands if the care does not save: it is said, not undone.
+  const result = data as unknown as EnrollRpcResult;
+  const bookingIds = (result.bookings ?? []).map(
+    (booking) => booking.bookingId,
+  );
+  if (care && bookingIds.length > 0) {
+    const written = await writeEnrolmentCare({
+      enrollmentId: result.enrollment.id,
+      bookingIds,
+      care,
+    });
+    if (!written.ok) {
+      return NextResponse.json(
+        { ...result, careNotSaved: true },
+        { status: 201 },
+      );
+    }
+    await applyBookingCareCharges(bookingIds, "initial");
   }
 
   return NextResponse.json(data, { status: 201 });

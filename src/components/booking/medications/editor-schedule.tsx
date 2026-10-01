@@ -13,7 +13,7 @@ import {
 import {
   dayCount,
   doseCountWords,
-  slotLabel,
+  doseTimeName,
 } from "@/lib/medications/describe";
 import { fill } from "@/lib/medications/dose";
 import {
@@ -172,7 +172,7 @@ export function EditorSchedule({ step }: { step: MedicationStepState }) {
                 }))
               }
             >
-              <span>{slotLabel(t, slot.id)}</span>
+              <span>{doseTimeName(t, slot)}</span>
               <span className="text-meta text-ink-tertiary font-normal tabular-nums">
                 {formatTimeOfDay(slot.time, locale)}
               </span>

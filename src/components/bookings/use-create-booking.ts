@@ -40,8 +40,11 @@ export function useCreateBookingFromModal() {
   const queryClient = useQueryClient();
   const { currentLocationId } = useLocationContext();
 
-  /** Resolves true when the booking was written, false when it was not. */
-  return async (bookingData: NewBooking): Promise<boolean> => {
+  /**
+   * Resolves with the booking's ref when it was written — what the form
+   * attaches a medication's label photo to — and false when it was not.
+   */
+  return async (bookingData: NewBooking): Promise<false | { ref: number }> => {
     let created: Awaited<ReturnType<typeof bookingMutations.create>> &
       CreatedExtras;
     try {
@@ -127,6 +130,6 @@ export function useCreateBookingFromModal() {
         ),
       });
     }
-    return true;
+    return { ref: created.id };
   };
 }

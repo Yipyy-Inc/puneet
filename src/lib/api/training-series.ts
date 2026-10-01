@@ -1,5 +1,6 @@
 "use client";
 
+import type { BookingCare } from "@/types/booking";
 import {
   useMutation,
   useQuery,
@@ -157,6 +158,8 @@ export interface EnrollInput {
   clientId: number;
   petId: number;
   joinWaitlist?: boolean;
+  /** The pet's feeding and medications, for every session it is booked into. */
+  care?: BookingCare;
 }
 
 export interface EnrollResult {
@@ -174,6 +177,8 @@ export interface EnrollResult {
     sessionId: string;
     sessionNumber: number;
   }[];
+  /** Enrolled, but the pet's feeding and medications did not save. */
+  careNotSaved?: boolean;
 }
 
 export function useEnrollInTrainingSeries(): UseMutationResult<

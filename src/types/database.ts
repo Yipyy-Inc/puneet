@@ -696,6 +696,57 @@ export type Database = {
           },
         ];
       };
+      booking_medication_photos: {
+        Row: {
+          booking_id: string;
+          content_type: string;
+          created_at: string;
+          created_by: string | null;
+          facility_id: string;
+          id: string;
+          medication_id: string;
+          size_bytes: number;
+          storage_path: string;
+        };
+        Insert: {
+          booking_id: string;
+          content_type: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id: string;
+          id?: string;
+          medication_id: string;
+          size_bytes: number;
+          storage_path: string;
+        };
+        Update: {
+          booking_id?: string;
+          content_type?: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id?: string;
+          id?: string;
+          medication_id?: string;
+          size_bytes?: number;
+          storage_path?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_medication_photos_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "booking_medication_photos_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       booking_pets: {
         Row: {
           booking_id: string;

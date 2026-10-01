@@ -1,5 +1,7 @@
 import { Sun, Bed, Scissors, GraduationCap, CheckCircle } from "lucide-react";
 
+import { careSubSteps, type CareStepUses } from "@/lib/bookings/care-steps";
+
 // No prices here. Each entry carried one — daycare 35, boarding 45, grooming
 // 40, training 85 — and two service pickers rendered them as "From $45" at a
 // facility whose own cheapest kennel was $38, or $125, or which had not
@@ -300,20 +302,18 @@ export const STEPS: WizardStepDef[] = [
   { id: "confirm", titleKey: "stepConfirm", descriptionKey: "stepConfirmHelp" },
 ];
 
+// Feeding (3) and Medication (4) are not in these lists: the facility decides
+// per service whether they appear, so `detailSubSteps` adds them.
 export const DAYCARE_SUB_STEPS: WizardSubStepDef[] = [
   { id: 0, titleKey: "schedule", descriptionKey: "subDatesAndTimes" },
   { id: 1, titleKey: "subRoomAssignment", descriptionKey: "subAssignToRoom" },
   { id: 2, titleKey: "addOnsLabel", descriptionKey: "subAddOnServices" },
-  { id: 3, titleKey: "feeding", descriptionKey: "subFeedingSchedule" },
-  { id: 4, titleKey: "subMedication", descriptionKey: "subMedicationDetails" },
 ];
 
 export const BOARDING_SUB_STEPS: WizardSubStepDef[] = [
   { id: 0, titleKey: "schedule", descriptionKey: "subDates" },
   { id: 1, titleKey: "subRoomType", descriptionKey: "subChooseRoom" },
   { id: 2, titleKey: "addOnsLabel", descriptionKey: "subAddOnServices" },
-  { id: 3, titleKey: "feeding", descriptionKey: "subFeedingSchedule" },
-  { id: 4, titleKey: "subMedication", descriptionKey: "subMedicationDetails" },
 ];
 
 export const EVALUATION_SUB_STEPS: WizardSubStepDef[] = [
@@ -337,6 +337,30 @@ export const CUSTOM_SERVICE_SUB_STEPS: WizardSubStepDef[] = [
 export const TRAINING_SUB_STEPS: WizardSubStepDef[] = [
   { id: 0, titleKey: "subSelectSeries", descriptionKey: "subPickAClass" },
 ];
+
+/**
+ * The Details screen's sub-steps for a service: its own, then Feeding and
+ * Medication where the facility has them on for it (lib/bookings/care-steps).
+ * A customer never sees Room Assignment (id 1): the facility assigns it.
+ */
+export function detailSubSteps(
+  service: string,
+  options: { customer: boolean; care: CareStepUses },
+): WizardSubStepDef[] {
+  const care = careSubSteps(options.care);
+  if (service === "daycare" || service === "boarding") {
+    const own = service === "daycare" ? DAYCARE_SUB_STEPS : BOARDING_SUB_STEPS;
+    return [
+      ...(options.customer ? own.filter((step) => step.id !== 1) : own),
+      ...care,
+    ];
+  }
+  if (service === "grooming") return [...GROOMING_SUB_STEPS, ...care];
+  if (service === "training") return [...TRAINING_SUB_STEPS, ...care];
+  if (service === "evaluation") return EVALUATION_SUB_STEPS;
+  if (service) return CUSTOM_SERVICE_SUB_STEPS;
+  return [];
+}
 
 // ── Per-service accent colors ────────────────────────────────────────────────
 // Used throughout the booking flow for consistent service-branded styling.

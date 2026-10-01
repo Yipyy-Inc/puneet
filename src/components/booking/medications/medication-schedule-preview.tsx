@@ -131,7 +131,13 @@ export function MedicationSchedulePreview({
             <dt className="text-ink-tertiary min-w-0">
               {fill(t("medsAddonRow"), {
                 count: addon.quantity,
-                items: itemWord(t, addon.method, addon.quantity, locale),
+                items: itemWord(
+                  t,
+                  addon.method,
+                  addon.quantity,
+                  locale,
+                  addon.label,
+                ),
                 name: addon.medication,
               })}
             </dt>

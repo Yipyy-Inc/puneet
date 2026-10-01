@@ -22186,3 +22186,118 @@ does not show is carried through untouched.
   from it.
 - The checkout gate names a pending meal by the label stored with the plan,
   in the language of whoever booked it.
+
+## 2026-10-01 — Feeding & medications is the facility's own settings page, and the steps reach grooming and training
+
+The client sent the settings page behind the two steps
+(`docs/Medication_and_Feeding_Instructions_setup_page_.html`, kept as the
+reference) and asked for it under Settings › Services, laid out exactly as the
+mock. It is `settings/feeding-medications` (facility and employee shells),
+`_sections/feeding-medications.tsx` over `_components/feeding-medications/`:
+two tabs, a row of jump links held under the header, a card per part in the
+mock's order, each saying when it differs from its defaults and resetting to
+them (keeping what the facility added), one save bar, and Undo on anything a
+facility removes. Care tasks keeps only the care-log feedback and a link here;
+Booking rules keeps the daycare meals fee and links here for the rest.
+
+**What is real now.**
+
+- **Every switch decides something.** `feeding_instructions` and
+  `medication_instructions` were reshaped (no facility had stored either —
+  checked 2026-10-01 — so nothing was migrated; every key has a schema
+  default, because `settingsFromRows` silently replaces a row that fails to
+  parse). Meal and dose times are rows a facility renames, moves, pre-selects
+  and adds to; feeding styles, habits, skip actions and allergy picks are lists
+  it adds its own words to (stored on a booking as those words); ways of
+  giving a medication are rows, the facility's own offered for every form;
+  house food is switched on or off, priced per meal, per day or included in
+  the price, food by food.
+- **Where the steps appear is the setting, per service** — `services` in both
+  domains, disabled / optional / required for boarding, daycare, grooming and
+  training (`careStepUse`). The old `careInstructions` on the module configs —
+  never chosen by anyone, read by nothing in the form — is no longer read for
+  feeding or medication. A step switched off is not in the form and books
+  nothing: a pet's profile medications no longer ride along on a groom.
+  Required means every pet has a feeding plan, or a medication or "{pet} takes
+  no medication" (`details.noMedication`, kept so an edit does not ask again).
+  An estimate never requires.
+- **The care steps have fixed ids in every flow** — 3 Feeding, 4 Medication
+  (`lib/bookings/care-steps.ts`). The booking form holds the sub-step's ID, not
+  its place, so a list that changes under it (the settings arriving, a step
+  switched off) leaves it on the same question or the next. Drafts keep the id
+  (`preSelectedSubStepId`); a draft saved before keeps its position, which
+  `legacySubStepId` maps to an id. Grooming and training draw the steps through
+  `CareStepPanel`; daycare and boarding draw them as before.
+- **A training enrolment carries the dog's care to every session.**
+  `enroll_in_training_series` books the sessions with empty details; the
+  enrolment route now takes the pet's care (`bookingCareSchema`, the four care
+  fields and nothing else), writes it onto the bookings the enrolment returned
+  with a `bookingGroup`, and applies the care charges once for the request
+  (`lib/api/enrolment-care.ts`). The multi-dog cart keeps each dog's care on
+  its line; drop-ins carry only their own dogs' care.
+- **Money.** The administration fee is the page's: none, per dose, per pet per
+  day, or per medication per day, plus an extra fee per injection while the
+  Injection form is offered (`care:injection-fee`), once per request on its
+  first booking, only where the step is on for the service. What the facility
+  sells is any selling row, its own included (`care:provided:method-…`, named
+  by its label). `care_fees` keeps only the daycare meals fee. Nothing is sold
+  or charged as the page ships.
+- **The step's safety rules.** A short supply warns or, where required,
+  stops the medication. The pharmacy label is confirmed per medication
+  (`labelConfirmed`). Controlled substances are refused by name — generic,
+  brand or French, word by word (`lib/medications/controlled.ts`) — unless
+  the facility accepts them, when the booking marks them (`controlled`). The
+  vet's clinic and phone are asked once a pet takes a medication, kept on the
+  booking (`details.vetContacts`) and on the pet's profile (`pets.details.vet`).
+- **A photo of the label is a private file.** The `booking-medication-photos`
+  bucket and the `booking_medication_photos` table
+  (`20261001163614_a_medication_label_photo_is_a_private_file.sql`, applied
+  to production; SQL `booking-medication-photos-rls.sql`): the client and the
+  facility's staff
+  read; staff and the client — while the booking is ahead — attach; staff
+  remove. The form keeps a chosen photo as a file until the booking is saved,
+  then sends it (`use-label-photos.ts`); a photo that does not save is said,
+  by medication, and the booking stands. The booking page shows the newest of
+  each medication, across the request.
+- **Packing counts the extra meals** the facility asks for ("10 meals + 2 extra
+  in case pickup is delayed").
+
+**Adapted on purpose, not oversights.** Every value is a token: no purple, no
+orange dots on the tabs (glyphs instead — §2b), no tinted strips. The save bar
+is the settings' own `SaveBar`, sticky, shown only while something is unsaved
+— the mock's floating dark bar is its look, not its placement. Undo is a
+sonner toast for 8 seconds (§5h). "Included in the price", not the mock's
+"Included with boarding", because it applies to every service the step is on
+for. A house food keeps a type select (the step's portions and preparation
+depend on it). All fifteen ways of giving are listed (the mock shows eight).
+"Pre-selected" and "built in" are two flags — the mock's one `def` flag made a
+default meal removable once unticked. Money ships off (house food off, nothing
+sold). "Which days" and "Parts of the page" are kept, in a last More options
+card per tab. Below 640px the method and house-food tables become two-line
+rows rather than scrolling sideways (§6 rule 6).
+
+**This closes** the Feeding entry's first open item — the per-service
+required / disabled setting is now read by the booking form.
+
+**Still open.**
+
+- The Daily Care board reads boarding guests only; a groom's or a class's
+  feeding and medications show on its booking page, not on the board.
+- Custom services have their own care switches (the custom-service wizard)
+  and none of this page.
+- A customer cannot add or replace a label photo after the booking is made,
+  nor remove one: a replaced photo's older row stays until staff remove it
+  (the newest is what is shown). A medication removed from a booking leaves
+  its photo stored until the booking goes.
+- A training enrolment's label photos are not sent: the enrolment returns no
+  ref the form can attach them to.
+- HEIC photos have no preview in Chrome or Firefox — the file row shows its
+  glyph.
+- A medication saved to the pet's profile is booked again without its label
+  being confirmed again.
+- The pre-arrival (Yipyy Go) form keeps its own medication fee and photos.
+- The multi-dog training cart quotes the care of the dog being set up only.
+- Time fields follow the browser's language, not the page's (as everywhere in
+  the app).
+- Required applies to staff edits as well as new bookings; one tick answers
+  it.

@@ -197,9 +197,6 @@ export const DEFAULT_MEAL_TIMES: Record<MealSlot, string> = {
   snack: "20:00",
 };
 
-/** The meals a new plan starts with, when the facility offers them. */
-export const STARTING_MEALS: readonly MealSlot[] = ["breakfast", "dinner"];
-
 /** What "+ Custom time" starts at. */
 export const CUSTOM_MEAL_DEFAULT = "15:00";
 
@@ -260,6 +257,40 @@ export const FOOD_ALLERGY_PRESETS = [
   "Lamb",
   "Sensitive stomach",
 ] as const;
+
+/**
+ * The allergy quick picks as the facility's page lists them, by id, with the
+ * word each stores on a booking.
+ */
+export const ALLERGY_PRESET_IDS = {
+  chicken: "Chicken",
+  beef: "Beef",
+  grain: "Grain",
+  dairy: "Dairy",
+  fish: "Fish",
+  lamb: "Lamb",
+  sensitive_stomach: "Sensitive stomach",
+} as const satisfies Record<string, (typeof FOOD_ALLERGY_PRESETS)[number]>;
+export type AllergyPresetId = keyof typeof ALLERGY_PRESET_IDS;
+export const ALLERGY_PRESET_ID_LIST = Object.keys(
+  ALLERGY_PRESET_IDS,
+) as AllergyPresetId[];
+
+/**
+ * The house foods the facility's page comes with: switched off, priced as the
+ * design shows them, named in the reader's language until the facility names
+ * them itself.
+ */
+export const BUILT_IN_HOUSE_FOODS = [
+  "hf-house-kibble",
+  "hf-sensitive-kibble",
+  "hf-canned-wet",
+] as const;
+export type BuiltInHouseFood = (typeof BUILT_IN_HOUSE_FOODS)[number];
+
+export const isBuiltInHouseFood = (value: unknown): value is BuiltInHouseFood =>
+  typeof value === "string" &&
+  (BUILT_IN_HOUSE_FOODS as readonly string[]).includes(value);
 
 /** The catalogue key each stored preset is shown with. */
 export const ALLERGY_KEY: Record<string, string> = {

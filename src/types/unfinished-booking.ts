@@ -7,6 +7,7 @@ import type {
   ExtraService,
   FeedingScheduleItem,
   MedicationItem,
+  VetContact,
 } from "@/types/booking";
 
 export type AbandonmentStep =
@@ -98,8 +99,13 @@ export interface UnfinishedBooking {
   abandonedAt: string;
   /** The step in the booking wizard where they dropped off */
   abandonmentStep: AbandonmentStep;
-  /** The sub-step within that step, where the step has them (Details does). */
+  /**
+   * The sub-step within that step, where the step has them (Details does) —
+   * its POSITION, as drafts saved before 2026-10-01 kept it.
+   */
   subStep?: number;
+  /** The sub-step's id (lib/bookings/care-steps.ts), as drafts keep it now. */
+  subStepId?: number;
   status: UnfinishedBookingStatus;
   lastContactedAt?: string;
   /** Chronological staff notes with timestamps */
@@ -125,6 +131,10 @@ export interface UnfinishedBooking {
   extraServices?: ExtraService[];
   feedingSchedule?: FeedingScheduleItem[];
   medications?: MedicationItem[];
+  /** The pets answered "takes no medication". */
+  noMedication?: number[];
+  /** Each pet's vet, by pet id. */
+  vetContacts?: Record<string, VetContact>;
   specialRequests?: string;
   notificationEmail?: boolean;
   notificationSMS?: boolean;

@@ -98,6 +98,12 @@ export interface TrainingSelection {
   price: number;
   kind: "enroll" | "drop-in";
   sessionId?: string;
+  /**
+   * The days the dog will be in class — every remaining session of an
+   * enrolment, or the one session of a drop-in. The Feeding and Medications
+   * steps plan over these (lib/bookings/care-steps.ts).
+   */
+  sessionDates?: string[];
 }
 
 function formatDateString(d: Date): string {
@@ -435,6 +441,13 @@ export function TrainingScheduleStep({
       numberOfWeeks: series.numberOfWeeks,
       price: series.enrollmentRules.fullPaymentAmount,
       kind: "enroll",
+      // The sessions an enrolment books: the scheduled ones still to come.
+      sessionDates: (() => {
+        const today = formatDateString(new Date());
+        return series.sessions
+          .filter((s) => s.status === "scheduled" && s.date >= today)
+          .map((s) => s.date);
+      })(),
     });
   }
 
@@ -466,6 +479,7 @@ export function TrainingScheduleStep({
       price: dropInPrice(series),
       kind: "drop-in",
       sessionId: session.id,
+      sessionDates: [session.date],
     });
   }
 

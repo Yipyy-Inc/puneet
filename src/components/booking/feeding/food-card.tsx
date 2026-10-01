@@ -22,6 +22,8 @@ import { foodName } from "@/lib/feeding/describe";
 import {
   brandPlaceholder,
   foodTypeLabel,
+  houseFoodDescription,
+  houseFoodName,
   mealLabel,
   packLabel,
   prepLabel,
@@ -48,6 +50,8 @@ import { fill } from "@/lib/medications/dose";
 import {
   houseFoodFor,
   houseFoodIncluded,
+  offeredHouseFoods,
+  type HouseFood,
 } from "@/lib/settings/feeding-instructions";
 import { useShellLocale, useShellText } from "@/lib/shell/use-shell-text";
 
@@ -89,7 +93,13 @@ export function FoodCard({
     food.source === "house"
       ? houseFoodFor(settings, food.houseFoodId)
       : undefined;
-  const offersHouse = settings.houseFoods.length > 0 || food.source === "house";
+  const houses = offeredHouseFoods(settings);
+  const offersHouse = houses.length > 0 || food.source === "house";
+  // Still on the facility's list, and house food still switched on.
+  const stillOffered = Boolean(house && houses.includes(house));
+  const packs = PACKS.filter(
+    (pack) => settings.packs.includes(pack) || pack === food.pack,
+  );
   const meals = sortedMeals(plan.meals);
   const types: FoodType[] = settings.foodTypes.includes(food.type)
     ? settings.foodTypes
@@ -103,11 +113,16 @@ export function FoodCard({
       : FOOD[food.type].units;
   const storage = food.source === "own" ? FOOD[food.type].storage : null;
   const StorageGlyph = storage ? STORAGE_GLYPH[storage] : null;
-  const included = houseFoodIncluded(settings, step.service);
-  const price = (h: (typeof settings.houseFoods)[number]) =>
+  const included = houseFoodIncluded(settings);
+  const named = (h: HouseFood) => ({
+    id: h.id,
+    name: houseFoodName(t, h),
+    unit: h.unit,
+  });
+  const price = (h: HouseFood) =>
     included
       ? t("feedIncluded")
-      : settings.pricing === "day"
+      : settings.house.pricing === "day"
         ? fill(t("feedPricePerDayShort"), {
             price: formatMoney(h.pricePerDay, locale),
           })
@@ -140,11 +155,11 @@ export function FoodCard({
               ]}
               onChange={(source) => {
                 if (source === food.source) return;
-                const first = settings.houseFoods[0];
+                const first = houses[0];
                 if (source === "house" && !first) return;
                 step.updateFood(food.id, (current) =>
                   source === "house" && first
-                    ? asHouseFood(current, first)
+                    ? asHouseFood(current, named(first))
                     : asOwnFood(current),
                 );
               }}
@@ -227,7 +242,7 @@ export function FoodCard({
               </div>
             ) : null}
 
-            {show.packing ? (
+            {packs.length > 0 ? (
               <div className="flex min-w-0 flex-col gap-2.5">
                 <FieldLabel id={`feed-pack-${index}`}>
                   {t("feedPackLabel")}
@@ -237,7 +252,7 @@ export function FoodCard({
                   aria-labelledby={`feed-pack-${index}`}
                   className="flex flex-wrap gap-2"
                 >
-                  {PACKS.map((pack) => (
+                  {packs.map((pack) => (
                     <ChoicePill
                       key={pack}
                       type="radio"
@@ -256,27 +271,27 @@ export function FoodCard({
         ) : (
           <div className="flex min-w-0 flex-col gap-2.5">
             <FieldLabel>{t("feedHouseLabel")}</FieldLabel>
-            {settings.houseFoods.length > 0 ? (
+            {houses.length > 0 ? (
               <OptionCards
                 label={t("feedHouseLabel")}
                 value={house?.id ?? ""}
-                options={settings.houseFoods.map((h) => ({
+                options={houses.map((h) => ({
                   value: h.id,
-                  title: h.name,
-                  hint: h.description || undefined,
+                  title: houseFoodName(t, h),
+                  hint: houseFoodDescription(t, h) || undefined,
                   trailing: price(h),
                 }))}
                 onChange={(id) => {
                   const picked = houseFoodFor(settings, id);
                   if (picked) {
                     step.updateFood(food.id, (current) =>
-                      withHouseFood(current, picked),
+                      withHouseFood(current, named(picked)),
                     );
                   }
                 }}
               />
             ) : null}
-            {!house ? (
+            {!stillOffered ? (
               <p className="text-meta text-warning flex items-center gap-2">
                 <TriangleAlert className="size-4 shrink-0" aria-hidden />
                 {t("feedHouseGone")}
@@ -316,7 +331,7 @@ export function FoodCard({
                     }))
                   }
                 >
-                  {mealLabel(t, meal, locale)}
+                  {mealLabel(t, meal, locale, settings)}
                 </ChoicePill>
               ))}
             </div>

@@ -9,6 +9,11 @@ import type { ChosenBoardingService } from "../service-details/BoardingDetails";
 import type { TrainingSelection } from "../service-details/TrainingScheduleStep";
 import type { ExtraService } from "@/types/booking";
 import type { MedicationStepState } from "@/components/booking/medications/use-medication-step";
+import {
+  FEEDING_SUB_STEP_ID,
+  MEDICATION_SUB_STEP_ID,
+} from "@/lib/bookings/care-steps";
+import { CareStepPanel } from "./care-step-panel";
 import type { FeedingStepState } from "@/components/booking/feeding/use-feeding-step";
 import type { Pet } from "@/types/pet";
 import type { KennelChange } from "@/lib/boarding/kennel-changes";
@@ -96,6 +101,11 @@ interface DetailsStepProps {
   medicationStep: MedicationStepState;
   /** "Step 3 of 4", as the rail counts — both care steps show it. */
   careStepLabel: string;
+  /**
+   * The service's own sub-steps are answered, so a care step has its days —
+   * for the services whose screens do not draw the care steps themselves.
+   */
+  careStepReady: boolean;
   feedingMedicationTab: "feeding" | "medication";
   setFeedingMedicationTab: (value: "feeding" | "medication") => void;
   extraServices: Array<{ serviceId: string; quantity: number; petId: number }>;
@@ -182,6 +192,7 @@ export function DetailsStep({
   feedingStep,
   medicationStep,
   careStepLabel,
+  careStepReady,
   extraServices,
   setExtraServices,
   selectedPets,
@@ -207,6 +218,27 @@ export function DetailsStep({
   groomingAutoAttachedAddOnIds,
   setGroomingAutoAttachedAddOnIds,
 }: DetailsStepProps) {
+  // Grooming and training have the care steps when the facility turns them
+  // on (2026-10-01), and draw them here; daycare and boarding in their own
+  // screens, as before.
+  const drawsCareSteps =
+    selectedService === "daycare" || selectedService === "boarding";
+  if (
+    !drawsCareSteps &&
+    (currentSubStep === FEEDING_SUB_STEP_ID ||
+      currentSubStep === MEDICATION_SUB_STEP_ID)
+  ) {
+    return (
+      <CareStepPanel
+        subStepId={currentSubStep}
+        ready={careStepReady}
+        feedingStep={feedingStep}
+        medicationStep={medicationStep}
+        stepLabel={careStepLabel}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Service-specific fields */}

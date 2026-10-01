@@ -41,6 +41,7 @@ interface Draft {
   service?: string;
   abandonmentStep: string;
   subStep?: number;
+  subStepId?: number;
   estimatedValue?: number;
   specialRequests?: string;
   petIds?: number[];
@@ -138,7 +139,7 @@ test.describe("an unfinished booking is kept, and resumed where it was left", ()
 
     const res = await leaveAt(page, "date_and_details", {
       estimatedValue: 184,
-      draft: { preSelectedSubStep: 3 },
+      draft: { preSelectedSubStepId: 3 },
     });
     expect(res.ok(), await res.text()).toBe(true);
 
@@ -147,8 +148,9 @@ test.describe("an unfinished booking is kept, and resumed where it was left", ()
     expect(draft!.petIds).toEqual([ALICE_PET]);
     expect(draft!.specialRequests).toBe("[e2e] left partway");
     // The sub-step is what returns them to the right QUESTION, not just the
-    // right screen. It was never saved until 2026-09-20.
-    expect(draft!.subStep).toBe(3);
+    // right screen. It was never saved until 2026-09-20, and is kept by its
+    // id since 2026-10-01 (lib/bookings/care-steps.ts).
+    expect(draft!.subStepId).toBe(3);
     // An indication for the facility, recorded when they left. Nothing prices
     // a booking from it — the wizard re-prices on resume.
     expect(draft!.estimatedValue).toBe(184);
@@ -179,9 +181,9 @@ test.describe("an unfinished booking is kept, and resumed where it was left", ()
   }) => {
     await signIn(page, ACCOUNTS.customer);
 
-    // Boarding's Details has five sub-steps; 3 is Feeding.
+    // Feeding is sub-step 3 in every flow that has it.
     await leaveAt(page, "date_and_details", {
-      draft: { preSelectedSubStep: 3 },
+      draft: { preSelectedSubStepId: 3 },
     });
     const draft = (await mine(page)).find((d) => d.service === SERVICE);
     expect(draft, "the draft is there").toBeTruthy();
@@ -191,9 +193,31 @@ test.describe("an unfinished booking is kept, and resumed where it was left", ()
     await expect(
       page.getByRole("heading", { name: "Details", exact: true }),
     ).toBeVisible({ timeout: 20_000 });
+    // The sub-step the screen is on, under its heading — not only its name
+    // in the rail, which lists every sub-step.
     await expect(
-      page.getByText("Feeding", { exact: true }).first(),
+      page.locator("h2 + p").filter({ hasText: /^Feeding$/ }),
     ).toBeVisible({ timeout: 10_000 });
+  });
+
+  test("a draft saved before ids were kept lands on the sub-step it named", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.customer);
+
+    // A customer's boarding list was schedule, add-ons, feeding, medication:
+    // position 2 was Feeding.
+    await leaveAt(page, "date_and_details", {
+      draft: { preSelectedSubStep: 2 },
+    });
+    const draft = (await mine(page)).find((d) => d.service === SERVICE);
+    expect(draft, "the draft is there").toBeTruthy();
+
+    await page.goto(`/customer/bookings/new?resumeBooking=${draft!.id}`);
+
+    await expect(
+      page.locator("h2 + p").filter({ hasText: /^Feeding$/ }),
+    ).toBeVisible({ timeout: 20_000 });
   });
 
   test("a draft for somebody else's client is refused", async ({ page }) => {

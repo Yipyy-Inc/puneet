@@ -34,7 +34,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { bookingQueries } from "@/lib/api/booking";
 import { shiftDay } from "@/lib/api/booking-list-params";
-import { useCareFees } from "@/lib/api/facility-settings";
+import { useMedicationInstructions } from "@/lib/api/facility-settings";
 import {
   useAddIncidentCare,
   useSetIncidentCareActive,
@@ -177,12 +177,13 @@ export function InStayCareTab({ incident }: { incident: Incident }) {
   const canEditCare = canManageCare && !locked;
   const addCare = useAddIncidentCare();
   const setCareActive = useSetIncidentCareActive();
-  // The facility's medication fee (2G) prefills the fee inputs. It was a
-  // fixture's fee, the same at every facility.
-  const { fees } = useCareFees();
+  // The facility's administration fee (2G) prefills the fee inputs. It was a
+  // fixture's fee, the same at every facility; it is the Medications
+  // page's own since 2026-10-01 (Settings › Feeding & medications).
+  const { instructions: medicationSetup } = useMedicationInstructions();
   const GENERAL_MED_FEE = {
-    enabled: fees.medicationAdmin.enabled,
-    amount: fees.medicationAdmin.amount,
+    enabled: medicationSetup.fee.mode !== "none",
+    amount: medicationSetup.fee.amount,
   };
 
   const [careActions, setCareActions] = useState<IncidentCareAction[]>(

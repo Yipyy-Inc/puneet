@@ -60,6 +60,7 @@ const SAME_IN_BOTH = new Set([
   // Placeholders and a separator, with no words of its own — identical by
   // construction rather than by oversight.
   "booking.clientAndPets", // {client} · {pets}
+  "booking.feedCalcOwn", // {meals} × {portion} — the packing sum (2026-10-01)
   // Two of the six coat types are spelled the same in French. "Long" is the
   // French word too, and a double coat is "double" — changing either to make
   // this list shorter would make the French wrong, which is the same reason

@@ -19,6 +19,7 @@ import {
   allergyLabel,
   foodTypeLabel,
   habitLabel,
+  houseFoodName,
   mealLabel,
   prepLabel,
   skipLabel,
@@ -28,13 +29,7 @@ import {
 import { planFromItem, type FeedingPlan, type PlanFood } from "./plan";
 import { portionAmount, portionWords, feedUnitWord } from "./portion";
 import { planDays, servedMealIds, sortedMeals } from "./schedule";
-import {
-  isEatingHabit,
-  isFeedingStyle,
-  isFoodPrep,
-  isSkipAction,
-  isTreatsChoice,
-} from "./vocabulary";
+import { isBuiltInHouseFood, isFoodPrep, isTreatsChoice } from "./vocabulary";
 
 // ============================================================================
 // A feeding plan in words, in the reader's language: the meals, one line per
@@ -61,13 +56,13 @@ export function mealCount(
 export function foodName(
   t: Translate,
   food: PlanFood,
-  settings?: Pick<HouseFoodSettings, "houseFoods">,
+  settings?: HouseFoodSettings,
 ): string {
   if (food.source === "house") {
-    return (
-      (settings && houseFoodFor(settings, food.houseFoodId)?.name) ||
-      food.houseFoodName ||
-      t("feedHouseFood")
+    return houseFoodName(
+      t,
+      settings ? houseFoodFor(settings, food.houseFoodId) : undefined,
+      food.houseFoodName,
     );
   }
   return food.brand.trim() || foodTypeLabel(t, food.type);
@@ -79,19 +74,22 @@ const lower = (text: string, locale: AppLocale) =>
 /**
  * A house food's name inside a sentence — "5 meals of House kibble". The
  * facility's name for it stays as it was typed: "Hill's Science Diet" is a
- * name, not a word to fold. Only our own fallback is lower-cased.
+ * name, not a word to fold. Only our own words — the page's three house
+ * foods, and the fallback — are lower-cased.
  */
 export function houseFoodInline(
   t: Translate,
   food: PlanFood,
   locale: AppLocale,
-  settings?: Pick<HouseFoodSettings, "houseFoods">,
+  settings?: HouseFoodSettings,
 ): string {
-  return (
-    (settings && houseFoodFor(settings, food.houseFoodId)?.name) ||
-    food.houseFoodName ||
-    lower(t("feedHouseFood"), locale)
-  );
+  const house = settings ? houseFoodFor(settings, food.houseFoodId) : undefined;
+  const own = house?.name?.trim();
+  if (own) return own;
+  if (house && isBuiltInHouseFood(house.id)) {
+    return lower(houseFoodName(t, house), locale);
+  }
+  return food.houseFoodName.trim() || lower(t("feedHouseFood"), locale);
 }
 
 /**
@@ -103,7 +101,7 @@ export function panelFoodWords(
   t: Translate,
   food: PlanFood,
   locale: AppLocale,
-  settings?: Pick<HouseFoodSettings, "houseFoods">,
+  settings?: HouseFoodSettings,
 ): string {
   const name =
     food.source === "house"
@@ -127,7 +125,7 @@ function servingWords(
   t: Translate,
   food: PlanFood,
   locale: AppLocale,
-  settings?: Pick<HouseFoodSettings, "houseFoods">,
+  settings?: HouseFoodSettings,
 ): string {
   const base = `${portionWords(t, food, locale)} ${foodName(t, food, settings)}`;
   return food.source === "own" && food.brand.trim()
@@ -141,7 +139,7 @@ export function mealWhat(
   plan: FeedingPlan,
   mealId: string,
   locale: AppLocale,
-  settings?: Pick<HouseFoodSettings, "houseFoods">,
+  settings?: HouseFoodSettings,
 ): string {
   const meals = sortedMeals(plan.meals);
   return plan.foods
@@ -179,7 +177,8 @@ export function planExtras(
   },
 ): string[] {
   const extras: string[] = [];
-  const styles = plan.styles.filter(isFeedingStyle);
+  // The facility's own quick picks read as the facility wrote them.
+  const styles = plan.styles.filter((style) => style.trim());
   if (styles.length > 0) {
     extras.push(
       fill(t("feedStyleLine"), {
@@ -190,7 +189,7 @@ export function planExtras(
       }),
     );
   }
-  const habits = plan.habits.filter(isEatingHabit);
+  const habits = plan.habits.filter((habit) => habit.trim());
   if (habits.length > 0) {
     extras.push(
       fill(t("feedHabitsLine"), {
@@ -205,7 +204,7 @@ export function planExtras(
   if (instruction) extras.push(instruction);
   const prepNotes = plan.carry.prepNotes?.trim();
   if (prepNotes) extras.push(prepNotes);
-  if (stated.skip && isSkipAction(plan.skip)) {
+  if (stated.skip && plan.skip.trim()) {
     extras.push(fill(t("feedSkipLine"), { action: skipLabel(t, plan.skip) }));
   }
   const refusal = plan.carry.refusalNotes?.trim();
@@ -256,7 +255,7 @@ export function describeFeeding(
     priced?: boolean;
   },
 ): FeedingLines {
-  const { t, locale, stay, settings, service = "", priced = true } = options;
+  const { t, locale, stay, settings, priced = true } = options;
   const plan = planFromItem(item, { settings, stay });
   const meals = sortedMeals(plan.meals);
   const days = stay.days.length > 0 ? planDays(plan, stay).length : null;
@@ -274,7 +273,7 @@ export function describeFeeding(
         served
           .map((id) => meals.find((meal) => meal.id === id))
           .filter((meal): meal is (typeof meals)[number] => Boolean(meal))
-          .map((meal) => mealLabel(t, meal, locale))
+          .map((meal) => mealLabel(t, meal, locale, settings))
           .join(", "),
       );
     }
@@ -283,7 +282,7 @@ export function describeFeeding(
       .map((prep) => prepLabel(t, prep));
     if (preps.length > 0) parts.push(preps.join(", "));
     if (food.source === "house" && days !== null) {
-      const charge = foodCharge(food, { meals, days }, settings, service);
+      const charge = foodCharge(food, { meals, days }, settings);
       if (charge && charge.quantity > 0) {
         const waived = plan.waivedFoods.includes(food.id);
         const what = fill(t("feedProvides"), {

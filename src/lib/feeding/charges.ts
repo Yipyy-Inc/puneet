@@ -13,20 +13,18 @@ import { servedMealIds, sortedMeals } from "./schedule";
 
 // ============================================================================
 // What a facility's house food adds to a booking (2026-10-01): per meal or per
-// day, as the facility prices it in Settings › Care tasks — unless it comes
-// with the service, or staff waived it. A line on the bill, written by the
+// day, as the facility prices it on Settings › Services › Feeding &
+// medications — unless it is included in the price, priced at nothing, no
+// longer offered, or waived by staff. A line on the bill, written by the
 // server with the same arithmetic the booking form quotes it with.
 // ============================================================================
 
-export type HouseFoodSettings = Pick<
-  FeedingInstructions,
-  "houseFoods" | "pricing" | "includedWith"
->;
+export type HouseFoodSettings = Pick<FeedingInstructions, "house">;
 
 /** What one house food costs over one pet's days. */
 export interface HouseFoodCharge {
   houseFoodId: string;
-  /** The facility's own name for it. */
+  /** The facility's own name for it; empty for one the page came with, named by `houseFoodName`. */
   name: string;
   per: HouseFoodPricing;
   /** Meals or days. */
@@ -34,8 +32,10 @@ export interface HouseFoodCharge {
   unitPrice: number;
   /** Nothing when included or waived. */
   amount: number;
-  /** Comes with the service, or priced at nothing. */
+  /** Included in the price, priced at nothing, or no longer offered. */
   included: boolean;
+  /** House food is on, and this one is on the facility's list. */
+  offered: boolean;
   waived: boolean;
 }
 
@@ -59,30 +59,30 @@ export function foodCharge(
   food: FoodLike,
   plan: Pick<PlanLike, "meals" | "days">,
   settings: HouseFoodSettings,
-  service: string,
 ): Omit<HouseFoodCharge, "waived"> | null {
   if (food.source !== "house") return null;
   const house = houseFoodFor(settings, food.houseFoodId);
   if (!house) return null;
   const meals = sortedMeals(plan.meals);
   const served = servedMealIds(food, meals).length;
+  const per: HouseFoodPricing =
+    settings.house.pricing === "day" ? "day" : "meal";
   const quantity =
-    settings.pricing === "day"
-      ? served > 0
-        ? plan.days
-        : 0
-      : plan.days * served;
+    per === "day" ? (served > 0 ? plan.days : 0) : plan.days * served;
   // In cents, as the bill's line stores it, so the form and the line agree.
   const unitPrice = round2(houseFoodPrice(settings, house));
-  const included = houseFoodIncluded(settings, service) || unitPrice <= 0;
+  // House food switched off, or this one taken off the list, charges nothing.
+  const offered = settings.house.on && house.on;
+  const included = houseFoodIncluded(settings) || unitPrice <= 0 || !offered;
   return {
     houseFoodId: house.id,
-    name: house.name,
-    per: settings.pricing,
+    name: house.name ?? "",
+    per,
     quantity,
     unitPrice,
     amount: included ? 0 : round2(quantity * unitPrice),
     included,
+    offered,
   };
 }
 
@@ -95,7 +95,6 @@ export function foodCharge(
 export function houseFoodCharges(
   plan: PlanLike,
   settings: HouseFoodSettings,
-  service: string,
 ): HouseFoodCharge[] {
   const meals = sortedMeals(plan.meals);
   const groups = new Map<
@@ -103,12 +102,7 @@ export function houseFoodCharges(
     { charge: Omit<HouseFoodCharge, "waived">; waived: boolean; served: number }
   >();
   for (const food of plan.foods) {
-    const charge = foodCharge(
-      food,
-      { meals, days: plan.days },
-      settings,
-      service,
-    );
+    const charge = foodCharge(food, { meals, days: plan.days }, settings);
     if (!charge) continue;
     const waived = plan.waivedFoods.includes(food.id);
     const key = `${charge.houseFoodId}:${waived}`;
@@ -120,7 +114,7 @@ export function houseFoodCharges(
     }
     existing.served += served;
     existing.charge.quantity =
-      settings.pricing === "day"
+      existing.charge.per === "day"
         ? existing.served > 0
           ? plan.days
           : 0
@@ -141,7 +135,6 @@ export function recordHouseFoodCharges(
   item: FeedingScheduleItem,
   stay: MedStay,
   settings: HouseFoodSettings,
-  service: string,
 ): HouseFoodCharge[] {
   const foods = Array.isArray(item.foods) ? item.foods : [];
   if (!foods.some((food) => food?.source === "house")) return [];
@@ -163,6 +156,5 @@ export function recordHouseFoodCharges(
       waivedFoods: Array.isArray(item.waivedFoods) ? item.waivedFoods : [],
     },
     settings,
-    service,
   );
 }

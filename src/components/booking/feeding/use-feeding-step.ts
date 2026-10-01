@@ -35,12 +35,11 @@ import {
   type FeedingDayRow,
   type PackingRow,
 } from "@/lib/feeding/schedule";
-import type { MealSlot } from "@/lib/feeding/vocabulary";
 import type { MedStay } from "@/lib/medications/schedule";
 import type { CareFees } from "@/lib/settings/care-fees";
 import {
   houseFoodIncluded,
-  mealSlotTime,
+  mealRow,
   type FeedingInstructions,
 } from "@/lib/settings/feeding-instructions";
 import { useShellLocale, useShellText } from "@/lib/shell/use-shell-text";
@@ -86,6 +85,11 @@ export interface FeedingStepInput {
   staff: boolean;
   /** Keep the plans of pets the form did not load — an edit. */
   keepOtherPets: boolean;
+  /**
+   * The facility made the step required for this service: every pet needs a
+   * plan before the form goes on. Never for an estimate.
+   */
+  required: boolean;
 }
 
 type Patch<T> = Partial<T> | ((current: T) => Partial<T>);
@@ -106,6 +110,12 @@ export interface FeedingStepState {
   dateless: boolean;
   effectiveFeeding: FeedingScheduleItem[];
   canContinue: boolean;
+  /** Every pet has a plan, where the step is required. */
+  required: boolean;
+  /** The pets with no plan yet. */
+  unplanned: { id: number; name: string }[];
+  /** Nothing more is asked of this step. */
+  complete: boolean;
   panel: {
     petName: string;
     rows: FeedingDayRow[];
@@ -124,7 +134,8 @@ export interface FeedingStepState {
   updateFood: (foodId: string, patch: Patch<PlanFood>) => void;
   addFood: () => void;
   removeFood: (foodId: string) => void;
-  toggleSlot: (slot: MealSlot) => void;
+  /** A meal time on or off — the vocabulary's, or one the facility added. */
+  toggleSlot: (slot: string) => void;
   addCustomMeal: () => void;
   setMealTime: (mealId: string, time: string) => void;
   removeMeal: (mealId: string) => void;
@@ -227,6 +238,10 @@ export function useFeedingStep(input: FeedingStepInput): FeedingStepState {
     );
   });
 
+  const unplanned = pets
+    .filter((pet) => shownPlan(pet.id) === null)
+    .map((pet) => ({ id: pet.id, name: pet.name }));
+
   const active = activePetId;
   const plan = active !== null ? shownPlan(active) : null;
   const addons = plan
@@ -238,7 +253,6 @@ export function useFeedingStep(input: FeedingStepInput): FeedingStepState {
           waivedFoods: plan.waivedFoods,
         },
         settings,
-        service,
       )
     : [];
 
@@ -287,16 +301,19 @@ export function useFeedingStep(input: FeedingStepInput): FeedingStepState {
     ),
     effectiveFeeding,
     canContinue: !blocking,
+    required: input.required,
+    unplanned,
+    complete: !input.required || unplanned.length === 0,
     panel: {
       petName: pets.find((pet) => pet.id === active)?.name ?? "",
       rows: feedingRows(plan, stay),
-      packing: plan ? packingList(plan, stay) : [],
+      packing: plan ? packingList(plan, stay, settings.extraMeals) : [],
       totalMeals: plan ? totalMeals(plan, stay) : 0,
       addons,
       addonTotal: addons
-        .filter((addon) => !addon.waived && !addon.included)
+        .filter((addon) => addon.offered && !addon.waived && !addon.included)
         .reduce((sum, addon) => sum + addon.amount, 0),
-      included: houseFoodIncluded(settings, service),
+      included: houseFoodIncluded(settings),
     },
     selectPet: (petId) => setChosenPetId(petId),
     addPlan: () => {
@@ -356,7 +373,8 @@ export function useFeedingStep(input: FeedingStepInput): FeedingStepState {
       write(active, (current) => {
         const existing = current.meals.find((meal) => meal.slot === slot);
         if (existing) return withoutMeal(current, existing.id);
-        const time = mealSlotTime(settings, slot);
+        const time = mealRow(settings, slot)?.time;
+        if (!time) return current;
         const twin = current.meals.find((meal) => meal.time === time);
         if (twin) {
           return {

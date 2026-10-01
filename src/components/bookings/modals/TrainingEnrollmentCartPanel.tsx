@@ -1,5 +1,6 @@
 "use client";
 
+import type { BookingCare } from "@/types/booking";
 import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
 import {
   formatDateLong,
@@ -17,6 +18,8 @@ import type { TrainingSelection } from "./service-details/TrainingScheduleStep";
 export interface TrainingCartItem extends TrainingSelection {
   petId: number;
   petName: string;
+  /** The dog's feeding and medications, kept when the next dog is set up. */
+  care?: BookingCare;
 }
 
 function EnrollmentRow({

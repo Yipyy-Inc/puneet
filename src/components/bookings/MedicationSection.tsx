@@ -30,15 +30,25 @@ import {
   XCircle,
   Plus,
   MessageSquare,
+  Stethoscope,
+  ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
-import type { MedicationEntry, MedicationItem } from "@/types/booking";
+import type {
+  MedicationEntry,
+  MedicationItem,
+  VetContact,
+} from "@/types/booking";
 import type { MedForm, MedFrequency } from "@/types/base";
 import { formatTime } from "@/lib/i18n/format";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import { useShellText } from "@/lib/shell/use-shell-text";
 import { useMedicationInstructions } from "@/lib/api/facility-settings";
+import { useMedicationPhotos } from "@/lib/api/booking-medication-photos";
+import { FileRow } from "@/components/ui/file-dropzone";
+import { formatFileSize } from "@/lib/i18n/format";
 import { describeMedication, formLabel } from "@/lib/medications/describe";
+import { fill as fillWords } from "@/lib/medications/dose";
 import type { MedStay } from "@/lib/medications/schedule";
 
 // ============================================================================
@@ -82,6 +92,14 @@ interface MedicationSectionProps {
   onAdd?: (item: MedicationItem) => Promise<void>;
   /** The booking's days, for "· 4 days" and what the facility supplies. */
   stay?: MedStay;
+  /** The pet, by name — for "Kofi takes no medication". */
+  petName?: string;
+  /** The owner answered that the pet takes no medication. */
+  takesNone?: boolean;
+  /** The pet's vet, as the booking's Medications step asked for it. */
+  vet?: VetContact;
+  /** The booking's ref, for the photos of its medications' labels. */
+  bookingRef?: number;
 }
 
 /**
@@ -148,10 +166,26 @@ export function MedicationSection({
   onLog,
   onAdd,
   stay,
+  petName,
+  takesNone,
+  vet,
+  bookingRef,
 }: MedicationSectionProps) {
   const { t, fill, locale } = useStaffText("bookingDetail");
   const bookingT = useShellText("booking");
   const { instructions: medicationSettings } = useMedicationInstructions();
+  // The label photos the owner or staff added, newest of each medication.
+  const photos = useMedicationPhotos(bookingRef);
+  const photoOf = (medicationId: string) =>
+    (photos.data ?? []).find((photo) => photo.medicationId === medicationId);
+  // A signed URL lasts a minute: opening one asks for a fresh one.
+  const openPhoto = async (medicationId: string) => {
+    const fresh = await photos.refetch();
+    const url = (fresh.data ?? []).find(
+      (photo) => photo.medicationId === medicationId,
+    )?.url;
+    if (url) window.open(url, "_blank", "noopener");
+  };
   // The booking's own list. It also merged the medication of FIXTURE
   // incidents matched by booking number — a real booking could show a
   // sample dog's prescription.
@@ -447,7 +481,11 @@ export function MedicationSection({
         {meds.length === 0 ? (
           <div className="py-6 text-center">
             <Pill className="text-ink-disabled mx-auto size-6" />
-            <p className="text-ink-secondary mt-2 text-sm">{t("medsNone")}</p>
+            <p className="text-ink-secondary mt-2 text-sm">
+              {takesNone && petName
+                ? fillWords(bookingT("medsTakesNone"), { pet: petName })
+                : t("medsNone")}
+            </p>
           </div>
         ) : (
           <div className="divide-line divide-y">
@@ -516,6 +554,21 @@ export function MedicationSection({
                           {med.instructions}
                         </p>
                       )}
+                      {(() => {
+                        const photo = photoOf(med.id);
+                        return photo ? (
+                          <div className="mt-2">
+                            <FileRow
+                              name={photo.name}
+                              meta={formatFileSize(photo.sizeBytes, locale)}
+                              icon={ImageIcon}
+                              thumbnailUrl={photo.url}
+                              state={{ kind: "done" }}
+                              onDownload={() => void openPhoto(med.id)}
+                            />
+                          </div>
+                        ) : null;
+                      })()}
                     </div>
                   </div>
 
@@ -634,6 +687,16 @@ export function MedicationSection({
             })}
           </div>
         )}
+
+        {/* The vet, where the owner gave one with the medications. */}
+        {vet && (vet.clinic || vet.phone) ? (
+          <p className="border-line text-meta text-ink-secondary flex items-start gap-2 border-t pt-3">
+            <Stethoscope className="mt-0.5 size-4 shrink-0" aria-hidden />
+            {fillWords(bookingT("medsVetLine"), {
+              vet: [vet.clinic, vet.phone].filter(Boolean).join(" · "),
+            })}
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   );

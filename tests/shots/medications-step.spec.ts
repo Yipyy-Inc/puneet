@@ -8,13 +8,16 @@ import { ACCOUNTS, signIn } from "../e2e/_auth";
 // PHOTOGRAPH THE MEDICATIONS STEP (2026-10-01).
 //
 // The client's page (docs/Medications_Step.html) in Yipyy's design: the step
-// empty, the editor with a half tablet staff split and pill pockets the
-// facility supplies, the saved cards with the stay's doses in the rail — and
-// below 1024px, where there is no rail, under the step. Then the setting
-// under Care tasks that decides what the step shows.
+// empty — boarding asks for an answer, so "takes no medication" is offered —
+// the editor with a half tablet staff split, pill pockets the facility
+// supplies, the pharmacy label confirmed and a photo of it, the saved cards
+// with the vet and the stay's doses in the rail — and below 1024px, where
+// there is no rail, under the step. The setting itself is photographed by
+// feeding-medications-settings.spec.ts.
 //
-// WRITES the demo facility's `medication_instructions` (pill pockets at $0.75
-// a dose) and puts the stored value back in a `finally`. Creates no booking.
+// WRITES the demo facility's `medication_instructions` (pill pockets sold at
+// $0.75 a dose, a photo of the label asked for) and puts the stored value
+// back in a `finally`. Creates no booking.
 //
 // WHAT TO LOOK FOR IN THE FILES (medications-*):
 //   · placement as the client's page has it: header and step count, pet
@@ -125,7 +128,12 @@ test("the Medications step and its setting", async ({ page }) => {
     (
       await write({
         ...stored,
-        provided: [{ method: "pill_pocket", price: 0.75, per: "dose" }],
+        methods: (stored.methods as Array<{ id: string }>).map((row) =>
+          row.id === "pill_pocket"
+            ? { ...row, sell: true, price: 0.75, per: "dose" }
+            : row,
+        ),
+        rules: { ...(stored.rules as object), photo: true },
       })
     ).ok(),
   ).toBe(true);
@@ -154,6 +162,16 @@ test("the Medications step and its setting", async ({ page }) => {
           .click();
         await dialog.locator("#meds-supply").fill("3");
         await shoot(page, `${lang}-${width}-editor`);
+        await dialog.locator("#meds-label-confirmed").click();
+        await dialog.locator('input[type="file"]').setInputFiles({
+          name: "apoquel-label.png",
+          mimeType: "image/png",
+          buffer: Buffer.from(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+            "base64",
+          ),
+        });
+        await shoot(page, `${lang}-${width}-label`);
 
         await dialog
           .getByRole("button", {
@@ -174,21 +192,6 @@ test("the Medications step and its setting", async ({ page }) => {
         await pick(dialog, "eye", "meds-method");
         await pick(dialog, "left", "meds-side");
         await shoot(page, `${lang}-${width}-drops`);
-      }
-    }
-
-    // The setting, under Care tasks.
-    for (const lang of ["en", "fr"] as const) {
-      await language(page, lang);
-      for (const width of [1440, 599]) {
-        await page.setViewportSize({ width, height: 2600 });
-        await page.goto("/facility/dashboard/settings/care-tasks");
-        await page.getByRole("switch").first().waitFor({ timeout: 60_000 });
-        await page.waitForTimeout(600);
-        await page.screenshot({
-          path: `${OUT}/medications-settings-${lang}-${width}.png`,
-          fullPage: true,
-        });
       }
     }
   } finally {

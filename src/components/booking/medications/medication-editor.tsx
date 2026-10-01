@@ -22,8 +22,11 @@ import type { MedicationStepState } from "./use-medication-step";
 
 const HINT_KEY = {
   name: "medsHintName",
+  controlled: "medsHintControlled",
   amount: "medsHintAmount",
   schedule: "medsHintSchedule",
+  supply: "medsHintSupply",
+  label: "medsHintLabel",
 } as const;
 
 export function MedicationEditor({
@@ -48,7 +51,7 @@ export function MedicationEditor({
     draftTimes(draft, step.settings).length *
     draftDays(draft, step.stay).length;
   const hint = step.problem
-    ? t(HINT_KEY[step.problem])
+    ? fill(t(HINT_KEY[step.problem]), { name })
     : fill(t("medsHintScheduled"), {
         doses: doseCountWords(t, doses, locale),
       });

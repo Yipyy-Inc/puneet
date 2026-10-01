@@ -54,6 +54,7 @@ export function BookingEditDialog({
       facilityId={booking.facilityId}
       facilityName={profile.businessName}
       editMode
+      editingRef={booking.id}
       preSelectedClientId={booking.clientId}
       preSelectedPetId={
         Array.isArray(booking.petId) ? booking.petId[0] : booking.petId
@@ -73,6 +74,9 @@ export function BookingEditDialog({
       }
       preSelectedFeedingSchedule={booking.feedingSchedule}
       preSelectedMedications={booking.medications}
+      // Answered once: an edit does not ask "takes no medication" again.
+      preSelectedNoMedication={booking.noMedication}
+      preSelectedVetContacts={booking.vetContacts}
       preSelectedSpecialRequests={booking.specialRequests}
       onCreateBooking={async (edited) => {
         // The wizard waits for this answer, and stays open on `false`.

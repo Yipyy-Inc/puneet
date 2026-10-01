@@ -12,13 +12,13 @@ import {
   unitWord,
   type Translate,
 } from "@/lib/medications/dose";
-import { draftDays, draftTimes } from "@/lib/medications/draft";
-import { supplyCheck } from "@/lib/medications/schedule";
+import { draftSupply } from "@/lib/medications/draft";
 import { DOSE } from "@/lib/medications/vocabulary";
 import { useShellLocale, useShellText } from "@/lib/shell/use-shell-text";
 import type { AppLocale } from "@/lib/language-settings";
 
 import { AllergyInput } from "./allergy-input";
+import { EditorLabelPhoto } from "./editor-label-photo";
 import {
   EditorSection,
   FieldLabel,
@@ -27,8 +27,8 @@ import type { MedicationStepState } from "./use-medication-step";
 
 // ============================================================================
 // SUPPLY & NOTES: how much is being brought against what the stay takes,
-// drug allergies, special instructions, and keeping the medication on the
-// pet's profile for next time.
+// the original pharmacy label where the facility asks for it, drug allergies,
+// special instructions, and keeping the medication on the pet's profile.
 // ============================================================================
 
 function SupplyStatus({
@@ -42,17 +42,7 @@ function SupplyStatus({
 }) {
   const draft = step.editor!.draft;
   const spec = DOSE[draft.form];
-  const doses =
-    draftTimes(draft, step.settings).length *
-    draftDays(draft, step.stay).length;
-  const typed = draft.supply.trim();
-  const brought = typed === "" ? null : Number(typed.replace(",", "."));
-  const check = supplyCheck({
-    doses,
-    amount: draft.amount,
-    wholeUnits: spec.fraction,
-    brought: brought !== null && Number.isFinite(brought) ? brought : null,
-  });
+  const check = draftSupply(draft, step);
   const words = (n: number) =>
     `${formatDecimal(n, locale, 2)} ${unitWord(t, draft.unit, n, locale, draft.customUnit)}`;
 
@@ -107,8 +97,14 @@ export function EditorSupply({
   const t = useShellText("booking");
   const locale = useShellLocale();
   const draft = step.editor!.draft;
-  const { show } = step.settings;
-  if (!show.supply && !show.allergies && !show.notes && !show.saveToProfile) {
+  const { show, rules } = step.settings;
+  if (
+    !show.supply &&
+    !rules.label &&
+    !show.allergies &&
+    !show.notes &&
+    !show.saveToProfile
+  ) {
     return null;
   }
 
@@ -126,15 +122,7 @@ export function EditorSupply({
                 inputMode="decimal"
                 value={draft.supply}
                 placeholder={(() => {
-                  const doses =
-                    draftTimes(draft, step.settings).length *
-                    draftDays(draft, step.stay).length;
-                  const need = supplyCheck({
-                    doses,
-                    amount: draft.amount,
-                    wholeUnits: DOSE[draft.form].fraction,
-                    brought: null,
-                  });
+                  const need = draftSupply({ ...draft, supply: "" }, step);
                   return need.kind === "unscheduled"
                     ? ""
                     : formatDecimal(need.need, locale, 2);
@@ -152,6 +140,32 @@ export function EditorSupply({
           </div>
         </div>
       ) : null}
+
+      {rules.label ? (
+        <div className="border-line flex items-start gap-3 rounded-xl border px-4 py-3.5">
+          <Checkbox
+            id="meds-label-confirmed"
+            checked={draft.labelConfirmed}
+            onCheckedChange={(on) =>
+              step.update({ labelConfirmed: on === true })
+            }
+            className="mt-0.5"
+          />
+          <label
+            htmlFor="meds-label-confirmed"
+            className="flex cursor-pointer flex-col gap-0.5"
+          >
+            <span className="text-body-strong text-body-ink">
+              {t("medsLabelConfirm")}
+            </span>
+            <span className="text-meta text-ink-tertiary">
+              {t("medsLabelConfirmHelp")}
+            </span>
+          </label>
+        </div>
+      ) : null}
+
+      <EditorLabelPhoto step={step} />
 
       {show.allergies ? (
         <div className="flex min-w-0 flex-col gap-2.5">

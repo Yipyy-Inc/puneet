@@ -5,7 +5,6 @@ import Link from "next/link";
 import { toast } from "sonner";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SaveBar } from "@/components/ui/save-bar";
@@ -23,34 +22,21 @@ import {
   useSaveFacilitySetting,
 } from "@/lib/api/facility-settings";
 import {
-  CARE_FEE_SERVICES,
   careFeesSchema,
   type CareFees,
   type FeedingFeeScope,
-  type MedicationFeeScope,
 } from "@/lib/settings/care-fees";
 import { useSettingsHref } from "@/lib/settings/use-settings-href";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
-// Medication and daycare feeding fees — what the New booking form adds to a
-// bill. They were a fixture's numbers, charged at every facility, with no
-// screen to change them; see lib/settings/care-fees.ts. Nothing is charged
-// until a facility turns a fee on here.
+// The daycare meals fee — what the New booking form adds to a daycare bill.
+// It was a fixture's number, charged at every facility, with no screen to
+// change it; see lib/settings/care-fees.ts. Nothing is charged until a
+// facility turns it on here. The medication fees moved, with what a facility
+// sells to give a medication with, to Settings › Services › Feeding &
+// medications (2026-10-01).
 // ============================================================================
-
-const SERVICE_KEY: Record<(typeof CARE_FEE_SERVICES)[number], string> = {
-  boarding: "svcBoarding",
-  daycare: "svcDaycare",
-  grooming: "svcGrooming",
-  training: "svcTraining",
-};
-
-const MEDICATION_SCOPES: { value: MedicationFeeScope; key: string }[] = [
-  { value: "per_medication", key: "scopePerMedication" },
-  { value: "per_pet", key: "scopePerPet" },
-  { value: "flat", key: "scopeFlat" },
-];
 
 const FEEDING_SCOPES: { value: FeedingFeeScope; key: string }[] = [
   { value: "per_pet", key: "scopePerPet" },
@@ -115,7 +101,6 @@ function CareFeesEditor({ initial }: { initial: CareFees }) {
     );
   };
 
-  const med = draft.medicationAdmin;
   const feeding = draft.daycareFeeding;
 
   return (
@@ -125,104 +110,9 @@ function CareFeesEditor({ initial }: { initial: CareFees }) {
         <p className="text-muted-foreground mt-1 text-sm">{t("feesHelp")}</p>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* ── Giving medication ─────────────────────────────────────── */}
-        <section className="space-y-3" aria-labelledby="fee-med-title">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <h3 id="fee-med-title" className="text-[15px] font-semibold">
-                {t("medAdminTitle")}
-              </h3>
-              <p className="text-muted-foreground text-sm">
-                {t("medAdminHelp")}
-              </p>
-            </div>
-            <Switch
-              checked={med.enabled}
-              aria-label={t("feeEnabled")}
-              onCheckedChange={(enabled) =>
-                update("medicationAdmin", { enabled })
-              }
-            />
-          </div>
-          {med.enabled && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="min-w-0 space-y-1.5">
-                <Label htmlFor="fee-med-amount">{t("feeAmount")}</Label>
-                <Input
-                  id="fee-med-amount"
-                  type="number"
-                  inputMode="decimal"
-                  min={0}
-                  max={1000}
-                  step={0.01}
-                  className="tabular-nums"
-                  value={String(med.amount)}
-                  onChange={(event) =>
-                    update("medicationAdmin", {
-                      amount: amountOf(event.target.value),
-                    })
-                  }
-                />
-              </div>
-              <div className="min-w-0 space-y-1.5">
-                <Label htmlFor="fee-med-scope">{t("feeScope")}</Label>
-                <Select
-                  value={med.scope}
-                  onValueChange={(scope) =>
-                    update("medicationAdmin", {
-                      scope: scope as MedicationFeeScope,
-                    })
-                  }
-                >
-                  <SelectTrigger id="fee-med-scope">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MEDICATION_SCOPES.map((scope) => (
-                      <SelectItem key={scope.value} value={scope.value}>
-                        {t(scope.key)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <fieldset className="min-w-0 space-y-2 sm:col-span-2">
-                <legend className="text-sm font-medium">
-                  {t("feeServices")}
-                </legend>
-                <div className="flex flex-wrap gap-x-6 gap-y-2">
-                  {CARE_FEE_SERVICES.map((service) => {
-                    const id = `fee-med-service-${service}`;
-                    return (
-                      <div key={service} className="flex items-center gap-2">
-                        <Checkbox
-                          id={id}
-                          checked={med.services.includes(service)}
-                          onCheckedChange={(checked) =>
-                            update("medicationAdmin", {
-                              services: checked
-                                ? [...med.services, service]
-                                : med.services.filter((s) => s !== service),
-                            })
-                          }
-                        />
-                        <Label htmlFor={id} className="font-normal">
-                          {t(SERVICE_KEY[service])}
-                        </Label>
-                      </div>
-                    );
-                  })}
-                </div>
-              </fieldset>
-            </div>
-          )}
-        </section>
-
-        {/* ── What the facility supplies, priced elsewhere ───────────── */}
-        {/* A pill pocket is priced per dose or per day beside the way of
-            giving it prices, in the medication instructions (2026-10-01). */}
+        {/* ── Medication fees, priced with the Medications step ─────── */}
         <section
-          className="flex flex-wrap items-start justify-between gap-3 border-t pt-6"
+          className="flex flex-wrap items-start justify-between gap-3"
           aria-labelledby="fee-supplies-title"
         >
           <div className="min-w-0">
@@ -234,7 +124,7 @@ function CareFeesEditor({ initial }: { initial: CareFees }) {
             </p>
           </div>
           <Link
-            href={settingsPath("care-tasks")}
+            href={settingsPath("feeding-medications")}
             className="text-primary shrink-0 font-medium hover:underline"
           >
             {t("suppliesMovedLink")}

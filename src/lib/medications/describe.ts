@@ -21,11 +21,14 @@ import {
   asksForSide,
   DOSE,
   isMedUnit,
-  isProvidable,
   pageFormOf,
+  TIME_SLOT_IDS,
   type MedPageForm,
 } from "@/lib/medications/vocabulary";
-import type { MedicationInstructions } from "@/lib/settings/medication-instructions";
+import {
+  isCustomMethod,
+  type MedicationInstructions,
+} from "@/lib/settings/medication-instructions";
 import type { MedicationItem } from "@/types/booking";
 
 // ============================================================================
@@ -51,14 +54,47 @@ export function methodLabel(t: Translate, method: string): string {
   return t(`medsMethod${pascal(method)}`);
 }
 
+/**
+ * A way of giving's name: the vocabulary's in the reader's words, or one the
+ * facility added, as it wrote it (`label` — its row's, or what a booking stored).
+ */
+export function methodName(
+  t: Translate,
+  method: string,
+  label?: string,
+): string {
+  return isCustomMethod(method)
+    ? label?.trim() || t("medsMethodOther")
+    : methodLabel(t, method);
+}
+
 /** "Pill pockets" — what a supplied item's line on the bill is called. */
-export function providedLineName(t: Translate, method: string): string {
-  return t(`medsLine${pascal(method)}`);
+export function providedLineName(
+  t: Translate,
+  method: string,
+  label?: string,
+): string {
+  return isCustomMethod(method)
+    ? label?.trim() || t("medsMethodOther")
+    : t(`medsLine${pascal(method)}`);
 }
 
 /** "Morning", "Bedtime". */
 export function slotLabel(t: Translate, slot: string): string {
   return t(`medsSlot${pascal(slot)}`);
+}
+
+/** A dose time's name: the facility's words, else the vocabulary's. */
+export function doseTimeName(
+  t: Translate,
+  row: { id: string; label?: string },
+): string {
+  return (
+    row.label?.trim() ||
+    ((TIME_SLOT_IDS as readonly string[]).includes(row.id)
+      ? slotLabel(t, row.id)
+      : "")
+  );
 }
 
 /** The line of guidance a form carries — capsules, liquids, injections. */
@@ -72,7 +108,10 @@ export function itemWord(
   method: string,
   count: number,
   locale: AppLocale,
+  label?: string,
 ): string {
+  // The facility's own way of giving has one name, as it wrote it.
+  if (isCustomMethod(method)) return methodName(t, method, label);
   const one = isPluralOne(count, locale);
   return t(`medsItem${pascal(method)}${one ? "One" : "Other"}`);
 }
@@ -147,7 +186,7 @@ export function describeMedication(
     t: Translate;
     locale: AppLocale;
     stay?: MedStay;
-    settings?: Pick<MedicationInstructions, "provided">;
+    settings?: Pick<MedicationInstructions, "methods">;
     /**
      * Say what the supplied item costs. The booking form does; the booking
      * page does not — the bill has the line, and a price changed since would
@@ -169,12 +208,21 @@ export function describeMedication(
     scheduleParts.push(dayCount(t, activeDays(item, stay).length, locale));
   }
 
+  const ownLabel = (method: string) =>
+    settings?.methods.find((row) => row.id === method)?.label ??
+    item.methodLabel;
   let method = item.givenWith
-    ? methodLabel(t, item.givenWith)
+    ? methodName(t, item.givenWith, ownLabel(item.givenWith))
     : t("medsMethodNotSet");
   const charge = stay && settings ? providedCharge(item, stay, settings) : null;
   if (charge && charge.quantity > 0) {
-    const items = itemWord(t, charge.method, charge.quantity, locale);
+    const items = itemWord(
+      t,
+      charge.method,
+      charge.quantity,
+      locale,
+      charge.label,
+    );
     method += ` · ${
       priced || charge.waived
         ? fill(t("medsFacilityProvidesLine"), {
@@ -189,15 +237,18 @@ export function describeMedication(
             items,
           })
     }`;
-  } else if (
-    item.facilityProvidesMedAid &&
-    isProvidable(item.facilityMedAidItem)
-  ) {
+  } else if (item.facilityProvidesMedAid && item.facilityMedAidItem) {
     // Supplied, with no count to give: no days left in the stay, or the
     // facility no longer lists it. Whoever gives the dose still has to know
     // the pill pocket is theirs to find.
     method += ` · ${fill(t("medsFacilityProvidesItems"), {
-      items: itemWord(t, item.facilityMedAidItem, 2, locale),
+      items: itemWord(
+        t,
+        item.facilityMedAidItem,
+        2,
+        locale,
+        ownLabel(item.facilityMedAidItem),
+      ),
     })}`;
   }
 
@@ -219,6 +270,8 @@ export function describeMedication(
       }),
     );
   }
+  if (item.controlled) extras.push(t("medsControlledLine"));
+  if (item.labelConfirmed) extras.push(t("medsLabelConfirmedLine"));
   if (item.notes?.trim()) extras.push(item.notes.trim());
 
   return {

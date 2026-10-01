@@ -1,9 +1,8 @@
+import { feedingFeeApplies, type CareFees } from "@/lib/settings/care-fees";
 import {
-  feedingFeeApplies,
+  injectionFeeApplies,
+  isCustomMethod,
   medicationFeeApplies,
-  type CareFees,
-} from "@/lib/settings/care-fees";
-import {
   providedFor,
   type MedicationInstructions,
   type ProvidedPer,
@@ -18,7 +17,7 @@ import {
   doseCount,
   type MedStay,
 } from "@/lib/medications/schedule";
-import type { ProvidableMethod } from "@/lib/medications/vocabulary";
+import { pageFormOf } from "@/lib/medications/vocabulary";
 import type { HouseFoodPricing } from "@/lib/settings/feeding-instructions";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
 
@@ -47,6 +46,13 @@ import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
 // times × the days each plan is served — not one day's meals, which is what it
 // counted until feeding had days of its own (2026-10-01).
 //
+// ── THE ADMINISTRATION FEE COUNTS THE STAY ────────────────────────────────
+//
+// Per dose, per pet per day, or per medication per day (2026-10-01, the
+// client's settings page): every part's own days, summed over the request.
+// Injections add their own fee per injection given, on top. Both apply only
+// where the facility's Medications step appears for the service.
+//
 // ── ONE LINE PER THING SUPPLIED ───────────────────────────────────────────
 //
 // `care:provided:pill_pocket`, not one line per medication: the fees report
@@ -63,11 +69,20 @@ export interface CarePart {
 
 export interface CareChargeLine {
   feeId: string;
-  kind: "medication_fee" | "meals" | "provided" | "house_food";
-  /** For `provided`: what is supplied. */
-  method?: ProvidableMethod;
-  /** For `house_food`: which, and the facility's own name for it. */
+  kind:
+    | "medication_fee"
+    | "injection_fee"
+    | "meals"
+    | "provided"
+    | "house_food";
+  /** For `provided`: what is supplied — the vocabulary's, or the facility's own. */
+  method?: string;
+  /** For `house_food`: which. */
   houseFoodId?: string;
+  /**
+   * The facility's own name for a house food or a way of giving it added;
+   * empty for the vocabulary's, which a screen names in its reader's words.
+   */
   label?: string;
   per?: ProvidedPer | HouseFoodPricing;
   quantity: number;
@@ -81,6 +96,7 @@ export interface CareChargeLine {
 }
 
 export const MEDICATION_FEE_ID = "care:medication-fee";
+export const INJECTION_FEE_ID = "care:injection-fee";
 export const MEALS_FEE_ID = "care:meals";
 export const providedFeeId = (method: string) => `care:provided:${method}`;
 export const houseFoodFeeId = (houseFoodId: string) =>
@@ -106,9 +122,11 @@ function uniqueById<T extends { id: string }>(items: T[]): T[] {
 export function providedCharge(
   item: MedicationItem,
   stay: MedStay,
-  settings: Pick<MedicationInstructions, "provided">,
+  settings: Pick<MedicationInstructions, "methods">,
 ): {
-  method: ProvidableMethod;
+  method: string;
+  /** The facility's name for its own way of giving; empty for the vocabulary's. */
+  label: string;
   per: ProvidedPer;
   quantity: number;
   unitPrice: number;
@@ -125,7 +143,10 @@ export function providedCharge(
   // In cents, as the bill's line stores it, so the form and the line agree.
   const unitPrice = round2(supplied.price);
   return {
-    method: supplied.method,
+    method: supplied.id,
+    label: isCustomMethod(supplied.id)
+      ? supplied.label?.trim() || item.methodLabel?.trim() || ""
+      : "",
     per: supplied.per,
     quantity,
     unitPrice,
@@ -140,8 +161,13 @@ export function providedCharge(
  * cancelled first.
  */
 export function careChargeLines(input: {
+  /** The daycare meals fee. */
   fees: CareFees;
-  settings: Pick<MedicationInstructions, "provided">;
+  /** The administration and injection fees, and what the facility sells. */
+  settings: Pick<
+    MedicationInstructions,
+    "methods" | "fee" | "services" | "forms"
+  >;
   /** The facility's house food. None: nothing to charge for it. */
   feedingSettings?: HouseFoodSettings;
   service: string;
@@ -151,27 +177,36 @@ export function careChargeLines(input: {
   if (input.parts.length === 0) return lines;
 
   // ── Once per request ────────────────────────────────────────────────────
-  const medications = uniqueById(
-    input.parts.flatMap((part) => part.medications),
-  );
-  if (
-    medications.length > 0 &&
-    medicationFeeApplies(input.fees, input.service)
-  ) {
-    const { scope } = input.fees.medicationAdmin;
-    const amount = round2(input.fees.medicationAdmin.amount);
-    const quantity =
-      scope === "per_medication"
-        ? medications.length
-        : scope === "per_pet"
-          ? new Set(medications.map((m) => m.petId)).size || 1
-          : 1;
+  const quantity = medicationFeeQuantity(input.parts, input.settings.fee.mode);
+  if (quantity > 0 && medicationFeeApplies(input.settings, input.service)) {
+    const amount = round2(input.settings.fee.amount);
     lines[0].push({
       feeId: MEDICATION_FEE_ID,
       kind: "medication_fee",
       quantity,
       unitPrice: amount,
       amount: round2(quantity * amount),
+      taxedAs: "service",
+    });
+  }
+
+  // Every injection given over the request, on top of the fee above.
+  const injections = input.parts.reduce(
+    (sum, part) =>
+      sum +
+      uniqueById(part.medications)
+        .filter((item) => pageFormOf(item.form) === "injection")
+        .reduce((doses, item) => doses + doseCount(item, part.stay), 0),
+    0,
+  );
+  if (injections > 0 && injectionFeeApplies(input.settings, input.service)) {
+    const amount = round2(input.settings.fee.injection);
+    lines[0].push({
+      feeId: INJECTION_FEE_ID,
+      kind: "injection_fee",
+      quantity: injections,
+      unitPrice: amount,
+      amount: round2(injections * amount),
       taxedAs: "service",
     });
   }
@@ -209,14 +244,15 @@ export function careChargeLines(input: {
   // ── Per part: what the facility supplies ──────────────────────────────
   input.parts.forEach((part, index) => {
     const byMethod = new Map<
-      ProvidableMethod,
-      { quantity: number; unitPrice: number; per: ProvidedPer }
+      string,
+      { label: string; quantity: number; unitPrice: number; per: ProvidedPer }
     >();
     for (const item of uniqueById(part.medications)) {
       const charge = providedCharge(item, part.stay, input.settings);
       if (!charge || charge.waived || charge.quantity <= 0) continue;
       const sum = byMethod.get(charge.method);
       byMethod.set(charge.method, {
+        label: charge.label,
         quantity: (sum?.quantity ?? 0) + charge.quantity,
         unitPrice: charge.unitPrice,
         per: charge.per,
@@ -227,6 +263,7 @@ export function careChargeLines(input: {
         feeId: providedFeeId(method),
         kind: "provided",
         method,
+        ...(sum.label ? { label: sum.label } : {}),
         per: sum.per,
         quantity: sum.quantity,
         unitPrice: sum.unitPrice,
@@ -251,7 +288,6 @@ export function careChargeLines(input: {
         item,
         part.stay,
         input.feedingSettings,
-        input.service,
       )) {
         if (charge.waived || charge.included || charge.quantity <= 0) continue;
         const sum = byFood.get(charge.houseFoodId);
@@ -279,6 +315,43 @@ export function careChargeLines(input: {
   });
 
   return lines;
+}
+
+/**
+ * What the administration fee counts over the request: doses, days a pet is
+ * given something, or days each medication is given — each part over its own
+ * days and pets.
+ */
+function medicationFeeQuantity(
+  parts: CarePart[],
+  mode: MedicationInstructions["fee"]["mode"],
+): number {
+  if (mode === "none") return 0;
+  let quantity = 0;
+  for (const part of parts) {
+    const items = uniqueById(part.medications);
+    if (mode === "dose") {
+      quantity += items.reduce(
+        (sum, item) => sum + doseCount(item, part.stay),
+        0,
+      );
+    } else if (mode === "med_day") {
+      quantity += items.reduce(
+        (sum, item) => sum + activeDays(item, part.stay).length,
+        0,
+      );
+    } else {
+      // A pet given anything that day is one pet-day, however many medications.
+      const daysByPet = new Map<number | undefined, Set<string>>();
+      for (const item of items) {
+        const days = daysByPet.get(item.petId) ?? new Set<string>();
+        for (const day of activeDays(item, part.stay)) days.add(day);
+        daysByPet.set(item.petId, days);
+      }
+      for (const days of daysByPet.values()) quantity += days.size;
+    }
+  }
+  return quantity;
 }
 
 /** A plan's meals a day: its occasions with a time, each time once. */

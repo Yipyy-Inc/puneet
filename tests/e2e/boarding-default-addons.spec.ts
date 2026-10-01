@@ -1,6 +1,7 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 
+import { answerCareSteps } from "./_wizard";
 import { ACCOUNTS, signIn } from "./_auth";
 import { cancelBookingsMarked } from "./_sweep";
 
@@ -220,6 +221,8 @@ function nextMonthTuesday(): [number, number] {
 }
 
 async function next(dialog: Locator) {
+  // Boarding ships with its Medications step required (answerCareSteps).
+  await answerCareSteps(dialog);
   await dialog.getByRole("button", { name: /^next$/i }).click();
 }
 

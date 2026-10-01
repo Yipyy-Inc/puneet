@@ -75,9 +75,14 @@ const DAYCARE: MedStay = stayOf({
   dates: ["2026-03-19", "2026-03-17", "2026-03-23"],
 });
 
+/** The facility sells pill pockets, at the design's $0.75 a dose. */
 const WITH_POCKETS: MedicationInstructions = {
   ...SHIPPED_MEDICATION_INSTRUCTIONS,
-  provided: [{ method: "pill_pocket", price: 0.75, per: "dose" }],
+  methods: SHIPPED_MEDICATION_INSTRUCTIONS.methods.map((row) =>
+    row.id === "pill_pocket"
+      ? { ...row, sell: true, price: 0.75, per: "dose" as const }
+      : row,
+  ),
 };
 
 /** The mock's Bella: Apoquel 16 mg, morning and evening, in a pill pocket. */
@@ -446,6 +451,7 @@ describe("the editor and the record it saves", () => {
       name: "Apoquel",
       dayRule: "certain_dates" as const,
       certainDays: [],
+      labelConfirmed: true,
     };
     expect(draftProblem(draft, context)).toBe("schedule");
     expect(
@@ -457,6 +463,48 @@ describe("the editor and the record it saves", () => {
         context,
       ),
     ).toBe("amount");
+  });
+
+  test("the safety rules: the label, the supply, controlled substances", () => {
+    const draft = {
+      ...blankDraft(1, context),
+      name: "Apoquel",
+      supply: "2",
+    };
+    // The pharmacy label is asked for as the page ships.
+    expect(draftProblem(draft, context)).toBe("label");
+    const labelled = { ...draft, labelConfirmed: true };
+    // A short supply warns as the page ships, and stops the medication
+    // where the facility requires enough.
+    expect(draftProblem(labelled, context)).toBe(null);
+    const strict: DraftContext = {
+      ...context,
+      settings: { ...context.settings, supply: "block" },
+    };
+    expect(draftProblem(labelled, strict)).toBe("supply");
+    // Controlled substances are refused as the page ships, by any name.
+    expect(
+      draftProblem({ ...labelled, name: "Gabapentin", supply: "99" }, context),
+    ).toBe("controlled");
+    expect(
+      draftProblem(
+        { ...labelled, name: "neurontin 100mg", supply: "99" },
+        context,
+      ),
+    ).toBe("controlled");
+    const accepting: DraftContext = {
+      ...context,
+      settings: {
+        ...context.settings,
+        rules: { ...context.settings.rules, controlled: true },
+      },
+    };
+    expect(
+      draftProblem(
+        { ...labelled, name: "Gabapentin", supply: "99" },
+        accepting,
+      ),
+    ).toBe(null);
   });
 });
 
@@ -516,13 +564,12 @@ describe("the pet's profile", () => {
 
 describe("what the medications add to the bill", () => {
   const FEES: CareFees = {
-    medicationAdmin: {
-      enabled: true,
-      amount: 4,
-      scope: "per_medication",
-      services: ["boarding", "daycare"],
-    },
     daycareFeeding: { enabled: true, amount: 3, scope: "per_meal" },
+  };
+  // And an administration fee: $0.50 a dose (the Feeding & medications page).
+  const WITH_FEE: MedicationInstructions = {
+    ...WITH_POCKETS,
+    fee: { mode: "dose", amount: 0.5, injection: 5 },
   };
 
   test("pill pockets: 8 doses × $0.75 = $6.00, as the design shows", () => {
@@ -537,9 +584,9 @@ describe("what the medications add to the bill", () => {
 
   test("per day counts the days given, not the doses", () => {
     const perDay = {
-      provided: [
-        { method: "pill_pocket" as const, price: 0.75, per: "day" as const },
-      ],
+      methods: WITH_POCKETS.methods.map((row) =>
+        row.id === "pill_pocket" ? { ...row, per: "day" as const } : row,
+      ),
     };
     expect(providedCharge(APOQUEL, BOARDING, perDay)?.quantity).toBe(4);
   });
@@ -611,14 +658,15 @@ describe("what the medications add to the bill", () => {
     }));
     const lines = careChargeLines({
       fees: FEES,
-      settings: WITH_POCKETS,
+      settings: WITH_FEE,
       service: "daycare",
       parts,
     });
-    // The meals fee counts every meal served over the request — one a day,
-    // three days — still once, on the first booking (2026-10-01).
+    // The administration fee counts every dose over the request — two a
+    // day, three days — and the meals fee every meal served, one a day: both
+    // once, on the first booking (2026-10-01).
     expect(lines[0].map((line) => [line.feeId, line.quantity])).toEqual([
-      [MEDICATION_FEE_ID, 1],
+      [MEDICATION_FEE_ID, 6],
       [MEALS_FEE_ID, 3],
       [providedFeeId("pill_pocket"), 2],
     ]);
@@ -630,13 +678,13 @@ describe("what the medications add to the bill", () => {
   test("the parts add up to what the form showed for the whole request", () => {
     const whole = careChargeLines({
       fees: FEES,
-      settings: WITH_POCKETS,
+      settings: WITH_FEE,
       service: "daycare",
       parts: [{ stay: DAYCARE, medications: [APOQUEL] }],
     });
     const split = careChargeLines({
       fees: FEES,
-      settings: WITH_POCKETS,
+      settings: WITH_FEE,
       service: "daycare",
       parts: DAYCARE.days.map((day) => ({
         stay: { days: [day], overnight: false },
@@ -648,13 +696,13 @@ describe("what the medications add to the bill", () => {
     const rex = { ...APOQUEL, id: "med-rex", petId: 2 };
     const boardingWhole = careChargeLines({
       fees: FEES,
-      settings: WITH_POCKETS,
+      settings: WITH_FEE,
       service: "boarding",
       parts: [{ stay: BOARDING, medications: [APOQUEL, rex] }],
     });
     const boardingSplit = careChargeLines({
       fees: FEES,
-      settings: WITH_POCKETS,
+      settings: WITH_FEE,
       service: "boarding",
       parts: [
         { stay: BOARDING, medications: [APOQUEL] },
@@ -718,7 +766,10 @@ describe("the facility's settings", () => {
       medicationInstructionsSchema.safeParse(SHIPPED_MEDICATION_INSTRUCTIONS)
         .success,
     ).toBe(true);
-    expect(SHIPPED_MEDICATION_INSTRUCTIONS.provided).toEqual([]);
+    expect(
+      SHIPPED_MEDICATION_INSTRUCTIONS.methods.some((row) => row.sell),
+    ).toBe(false);
+    expect(SHIPPED_MEDICATION_INSTRUCTIONS.fee.mode).toBe("none");
   });
 
   test("a page with no way to pick a time is refused", () => {
@@ -727,7 +778,7 @@ describe("the facility's settings", () => {
       customTimes: false,
       times: SHIPPED_MEDICATION_INSTRUCTIONS.times.map((slot) => ({
         ...slot,
-        enabled: false,
+        on: false,
       })),
     };
     expect(medicationInstructionsSchema.safeParse(none).success).toBe(false);
@@ -743,7 +794,9 @@ describe("the facility's settings", () => {
     expect(
       medicationInstructionsSchema.safeParse({
         ...SHIPPED_MEDICATION_INSTRUCTIONS,
-        provided: [{ method: "pill_pocket", price: -1, per: "dose" }],
+        methods: WITH_POCKETS.methods.map((row) =>
+          row.id === "pill_pocket" ? { ...row, price: -1 } : row,
+        ),
       }).success,
     ).toBe(false);
   });

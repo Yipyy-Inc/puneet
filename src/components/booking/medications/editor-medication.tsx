@@ -1,5 +1,7 @@
 "use client";
 
+import { Info, TriangleAlert } from "lucide-react";
+
 import { ChoicePill } from "@/components/ui/choice-pill";
 import { Input } from "@/components/ui/input";
 import { Segmented } from "@/components/ui/segmented";
@@ -14,11 +16,14 @@ import {
   unitOption,
   unitWord,
 } from "@/lib/medications/dose";
+import { controlledSubstance } from "@/lib/medications/controlled";
 import {
   DOSE,
+  MED_FORMS,
   METHODS_BY_FORM,
   type MedPageForm,
 } from "@/lib/medications/vocabulary";
+import { isCustomMethod } from "@/lib/settings/medication-instructions";
 import { useShellLocale, useShellText } from "@/lib/shell/use-shell-text";
 
 import { AmountStepper } from "@/components/booking/care/amount-stepper";
@@ -31,7 +36,9 @@ import type { MedicationStepState } from "./use-medication-step";
 // ============================================================================
 // MEDICATION: its name and strength, its form, and one dose — the quick
 // picks, − / +, the unit where a form has more than one, "who splits them?"
-// for a half or a quarter, and the form's own note.
+// for a half or a quarter, and the form's own note. The facility's rules show
+// here too: a controlled substance it does not accept, the forms it does not
+// give, and whether its staff split tablets.
 // ============================================================================
 
 export function EditorMedication({ step }: { step: MedicationStepState }) {
@@ -62,12 +69,19 @@ export function EditorMedication({ step }: { step: MedicationStepState }) {
       form,
       unit: DOSE[form].units[0],
       amount: 1,
+      // Its own ways of giving suit every form.
       method:
-        current.method && METHODS_BY_FORM[form].includes(current.method)
+        current.method &&
+        ((METHODS_BY_FORM[form] as readonly string[]).includes(
+          current.method,
+        ) ||
+          isCustomMethod(current.method))
           ? current.method
           : "",
     }));
   };
+
+  const controlled = controlledSubstance(draft.name) !== null;
 
   return (
     <EditorSection label={t("medsSectionMedication")}>
@@ -82,6 +96,22 @@ export function EditorMedication({ step }: { step: MedicationStepState }) {
             placeholder={t("medsNamePlaceholder")}
             onChange={(event) => step.update({ name: event.target.value })}
           />
+          {controlled ? (
+            settings.rules.controlled ? (
+              <p className="text-meta text-ink-secondary flex items-start gap-2">
+                <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
+                {t("medsControlledAccepted")}
+              </p>
+            ) : (
+              <p
+                role="alert"
+                className="text-meta text-destructive flex items-start gap-2"
+              >
+                <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+                {fill(t("medsControlledRefused"), { name: draft.name.trim() })}
+              </p>
+            )
+          ) : null}
         </div>
         {settings.show.strength ? (
           <div className="flex min-w-0 flex-col gap-1.5">
@@ -123,6 +153,13 @@ export function EditorMedication({ step }: { step: MedicationStepState }) {
             </ChoicePill>
           ))}
         </div>
+        {/* Forms the facility does not give: the owner calls instead. */}
+        {settings.forms.length < MED_FORMS.length ? (
+          <p className="text-meta text-ink-tertiary flex items-start gap-2">
+            <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
+            {t("medsFormsMissingNote")}
+          </p>
+        ) : null}
       </fieldset>
 
       <div className="flex min-w-0 flex-col gap-3">
@@ -212,7 +249,14 @@ export function EditorMedication({ step }: { step: MedicationStepState }) {
           </span>
         </div>
 
-        {spec.splittable && isFractional(draft.amount) ? (
+        {spec.splittable && isFractional(draft.amount) && !settings.split ? (
+          <p className="text-meta text-ink-secondary flex items-start gap-2">
+            <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
+            {t("medsBringSplit")}
+          </p>
+        ) : null}
+
+        {spec.splittable && isFractional(draft.amount) && settings.split ? (
           <div className="border-line flex flex-wrap items-center gap-2.5 rounded-xl border px-3.5 py-3">
             <span className="text-body text-body-ink">
               {fill(t("medsSplitQuestion"), { dose })}

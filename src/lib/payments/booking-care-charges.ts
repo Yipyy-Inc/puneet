@@ -7,6 +7,7 @@ import {
   type CareChargeLine,
   type CarePart,
 } from "@/lib/medications/charges";
+import { houseFoodName } from "@/lib/feeding/labels";
 import { providedLineName } from "@/lib/medications/describe";
 import { round2 } from "@/lib/medications/dose";
 import { stayOf } from "@/lib/medications/schedule";
@@ -308,10 +309,14 @@ async function planRequest(
 
 function lineName(t: (key: string) => string, line: CareChargeLine): string {
   if (line.kind === "medication_fee") return t("feeMedicationAdmin");
+  if (line.kind === "injection_fee") return t("feeInjection");
   if (line.kind === "meals") return t("feeDaycareFeeding");
-  // The facility's own name for its house food, as its settings say it.
-  if (line.kind === "house_food") return line.label || t("feedHouseFood");
-  return providedLineName(t, line.method ?? "");
+  // The facility's own name for its house food, as its settings say it — or
+  // the page's, in the reader's words, for one it came with.
+  if (line.kind === "house_food") {
+    return houseFoodName(t, { id: line.houseFoodId, name: line.label });
+  }
+  return providedLineName(t, line.method ?? "", line.label);
 }
 
 /** The booking's medications, as far as they can be read. */

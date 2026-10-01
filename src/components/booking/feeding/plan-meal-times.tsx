@@ -9,7 +9,7 @@ import {
 import { OptionCards } from "@/components/booking/care/option-cards";
 import { ChoicePill } from "@/components/ui/choice-pill";
 import { mealCount } from "@/lib/feeding/describe";
-import { mealSlotLabel } from "@/lib/feeding/labels";
+import { mealLabel } from "@/lib/feeding/labels";
 import { offeredFeedingDayRules } from "@/lib/feeding/plan";
 import { planDays, sortedMeals } from "@/lib/feeding/schedule";
 import {
@@ -21,7 +21,7 @@ import {
 import { dayCount } from "@/lib/medications/describe";
 import { fill } from "@/lib/medications/dose";
 import { hasCheckoutDay } from "@/lib/medications/schedule";
-import { offeredMealSlots } from "@/lib/settings/feeding-instructions";
+import { offeredMealTimes } from "@/lib/settings/feeding-instructions";
 import { useShellLocale, useShellText } from "@/lib/shell/use-shell-text";
 import type { MedDayRule } from "@/types/base";
 
@@ -86,12 +86,13 @@ export function PlanMealTimes({
     };
   };
 
-  // A meal time the facility has since turned off stays on the plan that
-  // uses it, rather than vanishing from under it.
-  const slots = offeredMealSlots(settings);
+  // A meal time the facility has since turned off — or deleted — stays on
+  // the plan that uses it, rather than vanishing from under it.
+  const slots: { id: string; label?: string; time: string }[] =
+    offeredMealTimes(settings);
   for (const meal of plan.meals) {
     if (meal.slot && !slots.some((slot) => slot.id === meal.slot)) {
-      slots.push({ id: meal.slot, time: meal.time });
+      slots.push({ id: meal.slot, label: meal.label, time: meal.time });
     }
   }
   slots.sort((a, b) => a.time.localeCompare(b.time));
@@ -134,7 +135,14 @@ export function PlanMealTimes({
               checked={plan.meals.some((meal) => meal.slot === slot.id)}
               onChange={() => step.toggleSlot(slot.id)}
             >
-              <span>{mealSlotLabel(t, slot.id)}</span>
+              <span>
+                {mealLabel(
+                  t,
+                  { slot: slot.id, label: slot.label, time: slot.time },
+                  locale,
+                  settings,
+                )}
+              </span>
               <span className="text-meta text-ink-tertiary font-normal tabular-nums">
                 {formatTimeOfDay(slot.time, locale)}
               </span>
@@ -166,16 +174,14 @@ export function PlanMealTimes({
               </button>
             </span>
           ))}
-          {settings.customTimes ? (
-            <button
-              type="button"
-              onClick={step.addCustomMeal}
-              className="border-line-strong text-ink-secondary hover:bg-surface-inset focus-visible:outline-primary text-body flex min-h-10 items-center gap-2 rounded-full border-[1.5px] border-dashed px-4 font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 max-lg:min-h-12"
-            >
-              <Plus className="size-4" aria-hidden />
-              {t("medsAddCustomTime")}
-            </button>
-          ) : null}
+          <button
+            type="button"
+            onClick={step.addCustomMeal}
+            className="border-line-strong text-ink-secondary hover:bg-surface-inset focus-visible:outline-primary text-body flex min-h-10 items-center gap-2 rounded-full border-[1.5px] border-dashed px-4 font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 max-lg:min-h-12"
+          >
+            <Plus className="size-4" aria-hidden />
+            {t("medsAddCustomTime")}
+          </button>
         </div>
       </div>
 

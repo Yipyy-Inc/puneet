@@ -11,15 +11,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ChoicePill } from "@/components/ui/choice-pill";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { allergyLabel } from "@/lib/feeding/labels";
-import { FOOD_ALLERGY_PRESETS } from "@/lib/feeding/vocabulary";
+import { allergyLabel, optionValue } from "@/lib/feeding/labels";
+import { offeredOptions } from "@/lib/settings/feeding-instructions";
 import { useShellText } from "@/lib/shell/use-shell-text";
 
 import type { FeedingStepState } from "./use-feeding-step";
 
 // ============================================================================
-// ALLERGIES & NOTES: the common food allergies with one tap, any other typed
-// and added with Enter, notes, and keeping the plan on the pet's profile.
+// ALLERGIES & NOTES: the facility's allergy quick picks with one tap — the
+// common ones it left on, and its own — any other typed and added with Enter,
+// notes, and keeping the plan on the pet's profile.
 //
 // A marked allergy is a choice like any other — the 2px ring (§5s) — and an
 // alert, so it carries the alert glyph in its own ink (§3: colour is never
@@ -34,7 +35,11 @@ export function PlanAllergiesNotes({ step }: { step: FeedingStepState }) {
   const plan = step.plan!;
   const { show } = step.settings;
   const [typed, setTyped] = useState("");
-  if (!show.allergies && !show.notes && !show.saveToProfile) return null;
+  // What a quick pick stores: a common allergy's canonical word, or the
+  // facility's own words.
+  const presets = offeredOptions(step.settings, "allergies").map((row) =>
+    optionValue("allergies", row),
+  );
 
   const marked = (value: string) => plan.allergies.some((a) => same(a, value));
   const toggle = (value: string) =>
@@ -44,7 +49,7 @@ export function PlanAllergiesNotes({ step }: { step: FeedingStepState }) {
         : [...current.allergies, value],
     }));
   const typedOnes = plan.allergies.filter(
-    (allergy) => !FOOD_ALLERGY_PRESETS.some((preset) => same(preset, allergy)),
+    (allergy) => !presets.some((preset) => same(preset, allergy)),
   );
   const add = () => {
     const value = typed.trim();
@@ -56,53 +61,51 @@ export function PlanAllergiesNotes({ step }: { step: FeedingStepState }) {
 
   return (
     <EditorSection label={t("feedSectionAllergies")}>
-      {show.allergies ? (
-        <div className="flex min-w-0 flex-col gap-2.5">
-          <FieldLabel id="feed-allergies-label">
-            {t("feedAllergiesLabel")}
-          </FieldLabel>
-          <div
-            role="group"
-            aria-labelledby="feed-allergies-label"
-            className="flex flex-wrap items-center gap-2"
-          >
-            {[...FOOD_ALLERGY_PRESETS, ...typedOnes].map((allergy) => {
-              const on = marked(allergy);
-              return (
-                <ChoicePill
-                  key={allergy}
-                  type="checkbox"
-                  value={allergy}
-                  checked={on}
-                  onChange={() => toggle(allergy)}
-                >
-                  {on ? (
-                    <TriangleAlert
-                      className="text-destructive size-4 shrink-0"
-                      aria-hidden
-                    />
-                  ) : null}
-                  {allergyLabel(t, allergy)}
-                </ChoicePill>
-              );
-            })}
-            <Input
-              aria-label={t("feedAllergyAdd")}
-              value={typed}
-              placeholder={t("feedAllergyPlaceholder")}
-              onChange={(event) => setTyped(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  add();
-                }
-              }}
-              onBlur={add}
-              className="w-56 max-w-full"
-            />
-          </div>
+      <div className="flex min-w-0 flex-col gap-2.5">
+        <FieldLabel id="feed-allergies-label">
+          {t("feedAllergiesLabel")}
+        </FieldLabel>
+        <div
+          role="group"
+          aria-labelledby="feed-allergies-label"
+          className="flex flex-wrap items-center gap-2"
+        >
+          {[...presets, ...typedOnes].map((allergy) => {
+            const on = marked(allergy);
+            return (
+              <ChoicePill
+                key={allergy}
+                type="checkbox"
+                value={allergy}
+                checked={on}
+                onChange={() => toggle(allergy)}
+              >
+                {on ? (
+                  <TriangleAlert
+                    className="text-destructive size-4 shrink-0"
+                    aria-hidden
+                  />
+                ) : null}
+                {allergyLabel(t, allergy)}
+              </ChoicePill>
+            );
+          })}
+          <Input
+            aria-label={t("feedAllergyAdd")}
+            value={typed}
+            placeholder={t("feedAllergyPlaceholder")}
+            onChange={(event) => setTyped(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                add();
+              }
+            }}
+            onBlur={add}
+            className="w-56 max-w-full"
+          />
         </div>
-      ) : null}
+      </div>
 
       {show.notes ? (
         <div className="flex min-w-0 flex-col gap-2">

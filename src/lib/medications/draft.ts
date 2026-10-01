@@ -6,11 +6,14 @@ import {
   round2,
   type Translate,
 } from "@/lib/medications/dose";
+import { controlledSubstance } from "@/lib/medications/controlled";
 import {
   activeDays,
   doseTimes,
   hasCheckoutDay,
+  supplyCheck,
   type MedStay,
+  type SupplyCheck,
 } from "@/lib/medications/schedule";
 import {
   asksForSide,
@@ -18,16 +21,15 @@ import {
   DAY_RULES,
   DOSE,
   isMedUnit,
-  isProvidable,
   MED_METHODS,
   methodImpliedBy,
   pageFormOf,
-  type MedMethod,
   type MedPageForm,
   type MedUnit,
-  type TimeSlotId,
 } from "@/lib/medications/vocabulary";
 import {
+  isCustomMethod,
+  methodRow,
   offeredSlots,
   providedFor,
   type MedicationInstructions,
@@ -60,12 +62,15 @@ export interface MedicationDraft {
   side: MedSide;
   dayRule: MedDayRule;
   certainDays: string[];
-  /** The times of day picked with one tap. */
-  slots: TimeSlotId[];
+  /** The facility's dose times picked with one tap — the vocabulary's or its own. */
+  slots: string[];
   /** Any other times, `HH:MM`, in the order they were added. */
   custom: string[];
   food: MedFood;
-  method: MedMethod | "";
+  /** A way of giving: the vocabulary's, or one the facility added (`method-…`). */
+  method: string;
+  /** The facility's name for its own way of giving, as a booking stored it. */
+  methodLabel: string;
   source: "own" | "facility";
   waived: boolean;
   /** As typed. */
@@ -73,6 +78,8 @@ export interface MedicationDraft {
   notes: string;
   allergies: string[];
   saveToProfile: boolean;
+  /** The owner confirmed the original pharmacy label. */
+  labelConfirmed: boolean;
   /** What an older record says that the step does not ask, kept as it was. */
   carry: Partial<MedicationItem>;
 }
@@ -108,13 +115,20 @@ function startingDays(stay: MedStay): string[] {
   return hasCheckoutDay(stay) ? stay.days.slice(0, -1) : [...stay.days];
 }
 
-/** A new, empty medication for `petId`. */
+/**
+ * A new, empty medication for `petId`, at the dose times the facility
+ * pre-selects (else the first it offers, else a custom time).
+ */
 export function blankDraft(
   petId: number | undefined,
   { settings, stay }: DraftContext,
 ): MedicationDraft {
   const form = settings.forms[0] ?? "tablet";
-  const firstSlot = offeredSlots(settings)[0];
+  const offered = offeredSlots(settings);
+  const picked = offered.filter((row) => row.preselected);
+  const slots = (picked.length > 0 ? picked : offered.slice(0, 1)).map(
+    (row) => row.id,
+  );
   return {
     id: newMedicationId(),
     petId,
@@ -128,16 +142,19 @@ export function blankDraft(
     side: "both",
     dayRule: offeredDayRules(settings, stay)[0] ?? "every_day",
     certainDays: startingDays(stay),
-    slots: firstSlot ? [firstSlot.id] : [],
-    custom: firstSlot || !settings.customTimes ? [] : [CUSTOM_TIME_DEFAULT],
+    slots,
+    custom:
+      slots.length > 0 || !settings.customTimes ? [] : [CUSTOM_TIME_DEFAULT],
     food: "with",
     method: "",
+    methodLabel: "",
     source: "own",
     waived: false,
     supply: "",
     notes: "",
     allergies: [],
     saveToProfile: settings.show.saveToProfile,
+    labelConfirmed: false,
     carry: {},
   };
 }
@@ -160,9 +177,11 @@ export function draftFromItem(
   const slots = offeredSlots(settings);
   const times = doseTimes(item);
   const givenWith = item.givenWith as string | undefined;
-  const method: MedMethod | "" =
-    givenWith && (MED_METHODS as readonly string[]).includes(givenWith)
-      ? (givenWith as MedMethod)
+  const method: string =
+    givenWith &&
+    ((MED_METHODS as readonly string[]).includes(givenWith) ||
+      isCustomMethod(givenWith))
+      ? givenWith
       : (methodImpliedBy(item.form) ?? "");
   const food: MedFood =
     item.food ??
@@ -194,12 +213,14 @@ export function draftFromItem(
     custom: times.filter((time) => !slots.some((slot) => slot.time === time)),
     food,
     method,
+    methodLabel: item.methodLabel ?? "",
     source: item.facilityProvidesMedAid ? "facility" : "own",
     waived: item.aidWaived === true,
     supply: item.supplyCount != null ? String(item.supplyCount) : "",
     notes: item.notes ?? "",
     allergies: item.drugAllergies ?? [],
     saveToProfile: item.saveToProfile === true,
+    labelConfirmed: item.labelConfirmed === true,
     carry: {
       purpose: item.purpose,
       frequencyNotes: item.frequencyNotes,
@@ -233,14 +254,45 @@ export function draftDays(draft: MedicationDraft, stay: MedStay): string[] {
   );
 }
 
+/**
+ * How much the stay takes against what is being brought — the supply check
+ * the step shows, and stops on when the facility requires enough.
+ */
+export function draftSupply(
+  draft: MedicationDraft,
+  { settings, stay }: DraftContext,
+): SupplyCheck {
+  const doses =
+    draftTimes(draft, settings).length * draftDays(draft, stay).length;
+  const typed = draft.supply.trim();
+  const brought = typed === "" ? null : Number(typed.replace(",", "."));
+  return supplyCheck({
+    doses,
+    amount: draft.amount,
+    wholeUnits: DOSE[draft.form].fraction,
+    brought: brought !== null && Number.isFinite(brought) ? brought : null,
+  });
+}
+
 /** What stops a draft being saved, or `null`. */
-export type DraftProblem = "name" | "amount" | "schedule";
+export type DraftProblem =
+  | "name"
+  | "controlled"
+  | "amount"
+  | "schedule"
+  | "supply"
+  | "label";
 
 export function draftProblem(
   draft: MedicationDraft,
-  { settings, stay }: DraftContext,
+  context: DraftContext,
 ): DraftProblem | null {
+  const { settings, stay } = context;
   if (!draft.name.trim()) return "name";
+  // The facility does not accept it: no amount of detail makes it bookable.
+  if (!settings.rules.controlled && controlledSubstance(draft.name)) {
+    return "controlled";
+  }
   if (!(draft.amount > 0)) return "amount";
   if (
     draftTimes(draft, settings).length === 0 ||
@@ -248,6 +300,14 @@ export function draftProblem(
   ) {
     return "schedule";
   }
+  if (
+    settings.supply === "block" &&
+    settings.show.supply &&
+    draftSupply(draft, context).kind === "short"
+  ) {
+    return "supply";
+  }
+  if (settings.rules.label && !draft.labelConfirmed) return "label";
   return null;
 }
 
@@ -267,8 +327,8 @@ export function itemFromDraft(
   const show = settings.show;
   const supplied =
     draft.source === "facility" &&
-    isProvidable(draft.method) &&
     providedFor(settings, draft.method) !== undefined;
+  const custom = isCustomMethod(draft.method);
   const supply = Number(draft.supply.replace(",", "."));
   const food = show.food ? draft.food : undefined;
   const amount = round2(draft.amount);
@@ -297,8 +357,13 @@ export function itemFromDraft(
       draft.unit === "custom"
         ? draft.customUnit.trim() || undefined
         : undefined,
+    // Staff split tablets only where the facility says they do.
     splitBy:
-      spec.splittable && isFractional(amount) ? draft.splitBy : undefined,
+      spec.splittable && isFractional(amount)
+        ? settings.split
+          ? draft.splitBy
+          : "owner"
+        : undefined,
     side: asksForSide(draft.method) ? draft.side : undefined,
     dayRule: draft.dayRule,
     specificDays:
@@ -321,7 +386,12 @@ export function itemFromDraft(
         : food === "empty"
           ? ["empty_stomach"]
           : [],
-    givenWith: draft.method || undefined,
+    givenWith: (draft.method || undefined) as MedicationItem["givenWith"],
+    methodLabel: custom
+      ? methodRow(settings, draft.method)?.label?.trim() ||
+        draft.methodLabel.trim() ||
+        undefined
+      : undefined,
     facilityProvidesMedAid: supplied ? true : undefined,
     facilityMedAidItem: supplied ? draft.method : undefined,
     aidWaived: supplied && draft.waived ? true : undefined,
@@ -335,6 +405,9 @@ export function itemFromDraft(
         : undefined,
     notes: show.notes ? draft.notes.trim() : "",
     saveToProfile: show.saveToProfile ? draft.saveToProfile : undefined,
+    labelConfirmed:
+      settings.rules.label && draft.labelConfirmed ? true : undefined,
+    controlled: controlledSubstance(draft.name) ? true : undefined,
   };
 }
 

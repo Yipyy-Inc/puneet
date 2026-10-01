@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-import { savedFeedingPlanSchema, savedMedicationSchema } from "@/types/booking";
+import {
+  savedFeedingPlanSchema,
+  savedMedicationSchema,
+  vetContactSchema,
+} from "@/types/booking";
 
 // ============================================================================
 // Evaluation
@@ -90,6 +94,8 @@ export const petSchema = z.object({
    * `null` once the owner unticks it.
    */
   feedingPlan: savedFeedingPlanSchema.nullable().optional(),
+  /** The pet's vet, from a booking's Medications step (2026-10-01). */
+  vet: vetContactSchema.nullable().optional(),
   /** Per-visit photo gallery — populated by the check-in flow (pre-groom
    *  photos) and by the session panel (after photos). Surfaced in the pet
    *  profile's "Visit photos" section so owners and staff can scroll a

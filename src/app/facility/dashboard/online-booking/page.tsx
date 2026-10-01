@@ -128,6 +128,8 @@ function toRequest(
     ),
     feedingSchedule: b.feedingSchedule,
     medications: b.medications,
+    noMedication: b.noMedication,
+    vetContacts: b.vetContacts,
     refs: days.map((day) => day.id),
     dayDates: days.map((day) => day.startDate),
     quote:

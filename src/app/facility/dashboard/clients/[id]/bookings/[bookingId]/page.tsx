@@ -4,8 +4,11 @@ import { use, useState, useMemo } from "react";
 import {
   useDepositRules,
   useFacilityHours,
+  useFeedingInstructions,
+  useMedicationInstructions,
   usePricingRules,
 } from "@/lib/api/facility-settings";
+import { careStepUse } from "@/lib/settings/care-setup";
 import Link from "next/link";
 import { CreditCard, CircleAlert, CircleHelp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -567,6 +570,10 @@ export default function ClientBookingDetailPage({
   // not the template fixture's "Example Pet Care Facility" and its fabricated
   // GST number.
   const invoiceTemplate = useInvoiceTemplate();
+  // Where the Feeding and Medications steps appear, per service — the
+  // facility's Feeding & medications settings (2026-10-01).
+  const { instructions: feedingInstructions } = useFeedingInstructions();
+  const { instructions: medicationInstructions } = useMedicationInstructions();
   const facilityTaxConfig = useFacilitySettings().settings.tax_config
     .value as TaxConfig;
   // The facility's tax on part of the supply — a deposit, a prepayment —
@@ -1383,8 +1390,28 @@ export default function ClientBookingDetailPage({
               } as Record<string, typeof daycare | undefined>;
               const svcConfig = serviceConfigMap[booking.service];
               const care = svcConfig?.settings?.careInstructions;
-              const feedingMode = care?.feeding ?? "optional";
-              const medicationMode = care?.medication ?? "optional";
+              // Feeding and medications: the facility's own page decides
+              // per service (Settings › Feeding & medications). A booking
+              // that holds a plan or a medication shows it whatever the
+              // setting says now — it was booked with it.
+              const feedingUse = careStepUse(
+                feedingInstructions,
+                booking.service,
+              );
+              const medicationUse = careStepUse(
+                medicationInstructions,
+                booking.service,
+              );
+              const feedingMode =
+                feedingUse === "disabled" &&
+                (booking.feedingSchedule?.length ?? 0) > 0
+                  ? "optional"
+                  : feedingUse;
+              const medicationMode =
+                medicationUse === "disabled" &&
+                (booking.medications?.length ?? 0) > 0
+                  ? "optional"
+                  : medicationUse;
               const belongingsMode = care?.belongings ?? "optional";
 
               // Today's meals and doses are logged while the pet is here.
@@ -1453,6 +1480,16 @@ export default function ClientBookingDetailPage({
                         entries={careEntries.medication}
                         stay={bookingStay(booking)}
                         required={medicationMode === "required"}
+                        petName={petName}
+                        bookingRef={booking.id}
+                        takesNone={
+                          pet ? booking.noMedication?.includes(pet.id) : false
+                        }
+                        vet={
+                          pet
+                            ? booking.vetContacts?.[String(pet.id)]
+                            : undefined
+                        }
                         onAdd={async (item) => {
                           await bookingMutations.update(booking.id, {
                             medications: [...(booking.medications ?? []), item],

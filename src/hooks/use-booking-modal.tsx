@@ -13,6 +13,7 @@ import type {
   ExtraService,
   FeedingScheduleItem,
   MedicationItem,
+  VetContact,
 } from "@/types/booking";
 import type { Client } from "@/types/client";
 import type { ResumeStepId } from "@/lib/resume-booking";
@@ -53,6 +54,9 @@ interface BookingModalConfig {
   /** Resume: the step the draft was left on, and the sub-step within it. */
   preSelectedStep?: ResumeStepId;
   preSelectedSubStep?: number;
+  preSelectedSubStepId?: number;
+  preSelectedNoMedication?: number[];
+  preSelectedVetContacts?: Record<string, VetContact>;
   /**
    * Mirrors BookingModal's own prop. Typed `=> void` until 2026-09-22, which
    * typechecked while silently discarding what the handler returned — and the
@@ -156,6 +160,9 @@ export function BookingModalProvider({ children }: { children: ReactNode }) {
           preSelectedNotificationSMS={config.preSelectedNotificationSMS}
           preSelectedStep={config.preSelectedStep}
           preSelectedSubStep={config.preSelectedSubStep}
+          preSelectedSubStepId={config.preSelectedSubStepId}
+          preSelectedNoMedication={config.preSelectedNoMedication}
+          preSelectedVetContacts={config.preSelectedVetContacts}
           estimateMode={config.isEstimateMode ?? false}
           isCustomerMode={config.isCustomerMode ?? false}
           passRedemption={config.passRedemption}

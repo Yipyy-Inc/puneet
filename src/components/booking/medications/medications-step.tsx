@@ -1,19 +1,23 @@
 "use client";
 
-import { Pill, Plus } from "lucide-react";
+import { Info, Pill, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ChoicePill } from "@/components/ui/choice-pill";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatMoney, isPluralOne } from "@/lib/i18n/format";
 import { fill } from "@/lib/medications/dose";
-import { medicationFeeApplies } from "@/lib/settings/care-fees";
+import {
+  injectionFeeApplies,
+  medicationFeeApplies,
+} from "@/lib/settings/medication-instructions";
 import { useShellLocale, useShellText } from "@/lib/shell/use-shell-text";
 
 import { MedicationCard } from "./medication-card";
 import { MedicationEditor } from "./medication-editor";
 import { MedicationSchedulePreview } from "./medication-schedule-preview";
 import type { MedicationStepState } from "./use-medication-step";
+import { VetContactFields } from "./vet-contact";
 
 // ============================================================================
 // The booking form's Medications step, laid out as the client's design lays
@@ -26,9 +30,9 @@ import type { MedicationStepState } from "./use-medication-step";
 // ============================================================================
 
 const FEE_NOTICE_KEY = {
-  per_medication: "medsFeeNoticePerMedication",
-  per_pet: "medsFeeNoticePerPet",
-  flat: "medsFeeNoticeFlat",
+  dose: "medsFeeNoticeDose",
+  pet_day: "medsFeeNoticePetDay",
+  med_day: "medsFeeNoticeMedDay",
 } as const;
 
 export function MedicationsStep({
@@ -53,7 +57,19 @@ export function MedicationsStep({
 
   const pet = step.pets.find((candidate) => candidate.id === step.activePetId);
   const petName = pet?.name ?? "";
-  const fee = step.fees.medicationAdmin;
+  const { fee } = step.settings;
+  const notices = [
+    fee.mode !== "none" && medicationFeeApplies(step.settings, step.service)
+      ? fill(t(FEE_NOTICE_KEY[fee.mode]), {
+          amount: formatMoney(fee.amount, locale),
+        })
+      : "",
+    injectionFeeApplies(step.settings, step.service)
+      ? fill(t("medsFeeNoticeInjection"), {
+          amount: formatMoney(fee.injection, locale),
+        })
+      : "",
+  ].filter(Boolean);
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
@@ -65,7 +81,9 @@ export function MedicationsStep({
           <div className="flex min-w-0 flex-col gap-0.5">
             <h3 className="text-section text-heading">{t("medications")}</h3>
             <p className="text-body text-ink-secondary">
-              {t("medsStepSubtitle")}
+              {t(
+                step.required ? "medsStepSubtitleRequired" : "medsStepSubtitle",
+              )}
             </p>
           </div>
         </div>
@@ -74,12 +92,8 @@ export function MedicationsStep({
         </span>
       </div>
 
-      {medicationFeeApplies(step.fees, step.service) ? (
-        <p className="text-meta text-ink-tertiary">
-          {fill(t(FEE_NOTICE_KEY[fee.scope]), {
-            amount: formatMoney(fee.amount, locale),
-          })}
-        </p>
+      {notices.length > 0 ? (
+        <p className="text-meta text-ink-tertiary">{notices.join(" ")}</p>
       ) : null}
 
       {step.pets.length > 0 ? (
@@ -105,14 +119,16 @@ export function MedicationsStep({
                   data-active={active}
                   className="bg-surface-inset text-ink-secondary data-[active=true]:bg-primary data-[active=true]:text-primary-foreground text-meta rounded-full px-2 py-0.5 font-semibold whitespace-nowrap tabular-nums"
                 >
-                  {fill(
-                    t(
-                      isPluralOne(candidate.count, locale)
-                        ? "medsCountOne"
-                        : "medsCountOther",
-                    ),
-                    { count: candidate.count },
-                  )}
+                  {candidate.none
+                    ? t("medsNoneChip")
+                    : fill(
+                        t(
+                          isPluralOne(candidate.count, locale)
+                            ? "medsCountOne"
+                            : "medsCountOther",
+                        ),
+                        { count: candidate.count },
+                      )}
                 </span>
               </ChoicePill>
             );
@@ -129,6 +145,7 @@ export function MedicationsStep({
               stay={step.stay}
               settings={step.settings}
               dateless={step.dateless.has(item.id)}
+              photo={Boolean(step.labelPhotos?.photoFor(item.id))}
               editDisabled={step.editBlocked}
               onEdit={() => step.edit(item.id)}
               onRemove={() => step.remove(item.id)}
@@ -147,12 +164,37 @@ export function MedicationsStep({
               <p className="text-body text-ink-secondary">
                 {pet.saved.length > 0
                   ? t("medsAllSavedText")
-                  : fill(t("medsEmptyText"), { pet: petName })}
+                  : fill(
+                      t(
+                        step.required
+                          ? "medsEmptyTextRequired"
+                          : "medsEmptyText",
+                      ),
+                      { pet: petName },
+                    )}
               </p>
-              <Button type="button" onClick={step.add}>
-                <Plus className="size-4" aria-hidden />
-                {t("medsAddMedication")}
-              </Button>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <Button type="button" onClick={step.add}>
+                  <Plus className="size-4" aria-hidden />
+                  {t("medsAddMedication")}
+                </Button>
+                {step.required && pet.saved.length === 0 ? (
+                  <ChoicePill
+                    type="checkbox"
+                    value="none"
+                    checked={pet.none}
+                    onChange={() => step.setNone(pet.id, !pet.none)}
+                  >
+                    {fill(t("medsTakesNone"), { pet: petName })}
+                  </ChoicePill>
+                ) : null}
+              </div>
+              {step.required && pet.saved.length === 0 && !pet.none ? (
+                <p className="text-meta text-ink-secondary flex items-start gap-2">
+                  <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
+                  {fill(t("medsRequiredHint"), { pet: petName })}
+                </p>
+              ) : null}
             </div>
           )}
 
@@ -165,6 +207,15 @@ export function MedicationsStep({
               <Plus className="size-5" aria-hidden />
               {fill(t("medsAddAnother"), { pet: petName })}
             </button>
+          ) : null}
+
+          {step.settings.rules.vetContact && pet.count > 0 ? (
+            <VetContactFields
+              petId={pet.id}
+              petName={petName}
+              vet={pet.vet}
+              onChange={(patch) => step.setVet(pet.id, patch)}
+            />
           ) : null}
         </div>
       ) : null}

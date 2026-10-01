@@ -76,21 +76,32 @@ export interface PackingRow {
   food: PlanFood;
   /** Portions over the stay. */
   servings: number;
-  /** servings × the portion, in the food's unit. */
+  /** Portions packed beyond the stay, in case pickup is late. */
+  extra: number;
+  /** (servings + extra) × the portion, in the food's unit. */
   total: number;
 }
 
-/** What the owner packs: each of their own foods the stay serves. */
-export function packingList(plan: FeedingPlan, stay: MedStay): PackingRow[] {
+/**
+ * What the owner packs: each of their own foods the stay serves, and the
+ * facility's extra meals' worth of each (Settings › Feeding & medications).
+ */
+export function packingList(
+  plan: FeedingPlan,
+  stay: MedStay,
+  extraMeals = 0,
+): PackingRow[] {
   return plan.foods.flatMap((food) => {
     if (food.source !== "own") return [];
     const servings = foodServings(plan, food, stay);
     if (servings <= 0) return [];
+    const extra = Math.max(0, Math.floor(extraMeals));
     return [
       {
         food,
         servings,
-        total: Math.round(servings * food.amount * 100) / 100,
+        extra,
+        total: Math.round((servings + extra) * food.amount * 100) / 100,
       },
     ];
   });

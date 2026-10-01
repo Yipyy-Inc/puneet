@@ -62,8 +62,12 @@ export interface ResumeBookingPreselection {
   preSelectedNotificationSMS?: boolean;
   /** The step they left on, so the wizard opens THERE and not at the start. */
   preSelectedStep?: ResumeStepId;
-  /** The sub-step within it, where there is one. */
+  /** The sub-step within it, where there is one — its position, in old drafts. */
   preSelectedSubStep?: number;
+  /** The sub-step's id. */
+  preSelectedSubStepId?: number;
+  preSelectedNoMedication?: UnfinishedBooking["noMedication"];
+  preSelectedVetContacts?: UnfinishedBooking["vetContacts"];
 }
 
 export function buildResumePreselection(
@@ -89,5 +93,8 @@ export function buildResumePreselection(
     preSelectedNotificationSMS: ub.notificationSMS,
     preSelectedStep: resumeStepFor(ub.abandonmentStep),
     preSelectedSubStep: ub.subStep,
+    preSelectedSubStepId: ub.subStepId,
+    preSelectedNoMedication: ub.noMedication,
+    preSelectedVetContacts: ub.vetContacts,
   };
 }

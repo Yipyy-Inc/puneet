@@ -3,6 +3,7 @@ import { test, expect, type Locator, type Page } from "@playwright/test";
 import { bookingListSearch } from "@/lib/api/booking-list-params";
 
 import { ACCOUNTS, signIn } from "./_auth";
+import { answerCareSteps } from "./_wizard";
 import { bookingsMarked, cancelBookingsMarked } from "./_sweep";
 
 // ============================================================================
@@ -11,13 +12,14 @@ import { bookingsMarked, cancelBookingsMarked } from "./_sweep";
 // The client sent the page they wanted: a plan per pet — breakfast and dinner,
 // every day, a cup of the owner's own kibble in labelled bags, and the
 // facility's house kibble at dinner at $3.50 a meal — with the stay's meals
-// and the packing list beside it. And a setting under Care tasks that decides
-// what that page shows and what house food the facility provides.
+// and the packing list beside it. And the facility's own page under Settings
+// › Services › Feeding & medications that decides what it shows and what
+// house food the facility provides.
 //
 // ── WHAT THIS PINS ────────────────────────────────────────────────────────
 //
-// S1  The facility's house food is a setting it saves, and a customer's
-//     booking form reads it.
+// S1  The facility's house food is set on its Feeding & medications page, and
+//     a customer's booking form reads it.
 // S2  Staff walk the step: meal times, the owner's food and how it is packed,
 //     a house food served at dinner only, how the pet eats, allergies, the
 //     stay panel. The booking keeps all of it; the house food is ONE line on
@@ -27,7 +29,7 @@ import { bookingsMarked, cancelBookingsMarked } from "./_sweep";
 //     at the till is not brought back by a later edit.
 // S4  A customer's request: the house food is billed, the customer cannot
 //     waive it, and the request still confirms itself at the service's price.
-// S5  House food included with boarding is no line at all.
+// S5  House food included in the price is no line at all.
 //
 // ── IT CLEANS UP ──────────────────────────────────────────────────────────
 //
@@ -71,7 +73,7 @@ const prior: {
   buddy?: unknown;
 } = {};
 
-/** The facility's house kibble, as the settings card writes it. */
+/** The facility's house kibble, as its settings page writes it. */
 const houseKibble = {
   id: KIBBLE,
   name: "House kibble",
@@ -80,6 +82,7 @@ const houseKibble = {
   unit: "cup",
   pricePerMeal: MEAL_PRICE,
   pricePerDay: 8,
+  on: true,
 };
 
 function iso(d: Date): string {
@@ -216,6 +219,8 @@ async function openWizard(page: Page) {
 }
 
 async function next(dialog: Locator) {
+  // Boarding ships with its Medications step required (answerCareSteps).
+  await answerCareSteps(dialog);
   await dialog.getByRole("button", { name: /^next$/i }).click();
 }
 
@@ -289,17 +294,16 @@ test.beforeAll(async ({ browser }) => {
     prior.settings = await settings(page);
     prior.buddy = await buddysPlan(page);
 
-    // The facility provides house kibble at $3.50 a meal. Everything else on
-    // the page is as it ships.
+    // The facility provides house kibble at $3.50 a meal — house food
+    // switched on, which it ships off. Everything else on the page is as it
+    // ships.
     const current = prior.settings.feeding_instructions?.value as Record<
       string,
       unknown
     >;
     await writeSetting(page, "feeding_instructions", {
       ...current,
-      houseFoods: [houseKibble],
-      pricing: "meal",
-      includedWith: [],
+      house: { on: true, pricing: "meal", foods: [houseKibble] },
     });
     // Buddy starts with no saved plan, so the step starts empty.
     const cleared = await page.request.patch(`/api/pets/${BUDDY}`, {
@@ -349,35 +353,32 @@ test.afterAll(async ({ browser }) => {
   }
 });
 
-test("S1 the facility's house food is a setting it saves, and a customer's form reads it", async ({
+test("S1 the facility's house food is set on its own page, and a customer's form reads it", async ({
   page,
 }) => {
   test.setTimeout(3 * 60 * 1000);
   await signIn(page, ACCOUNTS.owner);
-  await page.goto("/facility/dashboard/settings/care-tasks");
+  await page.goto("/facility/dashboard/settings/feeding-medications");
 
-  // The house kibble written above, read back by the card.
-  await expect(page.locator(`#${KIBBLE}-name`)).toHaveValue("House kibble", {
-    timeout: 60_000,
-  });
+  // The house kibble written above, read back by the page.
+  await expect(page.getByLabel("Name of house food 1")).toHaveValue(
+    "House kibble",
+    { timeout: 60_000 },
+  );
 
-  // A second house food, through the card.
+  // A second house food, through the page.
   await page.getByRole("button", { name: "Add house food" }).click();
-  const names = page.getByLabel("Name", { exact: true });
-  await names.last().fill("Canned wet food");
-  await page.getByLabel("Price per meal").last().fill("2.5");
-  await page.getByLabel("Price per day").last().fill("6");
-  await page
-    .getByRole("button", { name: /save changes/i, disabled: false })
-    .click();
+  await page.getByLabel("Name of house food 2").fill("Canned wet food");
+  await page.getByLabel("Price per meal for Canned wet food").fill("2.5");
+  await page.getByRole("button", { name: /save changes/i }).click();
   await expect(
     page
       .locator("[data-sonner-toast]")
-      .filter({ hasText: "Feeding instructions saved" }),
+      .filter({ hasText: "Feeding settings saved" }),
   ).toBeVisible();
 
   await page.reload();
-  await expect(page.getByLabel("Name", { exact: true }).last()).toHaveValue(
+  await expect(page.getByLabel("Name of house food 2")).toHaveValue(
     "Canned wet food",
     { timeout: 60_000 },
   );
@@ -385,14 +386,14 @@ test("S1 the facility's house food is a setting it saves, and a customer's form 
   const stored = (await settings(page)).feeding_instructions;
   expect(stored.configured).toBe(true);
   expect(
-    (stored.value as { houseFoods?: Array<Record<string, unknown>> })
-      .houseFoods,
+    (stored.value as { house?: { foods?: Array<Record<string, unknown>> } })
+      .house?.foods,
   ).toEqual([
     expect.objectContaining({ id: KIBBLE, pricePerMeal: MEAL_PRICE }),
     expect.objectContaining({
       name: "Canned wet food",
       pricePerMeal: 2.5,
-      pricePerDay: 6,
+      on: true,
     }),
   ]);
 
@@ -403,8 +404,8 @@ test("S1 the facility's house food is a setting it saves, and a customer's form 
   const theirs = (await res.json()) as Record<string, Setting>;
   expect(theirs.feeding_instructions?.configured).toBe(true);
   expect(
-    (theirs.feeding_instructions?.value as { houseFoods?: unknown })
-      ?.houseFoods,
+    (theirs.feeding_instructions?.value as { house?: { foods?: unknown } })
+      ?.house?.foods,
   ).toEqual(
     expect.arrayContaining([
       expect.objectContaining({ id: KIBBLE, pricePerMeal: MEAL_PRICE }),
@@ -430,10 +431,11 @@ test("S2 staff write Buddy's plan, and the house food is one line on the bill", 
 
   // ── Food 1: the owner's kibble, in labelled bags ──────────────────────
   await dialog.locator("#feed-brand-0").fill("Orijen Original");
-  await expect(dialog.getByText("Pack 10 labeled portions")).toBeVisible();
+  // The page ships asking for two extra meals' worth, in case pickup is late.
+  await expect(dialog.getByText("Pack 12 labeled portions")).toBeVisible();
   await expect(
     dialog.getByText(
-      "10 meals × 1 cup each · add a little extra in case of delays",
+      "10 meals + 2 extra in case pickup is delayed · 1 cup each",
     ),
   ).toBeVisible();
 
@@ -485,7 +487,7 @@ test("S2 staff write Buddy's plan, and the house food is one line on the bill", 
   await expect(panel).toContainText("1 cup dry kibble + 1 cup House kibble");
   await expect(panel).toContainText("Packing list");
   await expect(panel).toContainText("Orijen Original");
-  await expect(panel).toContainText("10 portions");
+  await expect(panel).toContainText("12 portions");
   await expect(panel).toContainText("5 meals · House kibble");
   await expect(panel).toContainText("$17.50");
 
@@ -684,7 +686,7 @@ test("S4 a customer's house food is billed, never waived by them, and the reques
   ]);
 });
 
-test("S5 house food included with boarding is no line at all", async ({
+test("S5 house food included in the price is no line at all", async ({
   page,
 }) => {
   await signIn(page, ACCOUNTS.owner);
@@ -694,7 +696,10 @@ test("S5 house food included with boarding is no line at all", async ({
   >;
   await writeSetting(page, "feeding_instructions", {
     ...current,
-    includedWith: ["boarding"],
+    house: {
+      ...(current.house as Record<string, unknown>),
+      pricing: "included",
+    },
   });
   try {
     const created = await page.request.post("/api/bookings", {

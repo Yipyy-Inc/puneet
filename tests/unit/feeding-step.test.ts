@@ -79,39 +79,51 @@ const DAYCARE: MedStay = stayOf({
   dates: ["2026-03-17", "2026-03-19", "2026-03-23"],
 });
 
-/** The mock's three house foods. */
+/** The mock's three house foods, switched on and charged per meal. */
 const HOUSE: FeedingInstructions = {
   ...SHIPPED_FEEDING_INSTRUCTIONS,
-  houseFoods: [
-    {
-      id: "hf-std",
-      name: "House kibble",
-      description: "Adult, chicken & rice",
-      type: "kibble",
-      unit: "cup",
-      pricePerMeal: 3.5,
-      pricePerDay: 8,
-    },
-    {
-      id: "hf-sens",
-      name: "Sensitive-stomach kibble",
-      description: "Grain-free, salmon",
-      type: "kibble",
-      unit: "cup",
-      pricePerMeal: 4.5,
-      pricePerDay: 10,
-    },
-    {
-      id: "hf-wet",
-      name: "Canned wet food",
-      description: "Chicken pâté, 13 oz can",
-      type: "wet",
-      unit: "can",
-      pricePerMeal: 2.5,
-      pricePerDay: 6,
-    },
-  ],
+  house: {
+    on: true,
+    pricing: "meal",
+    foods: [
+      {
+        id: "hf-std",
+        name: "House kibble",
+        description: "Adult, chicken & rice",
+        type: "kibble",
+        unit: "cup",
+        pricePerMeal: 3.5,
+        pricePerDay: 8,
+        on: true,
+      },
+      {
+        id: "hf-sens",
+        name: "Sensitive-stomach kibble",
+        description: "Grain-free, salmon",
+        type: "kibble",
+        unit: "cup",
+        pricePerMeal: 4.5,
+        pricePerDay: 10,
+        on: true,
+      },
+      {
+        id: "hf-wet",
+        name: "Canned wet food",
+        description: "Chicken pâté, 13 oz can",
+        type: "wet",
+        unit: "can",
+        pricePerMeal: 2.5,
+        pricePerDay: 6,
+        on: true,
+      },
+    ],
+  },
 };
+
+/** HOUSE with its house food changed. */
+const withHouse = (
+  patch: Partial<FeedingInstructions["house"]>,
+): FeedingInstructions => ({ ...HOUSE, house: { ...HOUSE.house, ...patch } });
 
 const CTX: PlanContext = { settings: HOUSE, stay: BOARDING };
 const WORDS = { ...CTX, t: en, locale: "en" as const };
@@ -364,7 +376,7 @@ describe("a new plan", () => {
       ...HOUSE,
       meals: HOUSE.meals.map((slot) =>
         slot.id === "breakfast" || slot.id === "dinner"
-          ? { ...slot, enabled: false }
+          ? { ...slot, on: false }
           : slot,
       ),
     };
@@ -373,7 +385,7 @@ describe("a new plan", () => {
     ).toEqual([{ id: "lunch", slot: "lunch", time: "12:00" }]);
     const noSlots: FeedingInstructions = {
       ...HOUSE,
-      meals: HOUSE.meals.map((slot) => ({ ...slot, enabled: false })),
+      meals: HOUSE.meals.map((slot) => ({ ...slot, on: false })),
     };
     expect(
       blankPlan(IDS, 1, { settings: noSlots, stay: BOARDING }).meals,
@@ -453,12 +465,11 @@ describe("meals over the stay", () => {
       "1 cup House kibble",
     );
     // A brand is a name, not a word to fold.
-    const branded: FeedingInstructions = {
-      ...HOUSE,
-      houseFoods: HOUSE.houseFoods.map((food) =>
+    const branded = withHouse({
+      foods: HOUSE.house.foods.map((food) =>
         food.id === "hf-std" ? { ...food, name: "Hill's Science Diet" } : food,
       ),
-    };
+    });
     expect(panelFoodWords(en, houseKibble(), "en", branded)).toBe(
       "1 cup Hill's Science Diet",
     );
@@ -480,11 +491,7 @@ describe("what the house food adds to the bill", () => {
     foods: [houseKibble("food-1")],
     ...patch,
   });
-  const charges = (
-    p: FeedingPlan,
-    settings: FeedingInstructions = HOUSE,
-    service = "boarding",
-  ) =>
+  const charges = (p: FeedingPlan, settings: FeedingInstructions = HOUSE) =>
     houseFoodCharges(
       {
         meals: p.meals,
@@ -493,7 +500,6 @@ describe("what the house food adds to the bill", () => {
         waivedFoods: p.waivedFoods,
       },
       settings,
-      service,
     );
 
   test("per meal: 2 meals × 5 days × $3.50", () => {
@@ -506,33 +512,37 @@ describe("what the house food adds to the bill", () => {
         unitPrice: 3.5,
         amount: 35,
         included: false,
+        offered: true,
         waived: false,
       },
     ]);
   });
 
   test("per day: 5 days × $8.00", () => {
-    const [charge] = charges(plan(), { ...HOUSE, pricing: "day" });
+    const [charge] = charges(plan(), withHouse({ pricing: "day" }));
     expect([charge.quantity, charge.unitPrice, charge.amount]).toEqual([
       5, 8, 40,
     ]);
   });
 
-  test("included with boarding, or priced at nothing, charges nothing", () => {
-    const included = charges(plan(), { ...HOUSE, includedWith: ["boarding"] });
+  test("included in the price, or priced at nothing, charges nothing", () => {
+    const included = charges(plan(), withHouse({ pricing: "included" }));
     expect([included[0].included, included[0].amount]).toEqual([true, 0]);
-    expect(
-      charges(plan(), { ...HOUSE, includedWith: ["boarding"] }, "daycare")[0]
-        .included,
-    ).toBe(false);
-    const free = {
-      ...HOUSE,
-      houseFoods: HOUSE.houseFoods.map((food) => ({
-        ...food,
-        pricePerMeal: 0,
-      })),
-    };
+    const free = withHouse({
+      foods: HOUSE.house.foods.map((food) => ({ ...food, pricePerMeal: 0 })),
+    });
     expect(charges(plan(), free)[0].included).toBe(true);
+  });
+
+  test("house food switched off, or one food taken off the list, charges nothing", () => {
+    const off = charges(plan(), withHouse({ on: false }))[0];
+    expect([off.offered, off.included, off.amount]).toEqual([false, true, 0]);
+    const kibbleOff = withHouse({
+      foods: HOUSE.house.foods.map((food) =>
+        food.id === "hf-std" ? { ...food, on: false } : food,
+      ),
+    });
+    expect(charges(plan(), kibbleOff)[0].amount).toBe(0);
   });
 
   test("a waived food is marked and charges nothing", () => {
@@ -560,7 +570,7 @@ describe("what the house food adds to the bill", () => {
       ],
     });
     expect(charges(two)[0].quantity).toBe(15);
-    expect(charges(two, { ...HOUSE, pricing: "day" })[0].quantity).toBe(5);
+    expect(charges(two, withHouse({ pricing: "day" }))[0].quantity).toBe(5);
   });
 });
 
@@ -616,7 +626,7 @@ describe("care lines on the bill", () => {
     expect(
       lines({
         parts: [{ stay: BOARDING, feeding: [item(housePlan())] }],
-        feeding: { ...HOUSE, includedWith: ["boarding"] },
+        feeding: withHouse({ pricing: "included" }),
       }).flat(),
     ).toEqual([]);
     expect(
@@ -801,10 +811,9 @@ describe("the plan and the booking record", () => {
   test("a part the facility hides stores nothing", () => {
     const hidden: FeedingInstructions = {
       ...HOUSE,
-      show: { ...HOUSE.show, styles: false, brand: false, notes: false },
+      show: { ...HOUSE.show, brand: false, notes: false },
     };
     const record = itemFromPlan(full(), { ...WORDS, settings: hidden });
-    expect(record.styles).toBeUndefined();
     expect(record.foods?.[0].brand).toBeUndefined();
     expect(record.notes).toBe("");
   });
@@ -1173,26 +1182,45 @@ describe("the feeding setting", () => {
     expect(
       feedingInstructionsSchema.safeParse(SHIPPED_FEEDING_INSTRUCTIONS).success,
     ).toBe(true);
-    expect(SHIPPED_FEEDING_INSTRUCTIONS.houseFoods).toEqual([]);
+    // House food ships switched off: its three foods are there, priced,
+    // and charge nothing until the facility turns it on.
+    expect(SHIPPED_FEEDING_INSTRUCTIONS.house.on).toBe(false);
+    expect(SHIPPED_FEEDING_INSTRUCTIONS.house.foods.map((f) => f.id)).toEqual([
+      "hf-house-kibble",
+      "hf-sensitive-kibble",
+      "hf-canned-wet",
+    ]);
     expect(feedingInstructionsSchema.safeParse(HOUSE).success).toBe(true);
   });
 
-  test("refuses a house food measured unlike its kind, or a page with no way to plan a meal", () => {
-    const badUnit = {
-      ...HOUSE,
-      houseFoods: [{ ...HOUSE.houseFoods[0], unit: "can" }],
-    };
+  test("refuses a house food measured unlike its kind, a nameless one, or no food types", () => {
+    const badUnit = withHouse({
+      foods: [{ ...HOUSE.house.foods[0], unit: "can" }],
+    });
     expect(feedingInstructionsSchema.safeParse(badUnit).success).toBe(false);
+    const nameless = withHouse({
+      foods: [{ ...HOUSE.house.foods[0], name: " " }],
+    });
+    expect(feedingInstructionsSchema.safeParse(nameless).success).toBe(false);
     expect(
       feedingInstructionsSchema.safeParse({ ...HOUSE, foodTypes: [] }).success,
     ).toBe(false);
+    // Every quick-pick meal time off still leaves a custom time.
     expect(
       feedingInstructionsSchema.safeParse({
         ...HOUSE,
-        customTimes: false,
-        meals: HOUSE.meals.map((slot) => ({ ...slot, enabled: false })),
+        meals: HOUSE.meals.map((slot) => ({ ...slot, on: false })),
       }).success,
-    ).toBe(false);
+    ).toBe(true);
+  });
+
+  test("a row saved before the page parses, its new keys defaulted", () => {
+    const older = feedingInstructionsSchema.parse({
+      foodTypes: ["kibble"],
+    });
+    expect(older.house.on).toBe(false);
+    expect(older.extraMeals).toBe(2);
+    expect(older.services.boarding).toBe("optional");
   });
 });
 

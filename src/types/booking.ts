@@ -173,7 +173,13 @@ export const medicationItemSchema = z.object({
   prnTrigger: z.string().optional(),
   adminInstructions: z.array(medAdminInstructionEnum),
   adminNotes: z.string().optional(),
-  givenWith: medGivenWithEnum.optional(),
+  /**
+   * The way it is given: the vocabulary's, or one the facility added on its
+   * Feeding & medications page (`method-…`, named by `methodLabel`).
+   */
+  givenWith: z
+    .union([medGivenWithEnum, z.string().regex(/^method-[a-z0-9]{1,40}$/)])
+    .optional(),
   givenWithNotes: z.string().optional(),
   facilityProvidesMedAid: z.boolean().optional(),
   facilityMedAidItem: z.string().optional(),
@@ -209,6 +215,14 @@ export const medicationItemSchema = z.object({
   saveToProfile: z.boolean().optional(),
   /** The profile entry this came from, or became. */
   profileId: z.string().optional(),
+
+  // ── The facility's rules (2026-10-01, Settings › Feeding & medications) ──
+  /** The facility's name for a way of giving it added, as the booking saw it. */
+  methodLabel: z.string().max(40).optional(),
+  /** The owner confirmed it arrives in its original pharmacy-labelled packaging. */
+  labelConfirmed: z.boolean().optional(),
+  /** A controlled substance (gabapentin, trazodone…), which the facility accepts. */
+  controlled: z.boolean().optional(),
 });
 export type MedicationItem = z.infer<typeof medicationItemSchema>;
 
@@ -226,9 +240,17 @@ export const savedMedicationSchema = medicationItemSchema
     aidWaived: true,
     supplyCount: true,
     saveToProfile: true,
+    labelConfirmed: true,
   })
   .extend({ profileId: z.string().min(1) });
 export type SavedMedication = z.infer<typeof savedMedicationSchema>;
+
+/** The pet's vet, as the Medications step asks for it. */
+export const vetContactSchema = z.object({
+  clinic: z.string().trim().max(120).optional(),
+  phone: z.string().trim().max(40).optional(),
+});
+export type VetContact = z.infer<typeof vetContactSchema>;
 
 // ============================================================================
 // Supporting Schemas
@@ -548,6 +570,13 @@ export const newBookingSchema = z.object({
   feedingSchedule: z.array(feedingScheduleItemSchema).optional(),
   walkSchedule: z.string().optional(),
   medications: z.array(medicationItemSchema).optional(),
+  /**
+   * The pets the booker said take no medication — the answer a required
+   * Medications step asks for (2026-10-01), kept so an edit does not ask again.
+   */
+  noMedication: z.array(z.number().int()).max(20).optional(),
+  /** Each pet's vet (by pet id), asked for once a pet has a medication. */
+  vetContacts: z.record(z.string(), vetContactSchema).optional(),
   extraServices: z.array(z.union([extraServiceSchema, z.string()])).optional(),
   /**
    * Every charge on the booking was stated by the estimate it is made from,
@@ -993,6 +1022,20 @@ export const belongingEntrySchema = z.object({
 });
 export type BelongingEntry = z.infer<typeof belongingEntrySchema>;
 
+/**
+ * A pet's care as the booking form's care steps book it — what a training
+ * enrolment carries to the session bookings it makes (2026-10-01).
+ */
+export const bookingCareSchema = newBookingSchema
+  .pick({
+    feedingSchedule: true,
+    medications: true,
+    noMedication: true,
+    vetContacts: true,
+  })
+  .strict();
+export type BookingCare = z.infer<typeof bookingCareSchema>;
+
 export const bookingSchema = newBookingSchema.extend({
   id: z.number(),
   /** When the row was written — for a customer request, when they asked. Read-only. */
@@ -1177,6 +1220,10 @@ export const bookingRequestSchema = z.object({
   extraServices: z.array(extraServiceSchema).optional(),
   feedingSchedule: z.array(feedingScheduleItemSchema).optional(),
   medications: z.array(medicationItemSchema).optional(),
+  /** The pets answered "takes no medication". */
+  noMedication: z.array(z.number().int()).optional(),
+  /** Each pet's vet, by pet id. */
+  vetContacts: z.record(z.string(), vetContactSchema).optional(),
   notificationEmail: z.boolean().optional(),
   notificationSMS: z.boolean().optional(),
   /** Every booking this request made — one per daycare day — in date order. */

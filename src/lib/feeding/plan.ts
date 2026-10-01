@@ -4,8 +4,9 @@ import { parseAmount, round2, type Translate } from "@/lib/medications/dose";
 import { hasCheckoutDay, type MedStay } from "@/lib/medications/schedule";
 import {
   houseFoodFor,
-  mealSlotTime,
-  offeredMealSlots,
+  mealRow,
+  offeredMealTimes,
+  offeredOptions,
   type FeedingInstructions,
 } from "@/lib/settings/feeding-instructions";
 import type { MedDayRule } from "@/types/base";
@@ -17,36 +18,29 @@ import type {
   SavedFeedingPlan,
 } from "@/types/booking";
 
-import { foodTypeLabel, mealSlotLabel } from "./labels";
+import { foodTypeLabel, houseFoodName, mealLabel, optionValue } from "./labels";
 import { isClock, planDays, servedMealIds, sortedMeals } from "./schedule";
 import {
   CUSTOM_MEAL_DEFAULT,
+  DEFAULT_MEAL_TIMES,
   FEEDING_DAY_RULES,
   FOOD,
   feedUnitFromStored,
   foodTypeFromStored,
-  isEatingHabit,
-  isFeedingStyle,
   isFeedUnit,
   isFoodPack,
   isFoodPrep,
   isFoodType,
   isMealSlot,
-  isSkipAction,
   isTreatsChoice,
   MEAL_SLOTS,
   SKIP_ACTIONS,
-  STARTING_MEALS,
   startingAmount,
   styleFromStored,
-  type EatingHabit,
-  type FeedingStyle,
   type FeedUnit,
   type FoodPack,
   type FoodPrep,
   type FoodType,
-  type MealSlot,
-  type SkipAction,
   type TreatsChoice,
 } from "./vocabulary";
 
@@ -64,10 +58,12 @@ import {
 // ============================================================================
 
 export interface PlanMeal {
-  /** A meal time's own id (`breakfast`), `custom-<uuid>`, or an older row's. */
+  /** A meal time's own id (`breakfast`, `meal-…`), `custom-<uuid>`, or an older row's. */
   id: string;
-  /** Picked as one of the meal times. */
-  slot?: MealSlot;
+  /** Picked as one of the facility's meal times — the vocabulary's or its own. */
+  slot?: string;
+  /** The name a booking stored, for a meal time the facility has since deleted. */
+  label?: string;
   /** `HH:MM`; blank while a custom time is being typed. */
   time: string;
 }
@@ -99,9 +95,11 @@ export interface FeedingPlan {
   dayRule: MedDayRule;
   certainDays: string[];
   foods: PlanFood[];
-  styles: FeedingStyle[];
-  habits: EatingHabit[];
-  skip: SkipAction;
+  /** Vocabulary ids, or the facility's own quick picks as written. */
+  styles: string[];
+  habits: string[];
+  /** One skip action; empty when the facility offers none. */
+  skip: string;
   treats: TreatsChoice;
   allergies: string[];
   notes: string;
@@ -148,10 +146,20 @@ function startingType(
     : (settings.foodTypes[0] ?? preferred);
 }
 
+/** The pack a food starts in: the design's, if the facility accepts it. */
+function startingPack(
+  settings: Pick<FeedingInstructions, "packs">,
+  preferred: FoodPack,
+): FoodPack {
+  return settings.packs.includes(preferred)
+    ? preferred
+    : (settings.packs[0] ?? preferred);
+}
+
 /** A plan's first food: dry kibble, a cup, pre-portioned. */
 export function startingFood(
   id: string,
-  settings: Pick<FeedingInstructions, "foodTypes">,
+  settings: Pick<FeedingInstructions, "foodTypes" | "packs">,
 ): PlanFood {
   const type = startingType(settings, "kibble");
   const unit = FOOD[type].units[0];
@@ -167,14 +175,14 @@ export function startingFood(
     amount: startingAmount(unit),
     servedAt: null,
     prep: [],
-    pack: "pre_portioned",
+    pack: startingPack(settings, "pre_portioned"),
   };
 }
 
 /** "+ Add another food": a topper, a tablespoon, in its own container. */
 export function anotherFood(
   id: string,
-  settings: Pick<FeedingInstructions, "foodTypes">,
+  settings: Pick<FeedingInstructions, "foodTypes" | "packs">,
 ): PlanFood {
   const type = startingType(settings, "topper");
   const unit = type === "topper" ? "tbsp" : FOOD[type].units[0];
@@ -183,24 +191,28 @@ export function anotherFood(
     type,
     unit,
     amount: startingAmount(unit),
-    pack: "original_bag",
+    pack: startingPack(settings, "original_bag"),
   };
 }
 
-/** A new plan for `petId`, as the design starts one. */
+/**
+ * A new plan for `petId`: the meal times the facility pre-selects (else the
+ * first it offers, else a custom 3:00 PM), every day, one food.
+ */
 export function blankPlan(
   ids: { plan: string; food: string; meal: string },
   petId: number | undefined,
   { settings, stay }: PlanContext,
 ): FeedingPlan {
-  const slots = offeredMealSlots(settings);
-  const starting = slots.filter((slot) => STARTING_MEALS.includes(slot.id));
+  const offered = offeredMealTimes(settings);
+  const picked = offered.filter((row) => row.preselected);
   const meals: PlanMeal[] = (
-    starting.length > 0 ? starting : slots.slice(0, 1)
-  ).map((slot) => ({ id: slot.id, slot: slot.id, time: slot.time }));
-  if (meals.length === 0 && settings.customTimes) {
+    picked.length > 0 ? picked : offered.slice(0, 1)
+  ).map((row) => ({ id: row.id, slot: row.id, time: row.time }));
+  if (meals.length === 0) {
     meals.push({ id: ids.meal, time: CUSTOM_MEAL_DEFAULT });
   }
+  const skip = offeredOptions(settings, "skip")[0];
   return {
     id: ids.plan,
     petId,
@@ -210,7 +222,7 @@ export function blankPlan(
     foods: [startingFood(ids.food, settings)],
     styles: [],
     habits: [],
-    skip: SKIP_ACTIONS[0],
+    skip: skip ? optionValue("skip", skip) : "",
     treats: "house",
     allergies: [],
     notes: "",
@@ -271,7 +283,7 @@ const nonEmpty = <T>(value: T[] | undefined): T[] | undefined =>
 function foodFromRecord(
   food: FeedingFood,
   alias: (mealId: string) => string,
-  settings: Pick<FeedingInstructions, "houseFoods">,
+  settings: Pick<FeedingInstructions, "house">,
 ): PlanFood {
   const source = food.source === "house" ? "house" : "own";
   const type: FoodType = isFoodType(food.type) ? food.type : "other";
@@ -391,19 +403,39 @@ export function planFromItem(
       aliases.set(occasion.id, twin.id);
       continue;
     }
-    const stored = isMealSlot(occasion.slot) ? occasion.slot : undefined;
-    const slot = stored
-      ? mealSlotTime(settings, stored) === time
-        ? stored
-        : undefined
-      : MEAL_SLOTS.find((candidate) =>
-          settings.meals.some(
-            (m) => m.id === candidate && m.enabled && m.time === time,
-          ),
-        );
-    meals.push(
-      slot ? { id: occasion.id, slot, time } : { id: occasion.id, time },
-    );
+    const stored =
+      typeof occasion.slot === "string" && occasion.slot
+        ? occasion.slot
+        : undefined;
+    const row = mealRow(settings, stored);
+    let slot: string | undefined;
+    let label: string | undefined;
+    if (row) {
+      // Still a meal time here: the same one, while it is at the same time.
+      slot = row.time === time ? row.id : undefined;
+    } else if (stored && isMealSlot(stored)) {
+      slot = DEFAULT_MEAL_TIMES[stored] === time ? stored : undefined;
+    } else if (stored) {
+      // A meal time the facility has since deleted keeps its stored name.
+      slot = stored;
+      label =
+        typeof occasion.label === "string" && occasion.label.trim()
+          ? occasion.label.trim()
+          : undefined;
+    } else {
+      // An older row named no meal time: one of the vocabulary's, by its time.
+      slot = MEAL_SLOTS.find((candidate) =>
+        settings.meals.some(
+          (m) => m.id === candidate && m.on && m.time === time,
+        ),
+      );
+    }
+    meals.push({
+      id: occasion.id,
+      ...(slot ? { slot } : {}),
+      ...(label ? { label } : {}),
+      time,
+    });
   }
   const alias = (id: string) => aliases.get(id) ?? id;
 
@@ -426,8 +458,9 @@ export function planFromItem(
   const legacyStyle = Array.isArray(item.styles)
     ? null
     : styleFromStored(item.feedingInstruction);
+  // The facility's own quick picks are kept as written, like the vocabulary's ids.
   const styles = Array.isArray(item.styles)
-    ? strings(item.styles).filter(isFeedingStyle)
+    ? strings(item.styles)
     : legacyStyle
       ? [legacyStyle]
       : [];
@@ -451,8 +484,11 @@ export function planFromItem(
         : [...stay.days],
     foods,
     styles,
-    habits: strings(item.habits).filter(isEatingHabit),
-    skip: isSkipAction(item.skipMeal) ? item.skipMeal : SKIP_ACTIONS[0],
+    habits: strings(item.habits),
+    skip:
+      typeof item.skipMeal === "string" && item.skipMeal.trim()
+        ? item.skipMeal
+        : SKIP_ACTIONS[0],
     treats: isTreatsChoice(item.treats) ? item.treats : "house",
     allergies: strings(item.allergies),
     notes: typeof item.notes === "string" ? item.notes : "",
@@ -493,12 +529,14 @@ const LEGACY_UNIT: Partial<Record<FeedUnit, MealComponent["unit"]>> = {
 /** What a food is called on a record: the house food, the brand, the kind. */
 function recordName(
   food: PlanFood,
-  settings: Pick<FeedingInstructions, "houseFoods">,
+  settings: Pick<FeedingInstructions, "house">,
   t: Translate,
 ): string {
   if (food.source === "house") {
-    return (
-      houseFoodFor(settings, food.houseFoodId)?.name ?? food.houseFoodName ?? ""
+    return houseFoodName(
+      t,
+      houseFoodFor(settings, food.houseFoodId),
+      food.houseFoodName,
     );
   }
   return food.brand.trim() || foodTypeLabel(t, food.type);
@@ -525,7 +563,7 @@ export function itemFromPlan(
   const occasions: FeedingOccasion[] = meals.map((meal) => ({
     id: meal.id,
     label: meal.slot
-      ? mealSlotLabel(t, meal.slot)
+      ? mealLabel(t, meal, locale, settings)
       : formatTimeOfDay(meal.time, locale),
     time: meal.time,
     ...(meal.slot ? { slot: meal.slot } : {}),
@@ -558,7 +596,9 @@ export function itemFromPlan(
         food.source === "house" ? food.houseFoodId || undefined : undefined,
       houseFoodName:
         food.source === "house"
-          ? (house?.name ?? (food.houseFoodName || undefined))
+          ? house
+            ? houseFoodName(t, house)
+            : food.houseFoodName || undefined
           : undefined,
       unit: food.unit,
       customUnit:
@@ -569,7 +609,7 @@ export function itemFromPlan(
       servedAt:
         food.servedAt && served.length < meals.length ? served : undefined,
       prep: show.prep && food.prep.length > 0 ? [...food.prep] : undefined,
-      pack: food.source === "own" && show.packing ? food.pack : undefined,
+      pack: food.source === "own" ? food.pack : undefined,
     }) as FeedingFood;
   });
 
@@ -592,13 +632,11 @@ export function itemFromPlan(
         ? [...plan.certainDays].sort()
         : undefined,
     foods,
-    styles: show.styles && plan.styles.length > 0 ? plan.styles : undefined,
-    habits: show.habits && plan.habits.length > 0 ? plan.habits : undefined,
-    skipMeal: show.skip ? plan.skip : undefined,
+    styles: plan.styles.length > 0 ? plan.styles : undefined,
+    habits: plan.habits.length > 0 ? plan.habits : undefined,
+    skipMeal: plan.skip.trim() || undefined,
     treats: show.treats ? plan.treats : undefined,
-    allergies: show.allergies
-      ? plan.allergies.map((a) => a.trim()).filter(Boolean)
-      : [],
+    allergies: plan.allergies.map((a) => a.trim()).filter(Boolean),
     notes: show.notes ? plan.notes.trim() : "",
     waivedFoods: waived.length > 0 ? waived : undefined,
     saveToProfile: show.saveToProfile ? plan.saveToProfile : undefined,

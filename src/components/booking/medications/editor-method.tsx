@@ -6,15 +6,15 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ChoicePill } from "@/components/ui/choice-pill";
 import { formatMoney } from "@/lib/i18n/format";
-import { dayCount, itemWord, methodLabel } from "@/lib/medications/describe";
+import { dayCount, itemWord, methodName } from "@/lib/medications/describe";
 import { fill, round2 } from "@/lib/medications/dose";
 import { draftDays, draftTimes } from "@/lib/medications/draft";
+import { asksForSide, METHODS_BY_FORM } from "@/lib/medications/vocabulary";
 import {
-  asksForSide,
-  METHODS_BY_FORM,
-  type MedMethod,
-} from "@/lib/medications/vocabulary";
-import { providedFor } from "@/lib/settings/medication-instructions";
+  isCustomMethod,
+  methodRow,
+  providedFor,
+} from "@/lib/settings/medication-instructions";
 import { useShellLocale, useShellText } from "@/lib/shell/use-shell-text";
 import type { MedSide } from "@/types/base";
 
@@ -26,9 +26,10 @@ import { OptionCards } from "@/components/booking/care/option-cards";
 import type { MedicationStepState } from "./use-medication-step";
 
 // ============================================================================
-// HOW IT'S GIVEN: the ways that suit the form, which side for drops, and —
-// where the facility supplies what it is given with — who supplies it, what
-// that adds to the booking, and staff's waiver.
+// HOW IT'S GIVEN: the ways that suit the form — and the facility's own, which
+// suit every form — which side for drops, and, where the facility sells what
+// it is given with, who supplies it, what that adds to the booking, and
+// staff's waiver.
 // ============================================================================
 
 const SIDES: MedSide[] = ["left", "right", "both"];
@@ -44,12 +45,35 @@ export function EditorMethod({ step }: { step: MedicationStepState }) {
   const draft = step.editor!.draft;
   const { settings, stay, staff } = step;
 
-  const methods: MedMethod[] = METHODS_BY_FORM[draft.form].filter(
-    (method) => settings.methods.includes(method) || method === draft.method,
+  const own = settings.methods.filter(
+    (row) => row.on && isCustomMethod(row.id),
   );
+  const methods: { id: string; label: string }[] = [
+    ...METHODS_BY_FORM[draft.form]
+      .filter(
+        (id) => methodRow(settings, id)?.on === true || id === draft.method,
+      )
+      .map((id) => ({ id, label: methodName(t, id) })),
+    ...own.map((row) => ({
+      id: row.id,
+      label: methodName(t, row.id, row.label),
+    })),
+  ];
+  // One the facility has since switched off or deleted stays while picked.
+  if (
+    isCustomMethod(draft.method) &&
+    !methods.some((method) => method.id === draft.method)
+  ) {
+    methods.push({
+      id: draft.method,
+      label: methodName(t, draft.method, draft.methodLabel),
+    });
+  }
   if (methods.length === 0) return null;
 
   const supplied = providedFor(settings, draft.method || undefined);
+  const items = (count: number) =>
+    supplied ? itemWord(t, supplied.id, count, locale, supplied.label) : "";
   const perDay = draftTimes(draft, settings).length;
   const days = draftDays(draft, stay).length;
   const quantity = supplied
@@ -68,18 +92,23 @@ export function EditorMethod({ step }: { step: MedicationStepState }) {
         className="flex flex-wrap gap-2"
       >
         {methods.map((method) => {
-          const canProvide = providedFor(settings, method) !== undefined;
+          const canProvide = providedFor(settings, method.id) !== undefined;
           return (
             <ChoicePill
-              key={method}
+              key={method.id}
               type="radio"
               name="meds-method"
-              value={method}
-              checked={draft.method === method}
-              onChange={() => step.update({ method })}
+              value={method.id}
+              checked={draft.method === method.id}
+              onChange={() =>
+                step.update({
+                  method: method.id,
+                  methodLabel: isCustomMethod(method.id) ? method.label : "",
+                })
+              }
               className={canProvide ? "pr-2" : undefined}
             >
-              <span>{methodLabel(t, method)}</span>
+              <span>{method.label}</span>
               {canProvide ? (
                 <Badge variant="confirmed">
                   <CircleCheck aria-hidden />
@@ -118,14 +147,10 @@ export function EditorMethod({ step }: { step: MedicationStepState }) {
       {supplied ? (
         <div className="border-line flex flex-col gap-3.5 rounded-xl border p-4">
           <p className="text-body-strong text-body-ink">
-            {fill(t("medsWhoSupplies"), {
-              items: itemWord(t, supplied.method, 2, locale),
-            })}
+            {fill(t("medsWhoSupplies"), { items: items(2) })}
           </p>
           <OptionCards
-            label={fill(t("medsWhoSupplies"), {
-              items: itemWord(t, supplied.method, 2, locale),
-            })}
+            label={fill(t("medsWhoSupplies"), { items: items(2) })}
             value={draft.source}
             columns="sm:grid-cols-[repeat(auto-fit,minmax(14rem,1fr))]"
             options={[
@@ -164,7 +189,7 @@ export function EditorMethod({ step }: { step: MedicationStepState }) {
                   <span className="text-body-strong text-body-ink">
                     {fill(t("medsItemCount"), {
                       count: quantity,
-                      items: itemWord(t, supplied.method, quantity, locale),
+                      items: items(quantity),
                     })}
                   </span>
                   <span className="text-meta text-ink-tertiary">

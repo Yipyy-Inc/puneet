@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { vetContactSchema } from "@/types/booking";
+
 import type {
   AbandonmentStep,
   UnfinishedBooking,
@@ -85,8 +87,15 @@ const draftSchema = z
     preSelectedNotificationEmail: z.boolean().optional(),
     preSelectedNotificationSMS: z.boolean().optional(),
     // Which sub-step of Details they were on. `step` alone returns them to
-    // the right SCREEN; this returns them to the right question on it.
+    // the right SCREEN; this returns them to the right question on it. The
+    // id since 2026-10-01; the position, from older drafts, still read.
     preSelectedSubStep: z.number().int().min(0).max(20).optional(),
+    preSelectedSubStepId: z.number().int().min(0).max(20).optional(),
+    preSelectedNoMedication: z
+      .array(z.number().int().positive())
+      .max(20)
+      .optional(),
+    preSelectedVetContacts: z.record(z.string(), vetContactSchema).optional(),
   })
   .strip();
 
@@ -158,10 +167,13 @@ export function rowToUnfinishedBooking(
     feedingSchedule:
       d.preSelectedFeedingSchedule as UnfinishedBooking["feedingSchedule"],
     medications: d.preSelectedMedications as UnfinishedBooking["medications"],
+    noMedication: d.preSelectedNoMedication,
+    vetContacts: d.preSelectedVetContacts,
     specialRequests: d.preSelectedSpecialRequests,
     notificationEmail: d.preSelectedNotificationEmail,
     notificationSMS: d.preSelectedNotificationSMS,
     subStep: d.preSelectedSubStep,
+    subStepId: d.preSelectedSubStepId,
     ...(row.recovery_outcome && row.recovery_resolved_at
       ? {
           recovery: {

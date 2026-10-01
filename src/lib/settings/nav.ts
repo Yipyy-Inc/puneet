@@ -47,6 +47,7 @@ import {
   TriangleAlert,
   UserCircle,
   UserX,
+  Utensils,
   UtensilsCrossed,
   Wallet,
 } from "lucide-react";
@@ -322,6 +323,13 @@ export const SETTINGS_NAV: SettingsGroup[] = [
         label: "Add-ons",
         icon: Package,
         access: "manage_services",
+      },
+      {
+        id: "feeding-medications",
+        segment: "feeding-medications",
+        label: "Feeding & medications",
+        icon: Utensils,
+        access: "manage_facility_settings",
       },
       {
         id: "yipyygo",

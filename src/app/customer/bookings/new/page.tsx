@@ -150,6 +150,9 @@ export default function NewBookingPage() {
           // to Details to click forward again.
           preSelectedStep={resumePreselection?.preSelectedStep}
           preSelectedSubStep={resumePreselection?.preSelectedSubStep}
+          preSelectedSubStepId={resumePreselection?.preSelectedSubStepId}
+          preSelectedNoMedication={resumePreselection?.preSelectedNoMedication}
+          preSelectedVetContacts={resumePreselection?.preSelectedVetContacts}
           preSelectedNotificationEmail={
             resumePreselection?.preSelectedNotificationEmail
           }

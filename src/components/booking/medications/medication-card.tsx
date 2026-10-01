@@ -1,6 +1,6 @@
 "use client";
 
-import { TriangleAlert } from "lucide-react";
+import { ImageIcon, TriangleAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { describeMedication } from "@/lib/medications/describe";
@@ -21,15 +21,18 @@ export function MedicationCard({
   stay,
   settings,
   dateless,
+  photo = false,
   editDisabled,
   onEdit,
   onRemove,
 }: {
   item: MedicationItem;
   stay: MedStay;
-  settings: Pick<MedicationInstructions, "provided">;
+  settings: Pick<MedicationInstructions, "methods">;
   /** Its chosen dates are all outside this stay. */
   dateless: boolean;
+  /** A photo of its label goes with it. */
+  photo?: boolean;
   editDisabled: boolean;
   onEdit: () => void;
   onRemove: () => void;
@@ -54,6 +57,12 @@ export function MedicationCard({
           <p className="text-body text-body-ink">{lines.schedule}</p>
         ) : null}
         <p className="text-meta text-ink-tertiary">{lines.method}</p>
+        {photo ? (
+          <p className="text-meta text-ink-secondary flex items-center gap-1.5">
+            <ImageIcon className="size-4 shrink-0" aria-hidden />
+            {t("medsPhotoAttached")}
+          </p>
+        ) : null}
         {dateless ? (
           <p className="text-meta text-warning flex items-center gap-1.5">
             <TriangleAlert className="size-4 shrink-0" aria-hidden />

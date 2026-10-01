@@ -44,7 +44,11 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { bookableLookup, type BookableAddOn } from "@/lib/add-ons/bookable";
-import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
+import type {
+  FeedingScheduleItem,
+  MedicationItem,
+  VetContact,
+} from "@/types/booking";
 import {
   useBookingApproval,
   useFeedingInstructions,
@@ -53,6 +57,8 @@ import {
 import { responseHoursFor } from "@/lib/settings/booking-approval";
 import { describeFeeding } from "@/lib/feeding/describe";
 import { describeMedication } from "@/lib/medications/describe";
+import { fill as fillWords } from "@/lib/medications/dose";
+import { careStepUse } from "@/lib/settings/care-setup";
 import type { MedStay } from "@/lib/medications/schedule";
 import { staffQueries } from "@/lib/api/staff";
 import { AddOnStaffSelect } from "./AddOnStaffSelect";
@@ -96,6 +102,10 @@ interface ConfirmStepProps {
   medications: MedicationItem[];
   /** The stay the Medications step counted its days in. */
   medicationStay?: MedStay;
+  /** The pets answered "takes no medication". */
+  noMedication?: number[];
+  /** Each pet's vet, by pet id, where the facility asks. */
+  vetContacts?: Record<string, VetContact>;
   extraServices: Array<{
     serviceId: string;
     quantity: number;
@@ -236,6 +246,8 @@ export function ConfirmStep({
   feedingSchedule,
   medications,
   medicationStay,
+  noMedication = [],
+  vetContacts,
   extraServices,
   onAddOnStaffChange,
   addOnsCatalog,
@@ -291,6 +303,29 @@ export function ConfirmStep({
   const { approval } = useBookingApproval();
   const { instructions: medicationSettings } = useMedicationInstructions();
   const { instructions: feedingSettings } = useFeedingInstructions();
+  // A care step shows while the facility has it on for this service, or
+  // while the booking holds something of it (2026-10-01).
+  const showFeeding =
+    careStepUse(feedingSettings, selectedService) !== "disabled" ||
+    feedingSchedule.length > 0;
+  const showMedications =
+    careStepUse(medicationSettings, selectedService) !== "disabled" ||
+    medications.length > 0;
+  const petNameOf = (petId: number | string) =>
+    selectedPets.find((pet) => pet.id === Number(petId))?.name ?? "";
+  const noMedicationNames = noMedication
+    .map(petNameOf)
+    .filter((name) => name !== "");
+  const vetLines = Object.entries(vetContacts ?? {}).flatMap(([petId, vet]) => {
+    const contact = [vet.clinic, vet.phone].filter(Boolean).join(" · ");
+    if (!contact) return [];
+    const name = petNameOf(petId);
+    return [
+      fillWords(t("medsVetLine"), {
+        vet: selectedPets.length > 1 && name ? `${contact} (${name})` : contact,
+      }),
+    ];
+  });
   const { data: staffProfiles } = useQuery(staffQueries.profiles());
   const locale = useShellLocale();
   // Who an add-on may be given to: everybody working here now, and whoever
@@ -961,137 +996,165 @@ export function ConfirmStep({
         })()}
 
       {/* ── Care Notes ──────────────────────────────────────────── */}
-      {isDaycareOrBoarding && (
+      {(showFeeding || showMedications) && (
         <div className="grid gap-3 sm:grid-cols-2">
           {/* Feeding */}
-          <div className="rounded-2xl border p-4">
-            <SectionHeader
-              icon={Utensils}
-              label={t("feeding")}
-              onEdit={
-                onEditStep ? () => onEditStep(detailsStepIdx, 3) : undefined
-              }
-            />
-            {feedingSchedule.length > 0 ? (
-              <div className="space-y-3">
-                {feedingSchedule.map((item, idx) => {
-                  // The step's own words for the plan — its meals, each food
-                  // and how to serve it, what the facility provides — so
-                  // this reads exactly as the plan the owner wrote.
-                  const lines = describeFeeding(item, {
-                    t,
-                    locale,
-                    stay: medicationStay ?? { days: [], overnight: false },
-                    settings: feedingSettings,
-                    service: selectedService,
-                  });
-                  const petName =
-                    selectedPets.length > 1
-                      ? selectedPets.find((pet) => pet.id === item.petId)?.name
-                      : undefined;
-                  return (
-                    <div key={item.id || idx} className="space-y-0.5">
-                      {petName ? (
-                        <p className="text-body-strong text-body-ink">
-                          {petName}
+          {showFeeding ? (
+            <div className="rounded-2xl border p-4">
+              <SectionHeader
+                icon={Utensils}
+                label={t("feeding")}
+                onEdit={
+                  onEditStep ? () => onEditStep(detailsStepIdx, 3) : undefined
+                }
+              />
+              {feedingSchedule.length > 0 ? (
+                <div className="space-y-3">
+                  {feedingSchedule.map((item, idx) => {
+                    // The step's own words for the plan — its meals, each food
+                    // and how to serve it, what the facility provides — so
+                    // this reads exactly as the plan the owner wrote.
+                    const lines = describeFeeding(item, {
+                      t,
+                      locale,
+                      stay: medicationStay ?? { days: [], overnight: false },
+                      settings: feedingSettings,
+                      service: selectedService,
+                    });
+                    const petName =
+                      selectedPets.length > 1
+                        ? selectedPets.find((pet) => pet.id === item.petId)
+                            ?.name
+                        : undefined;
+                    return (
+                      <div key={item.id || idx} className="space-y-0.5">
+                        {petName ? (
+                          <p className="text-body-strong text-body-ink">
+                            {petName}
+                          </p>
+                        ) : null}
+                        <p className="text-meta text-ink-secondary">
+                          {lines.meals}
                         </p>
-                      ) : null}
-                      <p className="text-meta text-ink-secondary">
-                        {lines.meals}
-                      </p>
-                      {lines.foods.map((food, index) => (
-                        <p
-                          key={`${index}-${food}`}
-                          className="text-meta text-ink-secondary"
-                        >
-                          {food}
-                        </p>
-                      ))}
-                      {lines.extras.map((extra) => (
-                        <p key={extra} className="text-meta text-ink-tertiary">
-                          {extra}
-                        </p>
-                      ))}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              /* #1 — empty state */
-              <p className="text-muted-foreground flex items-center gap-1 text-xs">
-                <Info className="size-3 shrink-0" />
-                {t("noFeedingInstructions")}
-              </p>
-            )}
-          </div>
+                        {lines.foods.map((food, index) => (
+                          <p
+                            key={`${index}-${food}`}
+                            className="text-meta text-ink-secondary"
+                          >
+                            {food}
+                          </p>
+                        ))}
+                        {lines.extras.map((extra) => (
+                          <p
+                            key={extra}
+                            className="text-meta text-ink-tertiary"
+                          >
+                            {extra}
+                          </p>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                /* #1 — empty state */
+                <p className="text-muted-foreground flex items-center gap-1 text-xs">
+                  <Info className="size-3 shrink-0" />
+                  {t("noFeedingInstructions")}
+                </p>
+              )}
+            </div>
+          ) : null}
 
           {/* Medications */}
-          <div className="rounded-2xl border p-4">
-            <SectionHeader
-              icon={Pill}
-              label={t("medications")}
-              onEdit={
-                onEditStep ? () => onEditStep(detailsStepIdx, 4) : undefined
-              }
-            />
-            {medications.length > 0 ? (
-              <div className="space-y-3">
-                {medications.map((med, idx) => {
-                  // The step's own words for it — dose, days and times, how
-                  // it is given and what the facility supplies — so this
-                  // reads exactly as the card the owner saved.
-                  const lines = describeMedication(med, {
-                    t,
-                    locale,
-                    stay: medicationStay,
-                    settings: medicationSettings,
-                  });
-                  const petName =
-                    selectedPets.length > 1
-                      ? selectedPets.find((pet) => pet.id === med.petId)?.name
-                      : undefined;
-                  return (
-                    <div key={med.id || idx} className="space-y-0.5">
-                      <p className="text-body-strong text-body-ink">
-                        {med.name ||
-                          t("medicationNumber").replace("{n}", String(idx + 1))}
-                        {petName ? (
-                          <span className="text-meta text-ink-tertiary font-normal">
-                            {" "}
-                            · {petName}
-                          </span>
+          {showMedications ? (
+            <div className="rounded-2xl border p-4">
+              <SectionHeader
+                icon={Pill}
+                label={t("medications")}
+                onEdit={
+                  onEditStep ? () => onEditStep(detailsStepIdx, 4) : undefined
+                }
+              />
+              {medications.length > 0 ? (
+                <div className="space-y-3">
+                  {medications.map((med, idx) => {
+                    // The step's own words for it — dose, days and times, how
+                    // it is given and what the facility supplies — so this
+                    // reads exactly as the card the owner saved.
+                    const lines = describeMedication(med, {
+                      t,
+                      locale,
+                      stay: medicationStay,
+                      settings: medicationSettings,
+                    });
+                    const petName =
+                      selectedPets.length > 1
+                        ? selectedPets.find((pet) => pet.id === med.petId)?.name
+                        : undefined;
+                    return (
+                      <div key={med.id || idx} className="space-y-0.5">
+                        <p className="text-body-strong text-body-ink">
+                          {med.name ||
+                            t("medicationNumber").replace(
+                              "{n}",
+                              String(idx + 1),
+                            )}
+                          {petName ? (
+                            <span className="text-meta text-ink-tertiary font-normal">
+                              {" "}
+                              · {petName}
+                            </span>
+                          ) : null}
+                        </p>
+                        {lines.dose ? (
+                          <p className="text-meta text-ink-secondary">
+                            {lines.dose}
+                          </p>
                         ) : null}
-                      </p>
-                      {lines.dose ? (
-                        <p className="text-meta text-ink-secondary">
-                          {lines.dose}
+                        {lines.schedule ? (
+                          <p className="text-meta text-ink-secondary">
+                            {lines.schedule}
+                          </p>
+                        ) : null}
+                        <p className="text-meta text-ink-tertiary">
+                          {lines.method}
                         </p>
-                      ) : null}
-                      {lines.schedule ? (
-                        <p className="text-meta text-ink-secondary">
-                          {lines.schedule}
-                        </p>
-                      ) : null}
-                      <p className="text-meta text-ink-tertiary">
-                        {lines.method}
-                      </p>
-                      {lines.extras.map((extra) => (
-                        <p key={extra} className="text-meta text-ink-tertiary">
-                          {extra}
-                        </p>
-                      ))}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              /* #1 — empty state */
-              <p className="text-muted-foreground flex items-center gap-1 text-xs">
-                <Info className="size-3 shrink-0" />
-                {t("noMedications")}
-              </p>
-            )}
-          </div>
+                        {lines.extras.map((extra) => (
+                          <p
+                            key={extra}
+                            className="text-meta text-ink-tertiary"
+                          >
+                            {extra}
+                          </p>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                /* #1 — empty state */
+                <p className="text-muted-foreground flex items-center gap-1 text-xs">
+                  <Info className="size-3 shrink-0" />
+                  {t("noMedications")}
+                </p>
+              )}
+              {noMedicationNames.length > 0 || vetLines.length > 0 ? (
+                <div className="mt-3 space-y-0.5">
+                  {noMedicationNames.map((name) => (
+                    <p key={name} className="text-meta text-ink-secondary">
+                      {fillWords(t("medsTakesNone"), { pet: name })}
+                    </p>
+                  ))}
+                  {vetLines.map((line) => (
+                    <p key={line} className="text-meta text-ink-tertiary">
+                      {line}
+                    </p>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       )}
 

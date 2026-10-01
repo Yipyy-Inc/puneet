@@ -20,10 +20,18 @@ import type { FeedingStepState } from "./use-feeding-step";
 
 // ============================================================================
 // What one food comes to over the stay. The owner's: how much to pack — so
-// many labelled portions, or at least so much — and the sum behind it. The
-// facility's: how many meals or days of it, what that adds to the booking,
-// and staff's waiver.
+// many labelled portions, or at least so much, with the facility's extra
+// meals in case pickup is late — and the sum behind it. The facility's: how
+// many meals or days of it, what that adds to the booking, and staff's waiver.
 // ============================================================================
+
+/** "Included" — with the service the step is on. */
+const WITH_SERVICE: Partial<Record<string, string>> = {
+  boarding: "feedWithBoarding",
+  daycare: "feedWithDaycare",
+  grooming: "feedWithGrooming",
+  training: "feedWithTraining",
+};
 
 export function FoodSummary({
   step,
@@ -42,19 +50,31 @@ export function FoodSummary({
 
   if (food.source === "own") {
     const prePortioned = food.pack === "pre_portioned";
-    const total = Math.round(servings * food.amount * 100) / 100;
+    // Packed beyond the stay, as the facility asks — nothing extra for a food
+    // the stay never serves.
+    const extra = servings > 0 ? step.settings.extraMeals : 0;
+    const total = Math.round((servings + extra) * food.amount * 100) / 100;
+    const calc =
+      extra > 0
+        ? prePortioned
+          ? "feedCalcOwnEachExtra"
+          : "feedCalcOwnExtra"
+        : prePortioned
+          ? "feedCalcOwnEach"
+          : "feedCalcOwn";
     return (
       <div className="border-line flex flex-col gap-0.5 rounded-xl border px-4 py-3.5">
         <span className="text-body-strong text-body-ink">
           {prePortioned
-            ? fill(t("feedPackPortions"), { count: servings })
+            ? fill(t("feedPackPortions"), { count: servings + extra })
             : fill(t("feedPackAtLeast"), {
                 amount: portionWords(t, { ...food, amount: total }, locale),
               })}
         </span>
         <span className="text-meta text-ink-tertiary">
-          {fill(t(prePortioned ? "feedCalcOwnEach" : "feedCalcOwn"), {
+          {fill(t(calc), {
             meals: mealCount(t, servings, locale),
+            extra,
             portion: portionWords(t, food, locale),
           })}
         </span>
@@ -62,8 +82,9 @@ export function FoodSummary({
     );
   }
 
-  const charge = foodCharge(food, { meals, days }, step.settings, step.service);
-  if (!charge) return null;
+  const charge = foodCharge(food, { meals, days }, step.settings);
+  // No longer offered: the card says so, and there is nothing to price.
+  if (!charge || !charge.offered) return null;
   const waived = plan.waivedFoods.includes(food.id);
   const name = houseFoodInline(t, food, locale, step.settings);
   const price = formatMoney(charge.unitPrice, locale);
@@ -71,9 +92,7 @@ export function FoodSummary({
     charge.per === "day"
       ? dayCount(t, charge.quantity, locale)
       : mealCount(t, charge.quantity, locale);
-  const withService = t(
-    step.service === "daycare" ? "feedWithDaycare" : "feedWithBoarding",
-  );
+  const withService = t(WITH_SERVICE[step.service] ?? "feedWithBoarding");
 
   return (
     <div className="flex flex-col gap-2.5">

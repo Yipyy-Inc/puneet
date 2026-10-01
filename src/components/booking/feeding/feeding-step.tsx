@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleCheck, Copy, Plus, Utensils } from "lucide-react";
+import { CircleCheck, Copy, Info, Plus, Utensils } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -128,8 +128,17 @@ export function FeedingStep({
               {fill(t("feedEmptyTitle"), { pet: petName })}
             </p>
             <p className="text-body text-ink-secondary">
-              {fill(t("feedEmptyText"), { pet: petName })}
+              {fill(
+                t(step.required ? "feedEmptyTextRequired" : "feedEmptyText"),
+                { pet: petName },
+              )}
             </p>
+            {step.required ? (
+              <p className="text-meta text-ink-secondary flex items-start gap-2">
+                <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
+                {fill(t("feedRequiredHint"), { pet: petName })}
+              </p>
+            ) : null}
             <div className="flex flex-wrap gap-2.5">
               <Button type="button" onClick={step.addPlan}>
                 <Plus className="size-4" aria-hidden />

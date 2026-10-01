@@ -70,6 +70,7 @@ const CONVERTED = [
   "report-card-template",
   "evaluations",
   "addons",
+  "feeding-medications",
   "training",
   "pricing-rules",
 ] as const;

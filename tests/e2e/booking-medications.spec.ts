@@ -1,8 +1,10 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
+import { createClient } from "@supabase/supabase-js";
 
 import { bookingListSearch } from "@/lib/api/booking-list-params";
 
 import { ACCOUNTS, signIn } from "./_auth";
+import { answerCareSteps } from "./_wizard";
 import { bookingsMarked, cancelBookingsMarked } from "./_sweep";
 
 // ============================================================================
@@ -11,17 +13,18 @@ import { bookingsMarked, cancelBookingsMarked } from "./_sweep";
 // The client sent the page they wanted: a medication entered the way it is
 // given — ½ a tablet, staff to split it, morning and evening, not on the
 // checkout day, in a pill pocket the facility supplies at $0.75 a dose — with
-// the stay's doses beside it. And a setting under Care tasks that decides what
-// that page shows and what the facility supplies.
+// the stay's doses beside it. And the facility's own page under Settings ›
+// Services › Feeding & medications that decides what it shows, what the
+// facility sells, and what it charges.
 //
 // ── WHAT THIS PINS ────────────────────────────────────────────────────────
 //
-// S1  The facility's Medications page is a setting it saves, and a customer's
-//     booking form reads it.
+// S1  What the facility sells is set on its Feeding & medications page, and a
+//     customer's booking form reads it.
 // S2  Staff walk the step: quick picks, the split question, the days and the
 //     times, the method and what the facility supplies, the supply check
-//     that counts half tablets, a capsule's note, an eye drop's side, the
-//     stay panel. The booking keeps all of it; the pill pockets are ONE line
+//     that counts half tablets, the pharmacy label the page ships asking
+//     for, a capsule's note, an eye drop's side, the stay panel. The booking keeps all of it; the pill pockets are ONE line
 //     on its bill, not money in its price; the pet's profile keeps both
 //     medications, and the next booking starts with them.
 // S3  A staff edit moves the line it changed, and a line removed at the till
@@ -29,8 +32,19 @@ import { bookingsMarked, cancelBookingsMarked } from "./_sweep";
 // S4  A customer's request: the pill pockets are billed, the customer cannot
 //     waive them, and the request still confirms itself at the service's
 //     price.
-// S5  A daycare request is a booking a day: the medication fee lands once,
-//     on the first, and the pill pockets on the days that use them.
+// S5  A daycare request is a booking a day: the administration fee lands
+//     once, on the first, and the pill pockets on the days that use them.
+// S6  Boarding's Medications step ships required: Next waits until Buddy has
+//     a medication or "takes no medication" is ticked, and the booking keeps
+//     that answer.
+// S7  The safety rules on the step: a controlled substance refused, the
+//     pharmacy label confirmed, a photo of it sent once the booking is
+//     saved, and the vet — kept on the booking and on Buddy's profile.
+// S8  A training enrolment carries the dog's medications to every session
+//     it books, as one request: the fee once, the pill pockets per session.
+// S9  A label photo: replaced, removed by staff, refused when it is not a
+//     photo or not a medication of the booking; a customer reads their own
+//     and cannot remove it.
 //
 // ── IT CLEANS UP ──────────────────────────────────────────────────────────
 //
@@ -74,7 +88,57 @@ const made: number[] = [];
 const prior: {
   settings?: Record<string, Setting>;
   buddy?: unknown[];
+  vet?: unknown;
 } = {};
+
+/** A 1×1 PNG: a real photo, as far as the route's sniffing is concerned. */
+const PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+  "base64",
+);
+
+function admin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  expect(url, "NEXT_PUBLIC_SUPABASE_URL must be set").toBeTruthy();
+  expect(key, "SUPABASE_SERVICE_ROLE_KEY must be set").toBeTruthy();
+  return createClient(url!, key!, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+async function buddysVet(page: Page): Promise<unknown> {
+  const res = await page.request.get(`/api/pets?clientRef=${ALICE}`);
+  expect(res.ok(), await res.text()).toBe(true);
+  const pets = (await res.json()) as Array<{ id: number; vet?: unknown }>;
+  return Array.isArray(pets)
+    ? (pets.find((pet) => pet.id === BUDDY)?.vet ?? null)
+    : null;
+}
+
+async function photos(page: Page, ref: number) {
+  const res = await page.request.get(`/api/bookings/${ref}/medication-photos`);
+  expect(res.ok(), await res.text()).toBe(true);
+  return (await res.json()) as Array<{
+    id: string;
+    medicationId: string;
+    url: string;
+  }>;
+}
+
+function uploadPhoto(
+  page: Page,
+  ref: number,
+  medicationId: string,
+  buffer: Buffer = PNG,
+) {
+  return page.request.post(`/api/bookings/${ref}/medication-photos`, {
+    multipart: {
+      file: { name: "label.png", mimeType: "image/png", buffer },
+      medicationId,
+    },
+  });
+}
 
 function iso(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -183,7 +247,18 @@ async function openWizard(page: Page) {
 }
 
 async function next(dialog: Locator) {
+  // Boarding ships with its Medications step required (answerCareSteps).
+  await answerCareSteps(dialog);
   await dialog.getByRole("button", { name: /^next$/i }).click();
+}
+
+/** The pill pocket sold at the e2e price: the page ships selling nothing. */
+function sellingPockets(methods: unknown): unknown[] {
+  return (Array.isArray(methods) ? methods : []).map((row) =>
+    (row as { id?: string }).id === "pill_pocket"
+      ? { ...(row as object), sell: true, price: POCKET, per: "dose" }
+      : row,
+  );
 }
 
 /**
@@ -255,6 +330,7 @@ test.beforeAll(async ({ browser }) => {
     }
     prior.settings = await settings(page);
     prior.buddy = await buddysMedications(page);
+    prior.vet = await buddysVet(page);
 
     // The facility supplies pill pockets at $0.75 a dose. Everything else on
     // the page is as it ships.
@@ -264,7 +340,7 @@ test.beforeAll(async ({ browser }) => {
     >;
     await writeSetting(page, "medication_instructions", {
       ...current,
-      provided: [{ method: "pill_pocket", price: POCKET, per: "dose" }],
+      methods: sellingPockets(current.methods),
     });
     // Buddy starts with nothing saved, so the step starts empty.
     const cleared = await page.request.patch(`/api/pets/${BUDDY}`, {
@@ -295,8 +371,18 @@ test.afterAll(async ({ browser }) => {
       }
     }
     await page.request.patch(`/api/pets/${BUDDY}`, {
-      data: { medications: Array.isArray(prior.buddy) ? prior.buddy : [] },
+      data: {
+        medications: Array.isArray(prior.buddy) ? prior.buddy : [],
+        vet: prior.vet ?? null,
+      },
     });
+    // The class S8 enrols Buddy in; its sessions and enrolment go with it,
+    // and its bookings were cancelled with the rest above.
+    const { count } = await admin()
+      .from("training_series")
+      .delete({ count: "exact" })
+      .like("name", `${MARKER}%`);
+    console.log(`cleanup: ${count ?? 0} training series deleted`);
 
     let cancelled = 0;
     for (const ref of made) {
@@ -318,46 +404,63 @@ test.afterAll(async ({ browser }) => {
   }
 });
 
-test("S1 the Medications page is a setting the facility saves, and a customer's form reads it", async ({
+test("S1 what the facility sells is set on its own page, and a customer's form reads it", async ({
   page,
 }) => {
   test.setTimeout(3 * 60 * 1000);
   await signIn(page, ACCOUNTS.owner);
-  await page.goto("/facility/dashboard/settings/care-tasks");
+  await page.goto("/facility/dashboard/settings/feeding-medications");
+  await page.getByRole("tab", { name: "Medications" }).click();
 
-  // The price written above, read back by the card.
-  const pocketPrice = page.getByLabel("Price for Pill pocket");
-  await expect(pocketPrice).toHaveValue(String(POCKET), { timeout: 60_000 });
+  // The price written above, read back by the page.
+  await expect(page.getByLabel("Price of Pill pocket")).toHaveValue("0.75", {
+    timeout: 60_000,
+  });
 
-  // Cheese, by the day, saved through the card.
-  await page.getByRole("switch", { name: "Cheese" }).click();
-  await page.getByLabel("Price for Cheese").fill("1.25");
+  // Cheese, by the day, sold through the page.
+  await page.getByRole("switch", { name: "We sell Cheese" }).click();
+  const cheesePrice = page.getByLabel("Price of Cheese");
+  await cheesePrice.fill("1.25");
+  await cheesePrice.blur();
   await page
-    .getByRole("radiogroup", { name: "How Cheese is charged" })
-    .locator("label", { hasText: "Per day" })
+    .getByRole("radiogroup", {
+      name: "Charged per dose or per day for Cheese",
+    })
+    .locator("label", { hasText: "/ day" })
     .click();
-  await page
-    .getByRole("button", { name: /save changes/i, disabled: false })
-    .click();
+  await page.getByRole("button", { name: /save changes/i }).click();
   await expect(
     page
       .locator("[data-sonner-toast]")
-      .filter({ hasText: "Medication instructions saved" }),
+      .filter({ hasText: "Medication settings saved" }),
   ).toBeVisible();
 
   await page.reload();
-  await expect(page.getByLabel("Price for Cheese")).toHaveValue("1.25", {
+  await page.getByRole("tab", { name: "Medications" }).click();
+  await expect(page.getByLabel("Price of Cheese")).toHaveValue("1.25", {
     timeout: 60_000,
   });
 
   const stored = (await settings(page)).medication_instructions;
   expect(stored.configured).toBe(true);
-  expect(stored.value).toMatchObject({
-    provided: [
-      { method: "pill_pocket", price: POCKET, per: "dose" },
-      { method: "cheese", price: 1.25, per: "day" },
-    ],
-  });
+  const methods = (stored.value as { methods?: Array<Record<string, unknown>> })
+    .methods;
+  expect(methods).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        id: "pill_pocket",
+        sell: true,
+        price: POCKET,
+        per: "dose",
+      }),
+      expect.objectContaining({
+        id: "cheese",
+        sell: true,
+        price: 1.25,
+        per: "day",
+      }),
+    ]),
+  );
 
   // A customer's booking form reads the same setting, through their own
   // client row (20261001083734 lets them).
@@ -367,10 +470,10 @@ test("S1 the Medications page is a setting the facility saves, and a customer's 
   const theirs = (await res.json()) as Record<string, Setting>;
   expect(theirs.medication_instructions?.configured).toBe(true);
   expect(
-    (theirs.medication_instructions?.value as { provided?: unknown })?.provided,
+    (theirs.medication_instructions?.value as { methods?: unknown })?.methods,
   ).toEqual(
     expect.arrayContaining([
-      expect.objectContaining({ method: "pill_pocket", price: POCKET }),
+      expect.objectContaining({ id: "pill_pocket", sell: true, price: POCKET }),
     ]),
   );
   expect(typeof theirs.feeding_instructions?.configured).toBe("boolean");
@@ -427,7 +530,20 @@ test("S2 staff enter two medications the way they are given, and the pill pocket
   await dialog.locator("#meds-allergy").press("Enter");
   await expect(dialog.getByText("Penicillin", { exact: true })).toBeVisible();
 
-  await dialog.getByRole("button", { name: "Save medication" }).click();
+  // The page ships asking for the pharmacy label: Save waits for it.
+  const saveMedication = dialog.getByRole("button", {
+    name: "Save medication",
+  });
+  await expect(saveMedication).toBeDisabled();
+  await expect(
+    dialog.getByText("Confirm the pharmacy label to save"),
+  ).toBeVisible();
+  await dialog
+    .getByRole("checkbox", {
+      name: /original pharmacy-labelled packaging/i,
+    })
+    .click();
+  await saveMedication.click();
 
   const apoquelCard = dialog.getByRole("article", { name: "Apoquel" });
   await expect(apoquelCard).toContainText("16 mg · ½ tablet (staff to split)");
@@ -461,6 +577,11 @@ test("S2 staff enter two medications the way they are given, and the pill pocket
   await pick(dialog, "radio", "Left");
   await pick(dialog, "checkbox", /^Morning/);
   await pick(dialog, "checkbox", /^Bedtime/);
+  await dialog
+    .getByRole("checkbox", {
+      name: /original pharmacy-labelled packaging/i,
+    })
+    .click();
   await dialog.getByRole("button", { name: "Save medication" }).click();
 
   const dropsCard = dialog.getByRole("article", { name: "Optimmune" });
@@ -497,6 +618,7 @@ test("S2 staff enter two medications the way they are given, and the pill pocket
     facilityMedAidItem: "pill_pocket",
     drugAllergies: ["Penicillin"],
     supplyCount: 4,
+    labelConfirmed: true,
   });
   expect(byName("Optimmune")).toMatchObject({
     form: "drops",
@@ -655,18 +777,16 @@ test("S4 a customer's pill pockets are billed, never waived by them, and the req
   ]);
 });
 
-test("S5 a daycare request split by day: the medication fee once, the pill pockets on the days that use them", async ({
+test("S5 a daycare request split by day: the administration fee once, the pill pockets on the days that use them", async ({
   page,
 }) => {
   await signIn(page, ACCOUNTS.owner);
-  await writeSetting(page, "care_fees", {
-    medicationAdmin: {
-      enabled: true,
-      amount: 5,
-      scope: "per_medication",
-      services: ["boarding", "daycare"],
-    },
-    daycareFeeding: { enabled: false, amount: 0, scope: "per_pet" },
+  const before = (await settings(page)).medication_instructions
+    ?.value as Record<string, unknown>;
+  // $5 for each medication on each day it is given.
+  await writeSetting(page, "medication_instructions", {
+    ...before,
+    fee: { mode: "med_day", amount: 5, injection: 5 },
   });
 
   try {
@@ -719,14 +839,319 @@ test("S5 a daycare request split by day: the medication fee once, the pill pocke
           .sort(),
       ),
     );
+    // Given on two of the three days: two medication-days, on the first.
     expect(byDay).toEqual([
-      [`${MEDICATION_FEE}×1@5`, `${POCKETS}×1@${POCKET}`],
+      [`${MEDICATION_FEE}×2@5`, `${POCKETS}×1@${POCKET}`],
       [],
       [`${POCKETS}×1@${POCKET}`],
     ]);
   } finally {
-    // Only this test charges a medication fee; the rest of the file does not.
-    const was = prior.settings?.care_fees?.value;
-    if (was !== undefined) await writeSetting(page, "care_fees", was);
+    // Only this test charges a fee; the rest of the file does not.
+    await writeSetting(page, "medication_instructions", before);
   }
+});
+
+test("S6 a required Medications step waits for an answer, and the booking keeps it", async ({
+  page,
+}) => {
+  test.setTimeout(6 * 60 * 1000);
+  await signIn(page, ACCOUNTS.owner);
+  // Buddy with nothing saved, so the step asks.
+  const cleared = await page.request.patch(`/api/pets/${BUDDY}`, {
+    data: { medications: [] },
+  });
+  expect(cleared.ok(), await cleared.text()).toBe(true);
+
+  const dialog = await toMedications(page, 4);
+  const nextButton = dialog.getByRole("button", { name: /^next$/i });
+  await expect(nextButton).toBeDisabled();
+  await expect(
+    dialog.getByText(
+      "Add a medication, or confirm Buddy takes none, to continue.",
+    ),
+  ).toBeVisible();
+
+  await pick(dialog, "checkbox", "Buddy takes no medication");
+  await expect(nextButton).toBeEnabled();
+  await expect(
+    dialog.getByRole("radio", { name: /^Buddy\s*No medication$/ }),
+  ).toBeChecked();
+
+  await nextButton.click();
+  await expect(dialog.getByText("Buddy takes no medication")).toBeVisible();
+  await dialog.getByLabel(/special requests/i).fill(`${MARKER} none`);
+  await dialog.getByRole("button", { name: /^create booking$/i }).click();
+  const toast = page.locator("[data-sonner-toast]").first();
+  await expect(toast).toBeVisible({ timeout: 45_000 });
+  const said = (await toast.innerText()).replace(/\s+/g, " ");
+  const ref = Number(/#(\d+)/.exec(said)?.[1]);
+  expect(ref, `the wizard said: ${said}`).toBeGreaterThan(0);
+  made.push(ref);
+
+  const saved = (await booking(page, ref)) as BookingRead & {
+    noMedication?: number[];
+  };
+  expect(saved.noMedication).toEqual([BUDDY]);
+  expect(saved.medications ?? []).toEqual([]);
+});
+
+test("S7 a controlled substance is refused; the label is confirmed, photographed, and the vet kept", async ({
+  page,
+}) => {
+  test.setTimeout(6 * 60 * 1000);
+  await signIn(page, ACCOUNTS.owner);
+  const before = (await settings(page)).medication_instructions
+    ?.value as Record<string, unknown>;
+  await writeSetting(page, "medication_instructions", {
+    ...before,
+    rules: { ...(before.rules as object), photo: true },
+  });
+  await page.request.patch(`/api/pets/${BUDDY}`, {
+    data: { medications: [], vet: null },
+  });
+
+  let ref = 0;
+  try {
+    const dialog = await toMedications(page, 5);
+    await dialog.getByRole("button", { name: "Add medication" }).click();
+
+    // The page ships refusing controlled substances, by any name.
+    await dialog.locator("#meds-name").fill("Gabapentin 100 mg");
+    await expect(
+      dialog.getByText(
+        "We don’t accept controlled substances such as Gabapentin 100 mg. Call us before booking.",
+      ),
+    ).toBeVisible();
+    await expect(
+      dialog.getByRole("button", { name: "Save medication" }),
+    ).toBeDisabled();
+
+    // Rimadyl: the label confirmed, and photographed.
+    await dialog.locator("#meds-name").fill("Rimadyl");
+    await dialog
+      .getByRole("checkbox", {
+        name: /original pharmacy-labelled packaging/i,
+      })
+      .click();
+    await dialog.locator('input[type="file"]').setInputFiles({
+      name: "rimadyl-label.png",
+      mimeType: "image/png",
+      buffer: PNG,
+    });
+    await expect(dialog.getByText("rimadyl-label.png")).toBeVisible();
+    await expect(
+      dialog.getByText(/sent when the booking is saved/),
+    ).toBeVisible();
+    await dialog.getByRole("button", { name: "Save medication" }).click();
+    const card = dialog.getByRole("article", { name: "Rimadyl" });
+    await expect(card).toContainText("Photo of the label attached");
+
+    // The vet, asked once Buddy takes a medication.
+    await dialog.getByLabel("Clinic").fill("[e2e] Plateau Vet");
+    await dialog.getByLabel("Phone").fill("514-555-0100");
+
+    await next(dialog);
+    await expect(
+      dialog.getByText("Vet: [e2e] Plateau Vet · 514-555-0100"),
+    ).toBeVisible();
+    await dialog.getByLabel(/special requests/i).fill(`${MARKER} rules`);
+    await dialog.getByRole("button", { name: /^create booking$/i }).click();
+    const toast = page.locator("[data-sonner-toast]").first();
+    await expect(toast).toBeVisible({ timeout: 45_000 });
+    const said = (await toast.innerText()).replace(/\s+/g, " ");
+    ref = Number(/#(\d+)/.exec(said)?.[1]);
+    expect(ref, `the wizard said: ${said}`).toBeGreaterThan(0);
+    made.push(ref);
+
+    const saved = (await booking(page, ref)) as BookingRead & {
+      vetContacts?: Record<string, unknown>;
+    };
+    const rimadyl = (saved.medications ?? []).find((m) => m.name === "Rimadyl");
+    expect(rimadyl).toMatchObject({ labelConfirmed: true });
+    expect(saved.vetContacts).toEqual({
+      [String(BUDDY)]: { clinic: "[e2e] Plateau Vet", phone: "514-555-0100" },
+    });
+
+    // The photo, sent once the booking had its ref.
+    await expect
+      .poll(async () => (await photos(page, ref)).length, { timeout: 30_000 })
+      .toBe(1);
+    const [photo] = await photos(page, ref);
+    expect(photo.medicationId).toBe(rimadyl?.id);
+    expect(photo.url).toContain("booking-medication-photos");
+
+    // Buddy's profile keeps his vet for next time.
+    await expect
+      .poll(async () => buddysVet(page), { timeout: 30_000 })
+      .toEqual({ clinic: "[e2e] Plateau Vet", phone: "514-555-0100" });
+  } finally {
+    if (ref > 0) {
+      const saved = await booking(page, ref);
+      for (const med of saved.medications ?? []) {
+        await page.request.delete(
+          `/api/bookings/${ref}/medication-photos?medicationId=${encodeURIComponent(String(med.id))}`,
+        );
+      }
+    }
+    await writeSetting(page, "medication_instructions", before);
+  }
+});
+
+test("S8 a training enrolment carries the dog's medications to every session, as one request", async ({
+  page,
+}) => {
+  await signIn(page, ACCOUNTS.owner);
+  const before = (await settings(page)).medication_instructions
+    ?.value as Record<string, unknown>;
+  await writeSetting(page, "medication_instructions", {
+    ...before,
+    services: { ...(before.services as object), training: "optional" },
+    fee: { mode: "dose", amount: 1, injection: 5 },
+  });
+  try {
+    // A three-week class starting tomorrow evening.
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const created = await page.request.post("/api/training/series", {
+      data: {
+        name: `${MARKER} class`,
+        dayOfWeek: tomorrow.getDay(),
+        startTime: "18:00",
+        durationMinutes: 60,
+        startDate: iso(tomorrow),
+        numberOfSessions: 3,
+        capacity: 4,
+        totalPrice: 90,
+      },
+    });
+    expect(created.status(), await created.text()).toBe(201);
+    const seriesId = ((await created.json()) as { id: string }).id;
+
+    const enrolled = await page.request.post(
+      `/api/training/series/${seriesId}/enrollments`,
+      {
+        data: {
+          clientId: ALICE,
+          petId: BUDDY,
+          care: {
+            medications: [
+              apoquel({
+                id: "med-e2e-class",
+                times: ["18:30"],
+                dayRule: "every_day",
+                frequency: "once_daily",
+              }),
+            ],
+          },
+        },
+      },
+    );
+    expect(enrolled.status(), await enrolled.text()).toBe(201);
+    const body = (await enrolled.json()) as {
+      careNotSaved?: boolean;
+      bookings: Array<{ bookingRef: number }>;
+    };
+    const refs = body.bookings.map((b) => b.bookingRef);
+    made.push(...refs);
+    expect(body.careNotSaved).toBeUndefined();
+    expect(refs).toHaveLength(3);
+
+    // Every session carries the medication, tied as one request.
+    for (const [index, ref] of refs.entries()) {
+      const saved = (await booking(page, ref)) as BookingRead & {
+        bookingGroup?: { part: number; of: number };
+      };
+      expect(saved.medications?.[0]).toMatchObject({ name: "Apoquel" });
+      expect(saved.bookingGroup).toMatchObject({ part: index + 1, of: 3 });
+    }
+
+    // The fee once, on the first session; a pill pocket at each.
+    const byRef = await Promise.all(
+      refs.map(async (ref) =>
+        careLines(await lines(page, ref))
+          .map((line) => `${line.feeId}×${line.quantity}@${line.unitPrice}`)
+          .sort(),
+      ),
+    );
+    expect(byRef).toEqual([
+      [`${MEDICATION_FEE}×3@1`, `${POCKETS}×1@${POCKET}`],
+      [`${POCKETS}×1@${POCKET}`],
+      [`${POCKETS}×1@${POCKET}`],
+    ]);
+  } finally {
+    await writeSetting(page, "medication_instructions", before);
+  }
+});
+
+test("S9 a label photo is replaced and removed by staff; a customer reads theirs and cannot remove it", async ({
+  page,
+}) => {
+  await signIn(page, ACCOUNTS.owner);
+  const created = await page.request.post("/api/bookings", {
+    data: {
+      clientId: ALICE,
+      petId: BUDDY,
+      service: "boarding",
+      startDate: day(150),
+      endDate: day(152),
+      checkInTime: "14:00",
+      checkOutTime: "11:00",
+      status: "confirmed",
+      basePrice: 120,
+      discount: 0,
+      totalCost: 120,
+      specialRequests: `${MARKER} photo`,
+      medications: [apoquel({ id: "med-e2e-photo" })],
+    },
+  });
+  expect(created.status(), await created.text()).toBe(201);
+  const ref = ((await created.json()) as { id: number }).id;
+  made.push(ref);
+
+  try {
+    // Not a photo; not a medication of this booking.
+    const notPhoto = await uploadPhoto(
+      page,
+      ref,
+      "med-e2e-photo",
+      Buffer.from("%PDF-1.4 not a label"),
+    );
+    expect(notPhoto.status(), await notPhoto.text()).toBe(415);
+    const notHers = await uploadPhoto(page, ref, "med-not-on-it");
+    expect(notHers.status(), await notHers.text()).toBe(422);
+
+    // Added, then replaced: one photo, the newest.
+    const first = await uploadPhoto(page, ref, "med-e2e-photo");
+    expect(first.status(), await first.text()).toBe(201);
+    const second = await uploadPhoto(page, ref, "med-e2e-photo");
+    expect(second.status(), await second.text()).toBe(201);
+    const newest = ((await second.json()) as { id: string }).id;
+    expect((await photos(page, ref)).map((p) => p.id)).toEqual([newest]);
+    const { data: row } = await admin()
+      .from("bookings")
+      .select("id")
+      .eq("ref", ref)
+      .single();
+    const { count } = await admin()
+      .from("booking_medication_photos")
+      .select("id", { count: "exact", head: true })
+      .eq("booking_id", (row as { id: string }).id);
+    expect(count, "the older photo's row went with it").toBe(1);
+
+    // The customer reads their own, and cannot remove it.
+    await signIn(page, ACCOUNTS.customer);
+    expect((await photos(page, ref)).map((p) => p.id)).toEqual([newest]);
+    const refused = await page.request.delete(
+      `/api/bookings/${ref}/medication-photos?medicationId=med-e2e-photo`,
+    );
+    expect(refused.status(), await refused.text()).toBe(403);
+  } finally {
+    // Staff remove it — the row and the file.
+    await signIn(page, ACCOUNTS.owner);
+    const removed = await page.request.delete(
+      `/api/bookings/${ref}/medication-photos?medicationId=med-e2e-photo`,
+    );
+    expect(removed.status(), await removed.text()).toBe(204);
+  }
+  expect(await photos(page, ref)).toEqual([]);
 });

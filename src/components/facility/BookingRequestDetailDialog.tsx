@@ -29,9 +29,12 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { namesAddOn } from "@/lib/add-ons/bookable";
 import {
   useFeedingInstructions,
+  useMedicationInstructions,
   useServiceAddOns,
 } from "@/lib/api/facility-settings";
 import { describeFeeding } from "@/lib/feeding/describe";
+import { describeMedication } from "@/lib/medications/describe";
+import { fill as fillWords } from "@/lib/medications/dose";
 import { bookingStay } from "@/lib/medications/schedule";
 import { useShellLocale, useShellText } from "@/lib/shell/use-shell-text";
 import { facilityRooms } from "@/data/rooms";
@@ -155,7 +158,23 @@ export function BookingRequestDetailDialog({
   const words = useShellText("booking");
   const locale = useShellLocale();
   const { instructions: feedingSettings } = useFeedingInstructions();
+  const { instructions: medicationSettings } = useMedicationInstructions();
   if (!request) return null;
+
+  // The stay the owner's care is planned over, as the booking form planned it.
+  const careService = request.services.includes("boarding")
+    ? "boarding"
+    : (request.services[0] ?? "");
+  const careStay = bookingStay({
+    service: careService,
+    startDate: request.startDate,
+    endDate: request.endDate,
+  });
+  const takesNone = (request.noMedication ?? []).includes(request.petId);
+  const vet = request.vetContacts?.[String(request.petId)];
+  const vetText = vet
+    ? [vet.clinic, vet.phone].filter(Boolean).join(" · ")
+    : "";
 
   const initial = request.petName.charAt(0).toUpperCase();
   const grad = gradientFor(request.clientName + request.petName);
@@ -353,19 +372,12 @@ export function BookingRequestDetailDialog({
             <Section icon={Utensils} title="Feeding">
               <ul className="divide-border/50 -my-3 divide-y">
                 {request.feedingSchedule.map((fs) => {
-                  const service = request.services.includes("boarding")
-                    ? "boarding"
-                    : (request.services[0] ?? "");
                   const lines = describeFeeding(fs, {
                     t: words,
                     locale,
-                    stay: bookingStay({
-                      service,
-                      startDate: request.startDate,
-                      endDate: request.endDate,
-                    }),
+                    stay: careStay,
                     settings: feedingSettings,
-                    service,
+                    service: careService,
                   });
                   return (
                     <li key={fs.id} className="space-y-1 py-3">
@@ -395,12 +407,20 @@ export function BookingRequestDetailDialog({
             </Section>
           )}
 
-          {request.medications && request.medications.length > 0 && (
-            <Section icon={Pill} title="Medications">
+          {((request.medications?.length ?? 0) > 0 || takesNone || vetText) && (
+            <Section icon={Pill} title={words("medications")}>
               <ul className="divide-border/50 -my-3 divide-y">
-                {request.medications.map((m) => (
-                  <li key={m.id} className="space-y-1 py-3">
-                    <div className="flex items-center justify-between gap-2">
+                {(request.medications ?? []).map((m) => {
+                  // The step's own words for it, as the owner saved it —
+                  // dose, days and times, how it is given (2026-10-01).
+                  const lines = describeMedication(m, {
+                    t: words,
+                    locale,
+                    stay: careStay,
+                    settings: medicationSettings,
+                  });
+                  return (
+                    <li key={m.id} className="space-y-1 py-3">
                       <span className="text-foreground text-sm font-medium">
                         {m.name}
                         {m.strength && (
@@ -410,28 +430,42 @@ export function BookingRequestDetailDialog({
                           </span>
                         )}
                       </span>
-                      <span className="text-muted-foreground text-xs">
-                        {m.frequency.replace(/_/g, " ")}
-                      </span>
-                    </div>
-                    {m.purpose && (
+                      {lines.dose ? (
+                        <div className="text-muted-foreground text-xs">
+                          {lines.dose}
+                        </div>
+                      ) : null}
+                      {lines.schedule ? (
+                        <div className="text-muted-foreground text-xs">
+                          {lines.schedule}
+                        </div>
+                      ) : null}
                       <div className="text-muted-foreground text-xs">
-                        For: {m.purpose}
+                        {lines.method}
                       </div>
-                    )}
-                    <div className="text-muted-foreground flex flex-wrap gap-x-3 text-xs tabular-nums">
-                      {m.times.map((t, i) => (
-                        <span key={i}>{t}</span>
+                      {lines.extras.map((extra) => (
+                        <div
+                          key={extra}
+                          className="text-muted-foreground line-clamp-2 text-xs"
+                        >
+                          {extra}
+                        </div>
                       ))}
-                      <span>· {m.amount}</span>
-                    </div>
-                    {m.notes && (
-                      <div className="text-muted-foreground line-clamp-2 text-xs italic">
-                        “{m.notes}”
-                      </div>
-                    )}
+                    </li>
+                  );
+                })}
+                {takesNone ? (
+                  <li className="text-muted-foreground py-3 text-xs">
+                    {fillWords(words("medsTakesNone"), {
+                      pet: request.petName,
+                    })}
                   </li>
-                ))}
+                ) : null}
+                {vetText ? (
+                  <li className="text-muted-foreground py-3 text-xs">
+                    {fillWords(words("medsVetLine"), { vet: vetText })}
+                  </li>
+                ) : null}
               </ul>
             </Section>
           )}

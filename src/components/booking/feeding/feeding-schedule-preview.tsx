@@ -1,6 +1,7 @@
 "use client";
 
 import { foodName, mealCount, panelFoodWords } from "@/lib/feeding/describe";
+import { houseFoodName } from "@/lib/feeding/labels";
 import { feedUnitWord, portionAmount } from "@/lib/feeding/portion";
 import {
   formatDayRange,
@@ -129,7 +130,7 @@ export function FeedingSchedulePreview({
           <span className="text-micro text-ink-tertiary uppercase">
             {t("feedPackingList")}
           </span>
-          {panel.packing.map(({ food, servings, total }) => (
+          {panel.packing.map(({ food, servings, extra, total }) => (
             <div key={food.id} className="text-meta flex justify-between gap-2">
               <span className="text-ink-secondary min-w-0">
                 {foodName(t, food, step.settings)}
@@ -138,11 +139,11 @@ export function FeedingSchedulePreview({
                 {food.pack === "pre_portioned"
                   ? fill(
                       t(
-                        isPluralOne(servings, locale)
+                        isPluralOne(servings + extra, locale)
                           ? "feedPortionsOne"
                           : "feedPortionsOther",
                       ),
-                      { count: servings },
+                      { count: servings + extra },
                     )
                   : `${portionAmount(total, food.unit, locale)} ${feedUnitWord(
                       t,
@@ -164,27 +165,32 @@ export function FeedingSchedulePreview({
             {panel.totalMeals}
           </dd>
         </div>
-        {panel.addons.map((addon) => (
-          <div
-            key={`${addon.houseFoodId}:${addon.waived}`}
-            className="text-meta flex justify-between gap-2"
-          >
-            <dt className="text-ink-tertiary min-w-0">
-              {`${
-                addon.per === "day"
-                  ? dayCount(t, addon.quantity, locale)
-                  : mealCount(t, addon.quantity, locale)
-              } · ${addon.name}`}
-            </dt>
-            <dd className="text-body-ink shrink-0 font-semibold tabular-nums">
-              {addon.included
-                ? t("feedIncluded")
-                : addon.waived
-                  ? t("medsWaived")
-                  : formatMoney(addon.amount, locale)}
-            </dd>
-          </div>
-        ))}
+        {panel.addons
+          .filter((addon) => addon.offered)
+          .map((addon) => (
+            <div
+              key={`${addon.houseFoodId}:${addon.waived}`}
+              className="text-meta flex justify-between gap-2"
+            >
+              <dt className="text-ink-tertiary min-w-0">
+                {`${
+                  addon.per === "day"
+                    ? dayCount(t, addon.quantity, locale)
+                    : mealCount(t, addon.quantity, locale)
+                } · ${houseFoodName(t, {
+                  id: addon.houseFoodId,
+                  name: addon.name,
+                })}`}
+              </dt>
+              <dd className="text-body-ink shrink-0 font-semibold tabular-nums">
+                {addon.included
+                  ? t("feedIncluded")
+                  : addon.waived
+                    ? t("medsWaived")
+                    : formatMoney(addon.amount, locale)}
+              </dd>
+            </div>
+          ))}
         <div className="border-line-strong text-body flex justify-between gap-2 border-t border-dashed pt-2">
           <dt className="text-body-ink font-medium">{t("feedAddonsTotal")}</dt>
           <dd className="text-body-ink font-bold tabular-nums">

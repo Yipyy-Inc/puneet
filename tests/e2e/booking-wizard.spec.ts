@@ -5,6 +5,7 @@ import {
   type BookingListParams,
 } from "@/lib/api/booking-list-params";
 
+import { answerCareSteps } from "./_wizard";
 import { ACCOUNTS, signIn } from "./_auth";
 import { cancelBookingsMarked } from "./_sweep";
 
@@ -104,6 +105,8 @@ async function openWizard(page: Page, clientRef: number) {
 }
 
 async function next(dialog: Locator) {
+  // Boarding ships with its Medications step required (answerCareSteps).
+  await answerCareSteps(dialog);
   await dialog.getByRole("button", { name: /^next$/i }).click();
 }
 
