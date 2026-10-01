@@ -2162,6 +2162,8 @@ CREATE OR REPLACE FUNCTION "private"."customer_visible_setting_domains"() RETURN
     'deposit_rules',
     'cancellation_policies',
     'care_fees',
+    'feeding_instructions',
+    'medication_instructions',
     'booking_approval',
     'evaluation_config',
     'daycare_rates',
@@ -2633,6 +2635,10 @@ begin
     -- fee is added, is the facility's to say and never the payer's.
     new.service_charges_included := false;
 
+    -- A waived charge for what the facility supplies to give a medication
+    -- with is the facility's to grant, never the payer's.
+    new.details := private.keep_medication_waivers(new.details, null);
+
     return new;
   end if;
 
@@ -2703,6 +2709,7 @@ begin
   new.tip_amount          := old.tip_amount;
   new.taxable             := old.taxable;
   new.service_charges_included := old.service_charges_included;
+  new.details := private.keep_medication_waivers(new.details, old.details);
   new.start_at            := old.start_at;
   new.end_at              := old.end_at;
   new.assigned_staff_id   := old.assigned_staff_id;
@@ -4234,6 +4241,50 @@ $$;
 
 
 ALTER FUNCTION "private"."is_platform_admin"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."keep_medication_waivers"("p_new" "jsonb", "p_old" "jsonb") RETURNS "jsonb"
+    LANGUAGE "sql" IMMUTABLE
+    SET "search_path" TO ''
+    AS $$
+  select case
+    when p_new is null
+      or jsonb_typeof(p_new -> 'medications') is distinct from 'array'
+      then p_new
+    else jsonb_set(
+      p_new,
+      '{medications}',
+      coalesce((
+        select jsonb_agg(
+                 case
+                   when jsonb_typeof(m.value) is distinct from 'object'
+                     then m.value
+                   else (m.value - 'aidWaived') || coalesce((
+                     select jsonb_build_object('aidWaived', o.value -> 'aidWaived')
+                       from jsonb_array_elements(
+                              case
+                                when jsonb_typeof(p_old -> 'medications') = 'array'
+                                  then p_old -> 'medications'
+                                else '[]'::jsonb
+                              end
+                            ) as o(value)
+                      where jsonb_typeof(o.value) = 'object'
+                        and o.value ->> 'id' = m.value ->> 'id'
+                        and o.value ? 'aidWaived'
+                      limit 1
+                   ), '{}'::jsonb)
+                 end
+                 order by m.ordinality
+               )
+          from jsonb_array_elements(p_new -> 'medications')
+               with ordinality as m(value, ordinality)
+      ), '[]'::jsonb)
+    )
+  end
+$$;
+
+
+ALTER FUNCTION "private"."keep_medication_waivers"("p_new" "jsonb", "p_old" "jsonb") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "private"."line_item_moves_the_booking"() RETURNS "trigger"
@@ -33789,6 +33840,10 @@ GRANT ALL ON FUNCTION "private"."is_facility_admin"("p_facility_id" "uuid") TO "
 
 
 GRANT ALL ON FUNCTION "private"."is_platform_admin"() TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "private"."keep_medication_waivers"("p_new" "jsonb", "p_old" "jsonb") FROM PUBLIC;
 
 
 
