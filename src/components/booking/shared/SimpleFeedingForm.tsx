@@ -22,9 +22,11 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimePickerLux } from "@/components/ui/time-picker-lux";
-import { facilityConfig } from "@/data/facility-config";
 import type { FeedingScheduleItem, FoodUnit } from "@/types/booking";
-import { useCareFees } from "@/lib/api/facility-settings";
+import {
+  useCareFees,
+  useFeedingInstructions,
+} from "@/lib/api/facility-settings";
 import { feedingFeeApplies } from "@/lib/settings/care-fees";
 
 interface PetOption {
@@ -40,17 +42,6 @@ interface SimpleFeedingFormProps {
   /** The booking service type — used to show feeding fee for daycare */
   serviceType?: string;
 }
-
-// Read from facility config (editable in Settings > Care Tasks)
-const opts = facilityConfig.feedingOptions;
-const MEAL_PRESETS = opts.schedules.map((s) => ({
-  label: s.label,
-  time: s.time,
-}));
-const FOOD_TYPES = opts.foodTypes;
-const FEEDING_UNITS = opts.units;
-const FEEDING_INSTRUCTIONS = opts.instructions;
-const ALLERGY_PRESETS = opts.allergyPresets;
 
 function toFoodUnit(unit: string): FoodUnit {
   const normalized = unit.trim().toLowerCase();
@@ -129,6 +120,18 @@ export function SimpleFeedingForm({
   selectedPets,
   serviceType,
 }: SimpleFeedingFormProps) {
+  // The facility's own choices, from Settings › Care tasks › Feeding
+  // instructions. A literal read once at module load until 2026-10-01, so no
+  // edit there ever reached this form.
+  const { instructions: opts } = useFeedingInstructions();
+  const MEAL_PRESETS = opts.schedules.map((s) => ({
+    label: s.label,
+    time: s.time,
+  }));
+  const FOOD_TYPES = opts.foodTypes;
+  const FEEDING_UNITS = opts.units;
+  const FEEDING_INSTRUCTIONS = opts.instructions;
+  const ALLERGY_PRESETS = opts.allergyPresets;
   // The facility's own daycare feeding fee — none until it sets one.
   const { fees } = useCareFees();
   const showFeedingFee = feedingFeeApplies(fees, serviceType);

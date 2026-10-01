@@ -8,7 +8,11 @@ import type { ResumeStepId } from "@/lib/resume-booking";
 import { formatDateLocal } from "@/lib/shift-recurrence";
 
 import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
-import { formatCalendarDayLong, formatMoney } from "@/lib/i18n/format";
+import {
+  formatCalendarDayLong,
+  formatMoney,
+  isPluralOne,
+} from "@/lib/i18n/format";
 import React, {
   useState,
   useMemo,
@@ -149,7 +153,17 @@ import type {
 } from "@/types/booking";
 import type { Pet, Evaluation } from "@/types/pet";
 import { useCareFees } from "@/lib/api/facility-settings";
-import { careFeeLines } from "@/lib/settings/care-fees";
+import { useUpdatePet } from "@/lib/api/client";
+import {
+  careChargeLines,
+  type CareChargeLine,
+} from "@/lib/medications/charges";
+import { providedLineName } from "@/lib/medications/describe";
+import { fill as fillWords } from "@/lib/medications/dose";
+import { profileAfterBooking } from "@/lib/medications/draft";
+import { stayOf } from "@/lib/medications/schedule";
+import { useMedicationStep } from "@/components/booking/medications/use-medication-step";
+import { MedicationSchedulePreview } from "@/components/booking/medications/medication-schedule-preview";
 import { bookingQueries } from "@/lib/api/booking";
 import { isoDayOrUndefined } from "@/lib/bookings/booking-timing";
 import { staffQueries } from "@/lib/api/staff";
@@ -1297,6 +1311,93 @@ export function BookingModal({
     selectedPets,
   ]);
 
+  // ── THE MEDICATIONS STEP (2026-10-01) ─────────────────────────────────────
+  //
+  // The client's design, as one hook: the step in the main column and the
+  // stay-and-doses panel in the rail read the same state. Its days are the
+  // stay's — a boarding range, or the daycare days chosen. What is BOOKED is
+  // `effectiveMedications`: every saved medication and every named, complete
+  // one still open (lib: use-medication-step).
+  const medicationStay = useMemo(
+    () =>
+      selectedService === "boarding"
+        ? stayOf({
+            overnight: true,
+            start: boardingRangeStart
+              ? localDay(boardingRangeStart)
+              : undefined,
+            end: boardingRangeEnd ? localDay(boardingRangeEnd) : undefined,
+          })
+        : selectedService === "daycare"
+          ? stayOf({
+              overnight: false,
+              dates: daycareSelectedDates.map(localDay),
+            })
+          : { days: [], overnight: false },
+    [
+      selectedService,
+      boardingRangeStart,
+      boardingRangeEnd,
+      daycareSelectedDates,
+    ],
+  );
+  const medicationPets = useMemo(
+    () =>
+      effectiveSelectedPets.map((pet) => ({
+        id: pet.id,
+        name: pet.name,
+        saved: pet.medications,
+      })),
+    [effectiveSelectedPets],
+  );
+  const medicationStep = useMedicationStep({
+    medications,
+    setMedications,
+    pets: medicationPets,
+    service: selectedService,
+    stay: medicationStay,
+    // A pet starts from its profile on a NEW booking; an edit, or a draft
+    // that brought its own, keeps what it has.
+    fromProfiles:
+      !editMode &&
+      !(preSelectedMedications && preSelectedMedications.length > 0),
+    staff: !isCustomerMode,
+  });
+  const effectiveMedications = medicationStep.effectiveMedications;
+  const updatePet = useUpdatePet();
+
+  /**
+   * "Save to pet profile for future visits": a medication ticked for it goes
+   * onto the pet's profile, and one that came from the profile and was
+   * unticked comes off — so the next booking starts with them. After the
+   * booking is saved, never instead of it: a refusal (a member of staff who
+   * may not edit pet records) is said, and the booking stands.
+   */
+  const saveMedicationProfiles = async () => {
+    const pets = effectiveSelectedPets.filter((pet) => pet.id > 0);
+    const results = await Promise.allSettled(
+      pets.map(async (pet) => {
+        const next = profileAfterBooking(
+          pet.medications ?? [],
+          effectiveMedications.filter((item) => item.petId === pet.id),
+        );
+        if (next) {
+          await updatePet.mutateAsync({
+            ref: pet.id,
+            patch: { medications: next },
+          });
+        }
+      }),
+    );
+    results.forEach((result, index) => {
+      if (result.status === "rejected") {
+        toast.warning(
+          fillWords(t("medsProfileNotSaved"), { pet: pets[index].name }),
+        );
+      }
+    });
+  };
+
   // The groom's extras: the one list create_booking checks every requested
   // add-on against, narrowed by the add-on rules for this service, location
   // and these pets — the SAME call the details step makes, so the list priced
@@ -1813,47 +1914,43 @@ export function BookingModal({
       actualCheckOutTime: checkOutTime,
     });
 
-    // ── Medication & feeding service fees ──────────────────────────
-    // The facility's own fees, from Settings → Booking rules, and none until it
-    // sets them. A fixture charged every facility $5 a medication and $5 a pet
-    // fed at daycare until 2026-09-14.
-    const careFeeTotals = careFeeLines(careFees, {
+    // ── Medications and meals: lines on the bill (2026-10-01) ──────────
+    // The medication fee and the daycare meals fee (Settings → Booking rules)
+    // and what the facility supplies to give a medication with (Settings →
+    // Care tasks), worked out by the function the server writes the lines
+    // with — so the quote and the bill cannot disagree. They were folded into
+    // `total_cost` until now; `splitBookingMoney` takes them out below, and
+    // the server writes them as `fee` lines once the booking exists.
+    const careLines: CareChargeLine[] = careChargeLines({
+      fees: careFees,
+      settings: medicationStep.settings,
       service: selectedService,
-      medications: medications.map((m) => ({
-        petId: m.petId,
-        facilityMedAidItem: m.facilityProvidesMedAid
-          ? m.facilityMedAidItem
-          : null,
-      })),
-      feedingPetIds: feedingSchedule
-        .filter((f) => f.occasions.length > 0)
-        .map((f) => f.petId),
-      feedingMeals: feedingSchedule.reduce(
-        (sum, f) => sum + f.occasions.length,
-        0,
-      ),
-    });
+      parts: [
+        {
+          stay: medicationStay,
+          medications: effectiveMedications,
+          feeding: feedingSchedule,
+        },
+      ],
+    }).flat();
     const serviceFeeItems: Array<{ label: string; amount: number }> = [];
-    if (careFeeTotals.medicationAdmin > 0) {
+    let medicationFeeTotal = 0;
+    let feedingFeeTotal = 0;
+    for (const line of careLines) {
+      if (line.kind === "meals") feedingFeeTotal += line.amount;
+      else medicationFeeTotal += line.amount;
       serviceFeeItems.push({
-        label: t("feeMedicationAdmin"),
-        amount: careFeeTotals.medicationAdmin,
-      });
-    }
-    for (const aid of careFeeTotals.aids) {
-      serviceFeeItems.push({
-        label: t("feeMedicationAid").replace("{item}", aid.item.name),
-        amount: aid.amount,
-      });
-    }
-    const medicationFeeTotal =
-      careFeeTotals.medicationAdmin +
-      careFeeTotals.aids.reduce((sum, aid) => sum + aid.amount, 0);
-    const feedingFeeTotal = careFeeTotals.feeding;
-    if (feedingFeeTotal > 0) {
-      serviceFeeItems.push({
-        label: t("feeDaycareFeeding"),
-        amount: feedingFeeTotal,
+        label:
+          line.kind === "medication_fee"
+            ? t("feeMedicationAdmin")
+            : line.kind === "meals"
+              ? t("feeDaycareFeeding")
+              : fillWords(t("medsLineDetail"), {
+                  name: providedLineName(t, line.method ?? ""),
+                  quantity: line.quantity,
+                  price: formatMoney(line.unitPrice, locale),
+                }),
+        amount: line.amount,
       });
     }
 
@@ -2004,6 +2101,7 @@ export function BookingModal({
       discountTotal: pricingComputation.discountTotal,
       packagePassDiscount,
       addOnsTotal: pricingComputation.addOnsTotal + groomingAddOnsTotal,
+      careChargesTotal: medicationFeeTotal + feedingFeeTotal,
       total,
     });
 
@@ -2080,10 +2178,13 @@ export function BookingModal({
     isEstimateMode,
     isGuestEstimate,
     estimateTaxRate,
-    medications,
+    effectiveMedications,
+    medicationStay,
+    medicationStep.settings,
     feedingSchedule,
     careFees,
     t,
+    locale,
     includesEvaluation,
     redeemedPackageId,
     selectedPets,
@@ -2253,6 +2354,16 @@ export function BookingModal({
           );
           if ((hasExpired || hasFailed) && !evaluationOverridden) return false;
         }
+        // The Medications step: a medication with a name is booked, so Next
+        // waits while one is incomplete — no day, no time, no amount — or
+        // while a saved one's chosen dates are all outside the stay.
+        if (
+          (selectedService === "daycare" || selectedService === "boarding") &&
+          currentSubSteps[currentSubStep]?.id === 4 &&
+          !medicationStep.canContinue
+        ) {
+          return false;
+        }
         return isSubStepComplete(
           currentSubSteps[currentSubStep]?.id ?? currentSubStep,
         );
@@ -2301,6 +2412,8 @@ export function BookingModal({
     calculatePrice.total,
     isCustomerMode,
     passRedemption,
+    currentSubSteps,
+    medicationStep.canContinue,
   ]);
 
   const applicablePackages = useMemo(() => {
@@ -2869,7 +2982,9 @@ export function BookingModal({
       kennelMoves: kennelMoves.length > 0 ? kennelMoves : undefined,
       feedingSchedule: feedingSchedule || undefined,
       walkSchedule: walkSchedule || undefined,
-      medications: medications || undefined,
+      // What the Medications step books: every saved medication and every
+      // named, complete one still open there.
+      medications: effectiveMedications,
       extraServices: billedAddOnLines.length > 0 ? billedAddOnLines : undefined,
       notificationEmail: notificationEmail,
       notificationSMS: notificationSMS,
@@ -2970,6 +3085,7 @@ export function BookingModal({
     if (isCustomerMode) {
       const requested = await saveThrough(withBookingParts(booking));
       if (!requested.ok) return false;
+      await saveMedicationProfiles();
       // Pass-redemption booking: apply one prepaid pass once the booking
       // exists, and say how many are left.
       if (passRedemption) {
@@ -3067,6 +3183,7 @@ export function BookingModal({
       editMode ? booking : withBookingParts(booking, bookedRooms),
     );
     if (!saved.ok) return false;
+    await saveMedicationProfiles();
 
     // An EDIT creates no evaluation and redeems no pass — those describe a
     // new booking. The caller reports what the edit itself did.
@@ -3273,7 +3390,7 @@ export function BookingModal({
         ),
         preSelectedExtraServices: extraServices,
         preSelectedFeedingSchedule: feedingSchedule,
-        preSelectedMedications: medications,
+        preSelectedMedications: effectiveMedications,
         preSelectedSpecialRequests: specialRequests || undefined,
         preSelectedNotificationEmail: notificationEmail,
         preSelectedNotificationSMS: notificationSMS,
@@ -4337,15 +4454,36 @@ export function BookingModal({
                                     ),
                                   ),
                                 );
+                              // Feeding says its meals and Medication its
+                              // medications — the meds count sat under
+                              // Feeding, in English, until 2026-10-01.
                               if (subStep.id === 3) {
-                                const parts = [
-                                  feedingSchedule.length > 0 &&
-                                    `${feedingSchedule.reduce((s, f) => s + f.occasions.length, 0)} meals`,
-                                  medications.length > 0 &&
-                                    `${medications.length} med${medications.length !== 1 ? "s" : ""}`,
-                                ].filter(Boolean);
-                                return parts.length > 0
-                                  ? parts.join(" · ")
+                                const meals = feedingSchedule.reduce(
+                                  (s, f) => s + f.occasions.length,
+                                  0,
+                                );
+                                return meals > 0
+                                  ? fillWords(
+                                      t(
+                                        isPluralOne(meals, locale)
+                                          ? "railMealsOne"
+                                          : "railMealsOther",
+                                      ),
+                                      { count: meals },
+                                    )
+                                  : null;
+                              }
+                              if (subStep.id === 4) {
+                                const count = effectiveMedications.length;
+                                return count > 0
+                                  ? fillWords(
+                                      t(
+                                        isPluralOne(count, locale)
+                                          ? "medsCountOne"
+                                          : "medsCountOther",
+                                      ),
+                                      { count },
+                                    )
                                   : null;
                               }
                               return null;
@@ -4399,6 +4537,20 @@ export function BookingModal({
                     </div>
                   );
                 })}
+                {/* The client's design shows the stay and its doses BESIDE
+                    the Medications step; here it sits in the rail, under the
+                    steps, while that step is open (2026-10-01). Below 1024px,
+                    where the rail is hidden, the step shows it itself. */}
+                {!showingPackagePromptStep &&
+                displayedSteps[currentStep]?.id === "details" &&
+                (selectedService === "boarding" ||
+                  selectedService === "daycare") &&
+                currentSubSteps[currentSubStep]?.id === 4 ? (
+                  <MedicationSchedulePreview
+                    step={medicationStep}
+                    className="mt-4"
+                  />
+                ) : null}
               </div>
             </ScrollArea>
           </div>
@@ -4584,8 +4736,10 @@ export function BookingModal({
                       isCustomerMode={isCustomerMode}
                       feedingSchedule={feedingSchedule}
                       setFeedingSchedule={setFeedingSchedule}
-                      medications={medications}
-                      setMedications={setMedications}
+                      medicationStep={medicationStep}
+                      medicationStepLabel={t("stepOf")
+                        .replace("{step}", String(currentStep + 1))
+                        .replace("{total}", String(displayedSteps.length))}
                       feedingMedicationTab={feedingMedicationTab}
                       setFeedingMedicationTab={setFeedingMedicationTab}
                       extraServices={extraServices}
@@ -4891,7 +5045,8 @@ export function BookingModal({
                         boardingDateTimes={boardingDateTimes}
                         roomAssignments={roomAssignments}
                         feedingSchedule={feedingSchedule}
-                        medications={medications}
+                        medications={effectiveMedications}
+                        medicationStay={medicationStay}
                         extraServices={billedAddOnLines}
                         onAddOnStaffChange={(serviceId, petId, staffId) =>
                           setAddOnStaff((chosen) => ({
@@ -4921,9 +5076,25 @@ export function BookingModal({
                         specialRequests={specialRequests}
                         setSpecialRequests={setSpecialRequests}
                         isCustomerMode={isCustomerMode}
+                        // The confirm step names a step by its place in the
+                        // FULL list (client & pet, service, details) and a
+                        // Details screen by its fixed id. What is shown can
+                        // hide a step (a locked service, an edit) and a
+                        // sub-step (no room step for a customer), so both
+                        // are looked up — the Medications link opened
+                        // Feeding, and a hidden step shifted every jump.
                         onEditStep={(stepIdx, subStep) => {
-                          setCurrentStep(stepIdx);
-                          setCurrentSubStep(subStep ?? 0);
+                          const shown = displayedSteps.findIndex(
+                            (step) => step.id === STEPS[stepIdx]?.id,
+                          );
+                          setCurrentStep(shown >= 0 ? shown : stepIdx);
+                          const at =
+                            subStep === undefined
+                              ? 0
+                              : currentSubSteps.findIndex(
+                                  (sub) => sub.id === subStep,
+                                );
+                          setCurrentSubStep(at >= 0 ? at : (subStep ?? 0));
                         }}
                       />
                     )}

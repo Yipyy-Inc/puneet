@@ -168,6 +168,9 @@ export type FeedingFrequency = z.infer<typeof feedingFrequencyEnum>;
 // Medication Enums (from src/lib/types.ts)
 // ============================================================================
 
+// The booking form offers tablet, capsule, chewable, liquid, powder, topical,
+// drops, injection and other (2026-10-01). `pill`, `ear_drops` and
+// `eye_drops` are what it offered before, and bookings still carry them.
 export const medFormEnum = z.enum([
   "pill",
   "liquid",
@@ -176,6 +179,11 @@ export const medFormEnum = z.enum([
   "powder",
   "ear_drops",
   "eye_drops",
+  "tablet",
+  "capsule",
+  "chewable",
+  "drops",
+  "other",
 ]);
 export type MedForm = z.infer<typeof medFormEnum>;
 
@@ -223,5 +231,41 @@ export const medGivenWithEnum = z.enum([
   "by_hand",
   "syringe",
   "other",
+  // Offered by form since 2026-10-01 — drops are given in an eye or an ear.
+  "given_as_treat",
+  "poured_over_food",
+  "mixed_in_water",
+  "applied_to_skin",
+  "eye",
+  "ear",
+  "administered_by_staff",
 ]);
 export type MedGivenWith = z.infer<typeof medGivenWithEnum>;
+
+// ============================================================================
+// The medications step's own answers (2026-10-01)
+// ============================================================================
+
+/**
+ * Which days of the stay a medication is given. `except_checkout` is the
+ * default for an overnight stay; a stay with no separate checkout day (a
+ * daycare day) reads it as every booked day. `certain_dates` lists the days in
+ * `specificDays`, as ISO dates.
+ */
+export const medDayRuleEnum = z.enum([
+  "except_checkout",
+  "every_day",
+  "certain_dates",
+]);
+export type MedDayRule = z.infer<typeof medDayRuleEnum>;
+
+export const medFoodEnum = z.enum(["with", "empty", "either"]);
+export type MedFood = z.infer<typeof medFoodEnum>;
+
+/** Who splits a tablet or chew given in halves or quarters. */
+export const medSplitByEnum = z.enum(["owner", "staff"]);
+export type MedSplitBy = z.infer<typeof medSplitByEnum>;
+
+/** Eye or ear drops: which side. */
+export const medSideEnum = z.enum(["left", "right", "both"]);
+export type MedSide = z.infer<typeof medSideEnum>;

@@ -160,7 +160,6 @@ const BASELINE = new Set<string>([
   "src/app/facility/services/memberships/_components/subscribers/CancelSubscriptionDialog.tsx",
   "src/app/facility/settings/billing/_components/billing-self-service-view.tsx",
   "src/components/analytics/CustomReportsManager.tsx",
-  "src/components/bookings/MedicationSection.tsx",
   "src/components/bookings/UnfinishedBookingDetailSheet.tsx",
   "src/components/camera-integration/CameraIntegrationSettings.tsx",
   "src/components/custom-services/wizard/steps/YipyyGoConfigStep.tsx",

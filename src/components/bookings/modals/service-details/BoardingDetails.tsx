@@ -8,14 +8,11 @@ import { Check, PawPrint, Bed, X, AlertCircle, Gift } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
-import type {
-  ExtraService,
-  FeedingScheduleItem,
-  MedicationItem,
-} from "@/types/booking";
+import type { ExtraService, FeedingScheduleItem } from "@/types/booking";
 import type { Pet } from "@/types/pet";
 import { SimpleFeedingForm } from "@/components/booking/shared/SimpleFeedingForm";
-import { SimpleMedicationForm } from "@/components/booking/shared/SimpleMedicationForm";
+import { MedicationsStep } from "@/components/booking/medications/medications-step";
+import type { MedicationStepState } from "@/components/booking/medications/use-medication-step";
 import { useOfferedAddOns } from "@/lib/add-ons/use-offered-add-ons";
 import { getBoardingCategoryAvailability } from "@/lib/capacity-engine";
 import { useRooms } from "@/hooks/use-rooms";
@@ -88,8 +85,10 @@ interface BoardingDetailsProps {
   ) => void;
   feedingSchedule: FeedingScheduleItem[];
   setFeedingSchedule: (schedule: FeedingScheduleItem[]) => void;
-  medications: MedicationItem[];
-  setMedications: (medications: MedicationItem[]) => void;
+  /** The Medications step (2026-10-01): its state, held by BookingModal. */
+  medicationStep: MedicationStepState;
+  /** "Step 3 of 4", as the rail counts. */
+  medicationStepLabel: string;
 
   extraServices: Array<{ serviceId: string; quantity: number; petId: number }>;
   setExtraServices: (
@@ -139,8 +138,8 @@ export function BoardingDetails({
   setRoomAssignments,
   feedingSchedule,
   setFeedingSchedule,
-  medications,
-  setMedications,
+  medicationStep,
+  medicationStepLabel,
   extraServices,
   setExtraServices,
   selectedPets,
@@ -388,13 +387,6 @@ export function BoardingDetails({
 
         {currentSubStep === 4 && (
           <div className="space-y-4">
-            <div>
-              <h3 className="text-base font-semibold">{t("medication")}</h3>
-              <p className="text-muted-foreground mt-1 text-xs">
-                {t("addAnyMedicationsYourPet")}
-              </p>
-            </div>
-
             {!isStepAccessible(4) && (
               <div className="bg-muted/50 rounded-lg border border-dashed p-8 text-center">
                 <p className="text-muted-foreground">
@@ -403,19 +395,13 @@ export function BoardingDetails({
               </div>
             )}
 
+            {/* The client's Medications design (2026-10-01): its own
+                heading, its pets, its cards and editor. */}
             {isStepAccessible(4) && (
-              <div className="space-y-4">
-                <SimpleMedicationForm
-                  medications={medications}
-                  setMedications={setMedications}
-                  selectedPets={selectedPets.map((p) => ({
-                    id: p.id,
-                    name: p.name,
-                    type: p.type,
-                  }))}
-                  serviceType="boarding"
-                />
-              </div>
+              <MedicationsStep
+                step={medicationStep}
+                stepLabel={medicationStepLabel}
+              />
             )}
           </div>
         )}

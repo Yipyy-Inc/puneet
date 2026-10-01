@@ -201,6 +201,9 @@ test.describe("a customer books with their own facility's settings", () => {
       "deposit_rules",
       "care_fees",
       "daycare_rates",
+      // The Medications and Feeding steps' choices (2026-10-01).
+      "medication_instructions",
+      "feeding_instructions",
     ]) {
       expect(body[domain], domain).toBeDefined();
       expect(typeof body[domain]?.configured, domain).toBe("boolean");

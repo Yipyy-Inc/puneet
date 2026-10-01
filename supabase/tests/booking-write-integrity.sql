@@ -635,6 +635,92 @@ exception when others then
   reset role; perform pg_temp.t('T22-T24 stated charges', false, sqlerrm);
 end $$;
 
+-- ── T25-T28: a waived charge for what the facility supplies is staff's ──────
+--
+-- 2026-10-01: the Medications step lets STAFF waive the charge for what the
+-- facility supplies to give a medication with (`aidWaived` on the medication,
+-- in `details`), and the server prices that charge from what is stored. A
+-- customer writes `details` through PostgREST and the RPCs as well as the
+-- booking route, so the trigger keeps the waiver theirs to grant: dropped from
+-- a customer's insert, restored from the row on a customer's update.
+do $$
+declare r record; v_booking uuid; v_staff_booking uuid;
+begin
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c1', 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  insert into public.bookings
+    (facility_id, client_id, service, start_at, end_at, details)
+  values
+    ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000d1',
+     'boarding', now() + interval '6 days', now() + interval '8 days',
+     jsonb_build_object('medications', jsonb_build_array(
+       jsonb_build_object('id', 'm1', 'name', 'Apoquel', 'aidWaived', true,
+                          'facilityProvidesMedAid', true),
+       jsonb_build_object('id', 'm2', 'name', 'Vetmedin'))))
+  returning id into v_booking;
+  reset role;
+
+  select * into r from public.bookings where id = v_booking;
+  perform pg_temp.t('T25 a customer cannot insert a booking with a supply charge waived',
+            not (r.details->'medications'->0 ? 'aidWaived')
+              and r.details->'medications'->0->>'name' = 'Apoquel'
+              and jsonb_array_length(r.details->'medications') = 2,
+            r.details->>'medications');
+
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c1', 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  update public.bookings
+     set details = jsonb_set(details, '{medications,0,aidWaived}', 'true'::jsonb)
+   where id = v_booking;
+  reset role;
+
+  select * into r from public.bookings where id = v_booking;
+  perform pg_temp.t('T26 a customer cannot waive it afterwards either',
+            not (r.details->'medications'->0 ? 'aidWaived'),
+            r.details->>'medications');
+
+  -- Staff can: it is the checkbox the staff booking form offers.
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a1', 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  update public.bookings
+     set details = jsonb_set(details, '{medications,0,aidWaived}', 'true'::jsonb)
+   where id = v_booking;
+  insert into public.bookings
+    (facility_id, client_id, service, status, start_at, end_at, details)
+  values
+    ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000d1',
+     'boarding', 'confirmed', now() + interval '9 days', now() + interval '11 days',
+     jsonb_build_object('medications', jsonb_build_array(
+       jsonb_build_object('id', 'm1', 'name', 'Apoquel', 'aidWaived', true))))
+  returning id into v_staff_booking;
+  reset role;
+
+  select * into r from public.bookings where id = v_staff_booking;
+  perform pg_temp.t('T27 staff can waive it',
+            (r.details->'medications'->0->>'aidWaived')::boolean is true,
+            r.details->>'medications');
+
+  -- The customer edits the instructions on a booking staff waived a charge
+  -- on: the waiver stays, whatever their copy of the list says.
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c1', 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  update public.bookings
+     set details = jsonb_set(
+           jsonb_set(details, '{medications,0}',
+                     (details->'medications'->0) - 'aidWaived'),
+           '{medications,0,notes}', '"Give with breakfast"'::jsonb)
+   where id = v_booking;
+  reset role;
+
+  select * into r from public.bookings where id = v_booking;
+  perform pg_temp.t('T28 a customer''s edit keeps the waiver staff granted',
+            (r.details->'medications'->0->>'aidWaived')::boolean is true
+              and r.details->'medications'->0->>'notes' = 'Give with breakfast',
+            r.details->>'medications');
+exception when others then
+  reset role; perform pg_temp.t('T25-T28 supply waivers', false, sqlerrm);
+end $$;
+
 -- ── Report ─────────────────────────────────────────────────────────────────
 select case when ok then '  PASS  ' else '> FAIL <' end as result,
        name, detail

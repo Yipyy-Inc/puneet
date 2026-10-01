@@ -12,6 +12,11 @@ import {
 import { writeFailure } from "@/lib/api/write-failure";
 import { staffForStylist } from "@/lib/api/stylist-staff";
 import { applyBookingServiceCharges } from "@/lib/payments/booking-service-charges";
+import {
+  applyBookingCareCharges,
+  snapshotCareCharges,
+  type CareChargeSnapshot,
+} from "@/lib/payments/booking-care-charges";
 import { stampBookingTaxable } from "@/lib/payments/booking-service-tax";
 import { returnPassUnlessForfeited } from "@/lib/policies/return-pass-on-cancel";
 import {
@@ -254,6 +259,35 @@ export async function PATCH(
     return NextResponse.json(existing);
   }
 
+  // ── THE CARE CHARGES FOLLOW A STAFF EDIT (2026-10-01) ───────────────────
+  //
+  // The medication fee, the meals fee and what the facility supplies are
+  // bill lines worked out from the booking's medications, meals, days, pets
+  // and service. When staff change one of those, the lines follow — and only
+  // as far as the edit moved them, which is why this is read BEFORE the write
+  // (lib/payments/booking-care-charges.ts). A customer's own later change to
+  // their instructions never re-prices the booking.
+  const careEdit = (
+    [
+      "medications",
+      "feedingSchedule",
+      "startDate",
+      "endDate",
+      "service",
+      "petId",
+      "daycareSelectedDates",
+    ] as const
+  ).some((field) => changes[field] !== undefined);
+  let careBefore: CareChargeSnapshot | null = null;
+  let staffCareEdit = false;
+  if (careEdit) {
+    const viewer = await getViewer().catch(() => null);
+    staffCareEdit = Boolean(
+      viewer && (viewer.memberships.length > 0 || viewer.isPlatformAdmin),
+    );
+    if (staffCareEdit) careBefore = await snapshotCareCharges(stored.id);
+  }
+
   const { data: written, error } = await supabase
     .from("bookings")
     .update(row as never)
@@ -339,16 +373,37 @@ export async function PATCH(
     }
   }
 
+  // ── A BOOKING MOVED TO ANOTHER SERVICE IS A DIFFERENT SUPPLY ────────────
+  //
+  // `bookings.taxable` is pinned at creation so that a facility editing a RATE
+  // does not retroactively re-tax stays already taken under it. Editing the
+  // BOOKING is the opposite case: a stay moved from a taxed kennel class to an
+  // exempt one is now the exempt one, and the flag has to follow.
+  //
+  // Only when the service itself changed — a rename, a note or a staff
+  // reassignment leaves the supply exactly as it was. Before the care charges
+  // below, whose fees follow the service's tax, and before the read-back.
+  if (row.service !== undefined || row.service_type !== undefined) {
+    await stampBookingTaxable([stored.id]);
+  }
+
+  if (staffCareEdit) {
+    await applyBookingCareCharges([stored.id], { before: careBefore });
+  }
+
   // ── AN APPROVED REQUEST IS PRICED NOW ───────────────────────────────────
   //
   // Its service charges were skipped when it was made, at the $0 the database
   // gives a customer's request. They land now, decided as the create path
   // decides them — before the booking is read back, so the answer owes them.
+  // Its care charges were written when it was made; any a request made some
+  // other way is missing are written now.
   if (
     nextStatus === "confirmed" &&
     (currentStatus === "request_submitted" || currentStatus === "waitlisted")
   ) {
     await applyBookingServiceCharges([stored.id]);
+    await applyBookingCareCharges([stored.id], "initial");
   }
 
   const { data: updated } = await supabase
@@ -410,19 +465,6 @@ export async function PATCH(
         );
       }
     }
-  }
-
-  // ── A BOOKING MOVED TO ANOTHER SERVICE IS A DIFFERENT SUPPLY ────────────
-  //
-  // `bookings.taxable` is pinned at creation so that a facility editing a RATE
-  // does not retroactively re-tax stays already taken under it. Editing the
-  // BOOKING is the opposite case: a stay moved from a taxed kennel class to an
-  // exempt one is now the exempt one, and the flag has to follow.
-  //
-  // Only when the service itself changed — a rename, a note or a staff
-  // reassignment leaves the supply exactly as it was.
-  if (row.service !== undefined || row.service_type !== undefined) {
-    await stampBookingTaxable([stored.id]);
   }
 
   return NextResponse.json(updated ? rowToBooking(updated) : null);

@@ -101,6 +101,30 @@ const SAME_IN_BOTH = new Set([
   "booking.salon", // Salon / Salon — a grooming salon, same word
   "booking.mobile", // Mobile / Mobile — the grooming van, same word
   "booking.pricePerUnit", // {price}/{unit} — placeholders and a slash
+  // The Medications step (2026-10-01): forms and units French spells the
+  // same way, and lines that are placeholders and separators only.
+  "booking.medsFormCapsule", // Capsule / Capsule
+  "booking.medsFormInjection", // Injection / Injection
+  "booking.medsUnitCapsuleOne", // capsule / capsule
+  "booking.medsUnitCapsuleOther", // capsules / capsules
+  "booking.medsUnitMlOne", // ml — the abbreviation in both
+  "booking.medsUnitMlOther", // ml
+  "booking.medsUnitApplicationOne", // application / application
+  "booking.medsUnitApplicationOther", // applications / applications
+  "booking.medsUnitDoseOne", // dose / dose
+  "booking.medsUnitDoseOther", // doses / doses
+  "booking.medsUnitOptionCapsule", // capsule / capsule
+  "booking.medsUnitOptionMl", // ml
+  "booking.medsUnitOptionApplication", // application / application
+  "booking.medsDosesOne", // {count} dose
+  "booking.medsDosesOther", // {count} doses
+  "booking.medsPricePerDoseShort", // {price}/dose
+  "booking.medsDaysRangeSub", // {range} · {days}
+  "booking.medsItemCount", // {count} {items}
+  "booking.medsPanelHeading", // {service} · {pet}
+  "booking.medsPanelRange", // {range} · {length}
+  "booking.medsAddonRow", // {count} × {items} ({name})
+  "booking.medsLineDetail", // {name} ({quantity} × {price})
   // The points history's column heads: French spells these the same.
   "loyalty.date", // Date / Date
   "loyalty.type", // Type / Type

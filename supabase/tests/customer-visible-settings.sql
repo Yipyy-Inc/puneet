@@ -281,6 +281,12 @@ begin
   perform pg_temp.t(14,
     'service_addons is no longer a domain a customer can read',
     not ('service_addons' = any(domains)), array_to_string(domains, ', '));
+  -- What the booking form's Feeding and Medications steps offer (2026-10-01):
+  -- the customer fills those steps, so they read what the facility chose.
+  perform pg_temp.t(15,
+    'feeding_instructions and medication_instructions are on the customer allowlist',
+    array['feeding_instructions', 'medication_instructions'] <@ domains,
+    array_to_string(domains, ', '));
   -- ...and nothing that is the facility's own business.
   perform pg_temp.t(13,
     'staff, payroll, messaging and integration domains stay off it',

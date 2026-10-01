@@ -43,7 +43,11 @@ interface CareGuest {
   feedingTimes: string[];
   feedingInstructions: string;
   allergies: string[];
-  medications: { medicationName: string; times: string[] }[];
+  medications: {
+    medicationName: string;
+    times: string[];
+    frequencyRule?: { type: string; dates?: string[] };
+  }[];
 }
 
 interface CareLogEntry {
@@ -165,6 +169,19 @@ test.describe("the daily care board", () => {
               adminInstructions: ["with_food"],
               ifMissed: "skip",
             },
+            // Given every day but the checkout day — and today IS the
+            // checkout day of this stay (2026-10-01).
+            {
+              id: "med-e2e-not-checkout",
+              name: "Galliprant",
+              amount: "1 tablet",
+              doseAmount: 1,
+              doseUnit: "tablet",
+              form: "tablet",
+              frequency: "once_daily",
+              times: ["07:00"],
+              dayRule: "except_checkout",
+            },
           ],
         },
       });
@@ -233,6 +250,17 @@ test.describe("the daily care board", () => {
     expect(mine!.allergies).toContain("chicken");
     expect(mine!.feedingInstructions).toContain("Half a scoop");
     expect(mine!.medications.map((m) => m.medicationName)).toContain("Rimadyl");
+
+    // A medication given every day but checkout carries its day as a DATE on
+    // the facility's calendar, so the board leaves it out today — the
+    // checkout day — and never counts days of a stay from a UTC check-in.
+    const notToday = mine!.medications.find(
+      (m) => m.medicationName === "Galliprant",
+    );
+    expect(notToday?.frequencyRule).toEqual({
+      type: "except_dates",
+      dates: [today],
+    });
   });
 
   test("a guest who was never here is not on the board", async ({ page }) => {
@@ -378,6 +406,11 @@ test.describe("the daily care board", () => {
     expect(body.code).toBe("care_override_reason_required");
     // The list, not just a sentence: the dialog names what was missed.
     expect(body.pending?.length ?? 0).toBeGreaterThan(0);
+    // …and not a dose nobody was meant to give: Galliprant is not given on
+    // the checkout day, so it cannot hold the pet back on it.
+    expect(
+      (body.pending ?? []).filter((item) => item.label.includes("Galliprant")),
+    ).toEqual([]);
 
     // Still here. A refusal that let the pet go anyway would be worse than no
     // gate at all, because the screen would say it had asked.

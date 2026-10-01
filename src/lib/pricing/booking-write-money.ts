@@ -26,7 +26,8 @@ import type { PricingRuleAdjustment } from "@/lib/pricing-rules";
  *                   └─────────── serviceTotal ──────────┘  └── extras ──┘
  *                = total
  *
- * (The add-ons joined the fees as lines on 2026-09-30.)
+ * (The add-ons joined the fees as lines on 2026-09-30, and the care charges —
+ * medication fee, meals, what is supplied — on 2026-10-01.)
  *
  * So the three outputs are not independent — they are one sentence, and
  * `tests/unit/booking-write-money.test.ts` asserts the whole sentence rather than
@@ -71,6 +72,13 @@ export interface BookingMoneyInput {
    * so — like the service charges — they come out of `total_cost`.
    */
   addOnsTotal?: number;
+  /**
+   * The medication fee, the daycare meals fee and what the facility supplies
+   * to give a medication with, as `total` counts them. `fee` lines since
+   * 2026-10-01, written by the server from the facility's settings
+   * (lib/medications/charges.ts), so they come out of `total_cost` too.
+   */
+  careChargesTotal?: number;
   /** What the customer is quoted: the figure on screen, tax included. */
   total: number;
 }
@@ -93,6 +101,7 @@ export function splitBookingMoney({
   discountTotal,
   packagePassDiscount = 0,
   addOnsTotal = 0,
+  careChargesTotal = 0,
   total,
 }: BookingMoneyInput): BookingMoney {
   // A custom fee can be authored as a discount, in which case it is already a
@@ -116,11 +125,15 @@ export function splitBookingMoney({
   return {
     discount,
     serviceChargeTotal,
-    // The fees and the add-ons come out (they are billed as lines) and the
-    // discount goes back in (the database subtracts it itself). All three, or
-    // the bill is wrong.
+    // The fees, the add-ons and the care charges come out (they are billed
+    // as lines) and the discount goes back in (the database subtracts it
+    // itself). All of them, or the bill is wrong.
     serviceTotal: round2(
-      total - serviceChargeTotal - (addOnsTotal || 0) + discount,
+      total -
+        serviceChargeTotal -
+        (addOnsTotal || 0) -
+        (careChargesTotal || 0) +
+        discount,
     ),
   };
 }

@@ -1,16 +1,17 @@
 "use client";
 
+import { choicePillClass as PILL } from "@/components/ui/choice-pill";
+
 // ============================================================================
 // A few answers to choose between, as pills.
 //
 // Native radio and checkbox inputs underneath, so arrow keys and a screen
 // reader behave as they do everywhere else; the pill is their label. Selected
 // is §5s's recipe — a full 2px primary ring, the label one step darker — never
-// a tint or an edge line. 40px, and 48px below 1024px (§6 rule 7).
+// a tint or an edge line. 40px, and 48px below 1024px (§6 rule 7). The recipe
+// itself lives in components/ui/choice-pill.tsx, shared with the booking
+// form's Medications step.
 // ============================================================================
-
-const PILL =
-  "border-line-strong bg-card text-body-ink hover:border-ink-disabled has-checked:text-primary-hover has-focus-visible:outline-primary flex min-h-10 cursor-pointer items-center rounded-full border px-4 text-[14.5px] font-semibold has-checked:shadow-[inset_0_0_0_2px_var(--primary)] has-focus-visible:outline-2 has-focus-visible:outline-offset-2 max-lg:min-h-12";
 
 interface Option<T extends string> {
   value: T;

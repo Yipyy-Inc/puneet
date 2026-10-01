@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { savedMedicationSchema } from "@/types/booking";
+
 // ============================================================================
 // Evaluation
 // ============================================================================
@@ -77,6 +79,11 @@ export const petSchema = z.object({
     .optional(),
   energyLevel: z.enum(["low", "medium", "high"]).optional(),
   petStatus: z.enum(["active", "inactive", "deceased"]).optional(),
+  /**
+   * Medications saved from a booking's Medications step "for future visits"
+   * (2026-10-01). Kept in `pets.details`; the next booking starts with them.
+   */
+  medications: z.array(savedMedicationSchema).optional(),
   /** Per-visit photo gallery — populated by the check-in flow (pre-groom
    *  photos) and by the session panel (after photos). Surfaced in the pet
    *  profile's "Visit photos" section so owners and staff can scroll a

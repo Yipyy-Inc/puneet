@@ -20,9 +20,6 @@ export type {
 export { FeedingScheduleForm } from "./FeedingScheduleForm";
 export type { PetOption as FeedingPetOption } from "./FeedingScheduleForm";
 
-export { MedicationForm } from "./MedicationForm";
-export type { PetOption as MedicationPetOption } from "./MedicationForm";
-
 export { RequirementsGateStep } from "./RequirementsGateStep";
 export type { MissingRequirement } from "./RequirementsGateStep";
 

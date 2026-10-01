@@ -27,6 +27,7 @@ import { arrivalFailure } from "@/lib/bookings/arrival-failure";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import { printBookingInvoice } from "./_lib/print-invoice";
 import { bookingCareEntries } from "@/lib/daily-care/booking-care-entries";
+import { bookingStay } from "@/lib/medications/schedule";
 import { useCancelWithRefund } from "@/components/bookings/use-cancel-with-refund";
 import dynamic from "next/dynamic";
 
@@ -1440,6 +1441,7 @@ export default function ClientBookingDetailPage({
                         // added medication appears from the row it was saved to.
                         key={`med-${careLogStamp(careLog)}-${booking.medications?.length ?? 0}`}
                         entries={careEntries.medication}
+                        stay={bookingStay(booking)}
                         required={medicationMode === "required"}
                         onAdd={async (item) => {
                           await bookingMutations.update(booking.id, {

@@ -9,6 +9,7 @@ import {
 import type { CareLogEntry } from "@/app/api/care-log/route";
 import type { Booking } from "@/types/booking";
 import type { createServerClient } from "@/lib/supabase/server";
+import { DEFAULT_TIMEZONE, wallClockParts } from "@/lib/time/facility-time";
 
 // ============================================================================
 // The question a CHECK-OUT asks when today's meals or doses are not logged —
@@ -57,6 +58,9 @@ export { CARE_OVERRIDE_REASON_REQUIRED } from "@/lib/care-completion";
 interface BookingCareRow {
   id: string;
   ref: number;
+  service: string;
+  start_at: string;
+  end_at: string;
   details: Record<string, unknown> | null;
   facilities?: { timezone: string | null } | null;
 }
@@ -93,7 +97,7 @@ export async function requireCareLogged(
 ): Promise<NextResponse | null> {
   const { data, error } = await supabase
     .from("bookings")
-    .select("id, ref, details, facilities(timezone)")
+    .select("id, ref, service, start_at, end_at, details, facilities(timezone)")
     .eq("ref", bookingRef)
     .maybeSingle();
 
@@ -167,8 +171,16 @@ export async function requireCareLogged(
     }),
   );
 
+  // The booking's own days, on the facility's calendar: a dose that is not
+  // given on the checkout day, or only on chosen dates, is not due today.
+  const timeZone = booking.facilities?.timezone ?? DEFAULT_TIMEZONE;
   const entries = bookingCareEntries(
-    details as Parameters<typeof bookingCareEntries>[0],
+    {
+      ...(details as Parameters<typeof bookingCareEntries>[0]),
+      service: booking.service,
+      startDate: wallClockParts(booking.start_at, timeZone).date,
+      endDate: wallClockParts(booking.end_at, timeZone).date,
+    },
     careLog,
     day,
   );

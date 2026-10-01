@@ -22,6 +22,7 @@ import {
   formatTimeOfDay,
 } from "@/lib/i18n/format";
 import type { CareLogEntry } from "@/lib/api/care-log";
+import { bookingStay, isActiveOn } from "@/lib/medications/schedule";
 import type { Booking } from "@/types/booking";
 
 // ============================================================================
@@ -40,7 +41,9 @@ import type { Booking } from "@/types/booking";
 // was LOGGED, keyed the way the panels log them — `sched-<item>-<occasion>`
 // for a meal, `<medication>#HH:MM` for a dose — plus anything else logged that
 // day (a potty break, a walk from the Daily Care board). A planned item with no
-// row is "not logged"; on a future day it is simply planned.
+// row is "not logged"; on a future day it is simply planned. A dose is planned
+// only on its own days — not on the checkout day of a medication given "every
+// day except checkout", not off its chosen dates (2026-10-01).
 // ============================================================================
 
 type Row = {
@@ -48,6 +51,8 @@ type Row = {
   taskType: string;
   label: string;
   time: string;
+  /** Whether it is planned on a given day; absent, every day. */
+  dueOn?: (day: string) => boolean;
   entry?: CareLogEntry;
 };
 
@@ -120,6 +125,16 @@ export function BookingJournal({
   const day =
     picked ?? (days.includes(today) ? today : (days[days.length - 1] ?? today));
 
+  const stay = useMemo(
+    () =>
+      bookingStay({
+        service: booking.service,
+        startDate: booking.startDate,
+        endDate: booking.endDate,
+      }),
+    [booking.service, booking.startDate, booking.endDate],
+  );
+
   // What the owner's schedule asks for, every day of the stay.
   const planned = useMemo(() => {
     const meals: Omit<Row, "entry">[] = (booking.feedingSchedule ?? []).flatMap(
@@ -138,10 +153,11 @@ export function BookingJournal({
           taskType: "medication",
           label: [med.name, med.amount, med.strength].filter(Boolean).join(" "),
           time,
+          dueOn: (d: string) => isActiveOn(med, d, stay),
         })),
     );
     return [...meals, ...doses];
-  }, [booking.feedingSchedule, booking.medications]);
+  }, [booking.feedingSchedule, booking.medications, stay]);
 
   const log = useMemo(() => careLog ?? [], [careLog]);
   const labelFor = (entry: CareLogEntry) =>
@@ -150,10 +166,13 @@ export function BookingJournal({
 
   const rows: Row[] = useMemo(() => {
     const onDay = log.filter((e) => e.occurredOn === day);
-    const fromPlan = planned.map((p) => ({
-      ...p,
-      entry: onDay.find((e) => e.taskKey === p.key),
-    }));
+    const fromPlan = planned
+      .map((p) => ({
+        ...p,
+        entry: onDay.find((e) => e.taskKey === p.key),
+      }))
+      // Not one of its days — unless somebody logged it anyway, which stays.
+      .filter((p) => !p.dueOn || p.dueOn(day) || p.entry);
     const extra = onDay
       .filter((e) => !planned.some((p) => p.key === e.taskKey))
       .map((e) => ({

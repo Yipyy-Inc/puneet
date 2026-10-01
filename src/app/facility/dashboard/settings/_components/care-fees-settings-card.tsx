@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -30,6 +29,7 @@ import {
   type FeedingFeeScope,
   type MedicationFeeScope,
 } from "@/lib/settings/care-fees";
+import { useSettingsHref } from "@/lib/settings/use-settings-href";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
@@ -79,6 +79,7 @@ export function CareFeesSettingsCard() {
 
 function CareFeesEditor({ initial }: { initial: CareFees }) {
   const t = useSettingsText().section("booking-rules");
+  const settingsPath = useSettingsHref();
   const save = useSaveFacilitySetting();
   const [saved, setSaved] = useState<CareFees>(initial);
   const [draft, setDraft] = useState<CareFees>(initial);
@@ -115,7 +116,6 @@ function CareFeesEditor({ initial }: { initial: CareFees }) {
   };
 
   const med = draft.medicationAdmin;
-  const aids = draft.medicationAids;
   const feeding = draft.daycareFeeding;
 
   return (
@@ -218,112 +218,27 @@ function CareFeesEditor({ initial }: { initial: CareFees }) {
           )}
         </section>
 
-        {/* ── Medication aids ───────────────────────────────────────── */}
+        {/* ── What the facility supplies, priced elsewhere ───────────── */}
+        {/* A pill pocket is priced per dose or per day beside the way of
+            giving it prices, in the medication instructions (2026-10-01). */}
         <section
-          className="space-y-3 border-t pt-6"
-          aria-labelledby="fee-aids-title"
+          className="flex flex-wrap items-start justify-between gap-3 border-t pt-6"
+          aria-labelledby="fee-supplies-title"
         >
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <h3 id="fee-aids-title" className="text-[15px] font-semibold">
-                {t("aidsTitle")}
-              </h3>
-              <p className="text-muted-foreground text-sm">{t("aidsHelp")}</p>
-            </div>
-            <Switch
-              checked={aids.enabled}
-              aria-label={t("feeEnabled")}
-              onCheckedChange={(enabled) =>
-                update("medicationAids", { enabled })
-              }
-            />
+          <div className="min-w-0">
+            <h3 id="fee-supplies-title" className="text-[15px] font-semibold">
+              {t("suppliesTitle")}
+            </h3>
+            <p className="text-muted-foreground text-sm">
+              {t("suppliesMoved")}
+            </p>
           </div>
-          {aids.enabled && (
-            <div className="space-y-3">
-              {aids.items.map((item, index) => (
-                <div
-                  key={item.id}
-                  className="grid grid-cols-[minmax(0,1fr)_minmax(0,8rem)_auto] items-end gap-3"
-                >
-                  <div className="min-w-0 space-y-1.5">
-                    <Label htmlFor={`fee-aid-name-${item.id}`}>
-                      {t("aidName")}
-                    </Label>
-                    <Input
-                      id={`fee-aid-name-${item.id}`}
-                      value={item.name}
-                      maxLength={80}
-                      onChange={(event) =>
-                        update("medicationAids", {
-                          items: aids.items.map((it, i) =>
-                            i === index
-                              ? { ...it, name: event.target.value }
-                              : it,
-                          ),
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="min-w-0 space-y-1.5">
-                    <Label htmlFor={`fee-aid-fee-${item.id}`}>
-                      {t("aidFee")}
-                    </Label>
-                    <Input
-                      id={`fee-aid-fee-${item.id}`}
-                      type="number"
-                      inputMode="decimal"
-                      min={0}
-                      max={1000}
-                      step={0.01}
-                      className="tabular-nums"
-                      value={String(item.fee)}
-                      onChange={(event) =>
-                        update("medicationAids", {
-                          items: aids.items.map((it, i) =>
-                            i === index
-                              ? { ...it, fee: amountOf(event.target.value) }
-                              : it,
-                          ),
-                        })
-                      }
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    aria-label={t("removeAid").replace(
-                      "{name}",
-                      item.name.trim() || t("aidUnnamed"),
-                    )}
-                    onClick={() =>
-                      update("medicationAids", {
-                        items: aids.items.filter((_, i) => i !== index),
-                      })
-                    }
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                disabled={aids.items.length >= 30}
-                onClick={() =>
-                  update("medicationAids", {
-                    items: [
-                      ...aids.items,
-                      { id: `aid-${crypto.randomUUID()}`, name: "", fee: 0 },
-                    ],
-                  })
-                }
-              >
-                <Plus className="size-4" />
-                {t("addAid")}
-              </Button>
-            </div>
-          )}
+          <Link
+            href={settingsPath("care-tasks")}
+            className="text-primary shrink-0 font-medium hover:underline"
+          >
+            {t("suppliesMovedLink")}
+          </Link>
         </section>
 
         {/* ── Daycare meals ─────────────────────────────────────────── */}

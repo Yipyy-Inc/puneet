@@ -5,6 +5,7 @@ import {
   medicationEntriesFromItems,
 } from "@/lib/bookings/care-instructions";
 import type { CareLogEntry } from "@/app/api/care-log/route";
+import { bookingStay } from "@/lib/medications/schedule";
 import type { Booking } from "@/types/booking";
 
 // ============================================================================
@@ -18,6 +19,11 @@ import type { Booking } from "@/types/booking";
 // `medications`) plus the care log. So the gate never fired on a real
 // booking: a stay with three unlogged doses checked out without a word. The
 // fixture fields stay first so the two hand-written demo bookings still read.
+//
+// The booking's own days come too, when the caller has them: a medication
+// given "every day except checkout" or on chosen dates has nothing due on the
+// other days, and a gate that asked for it would hold the pet back over a dose
+// the owner said not to give (2026-10-01).
 // ============================================================================
 
 export function bookingCareEntries(
@@ -27,7 +33,7 @@ export function bookingCareEntries(
     | "feedingSchedule"
     | "medicationInstructions"
     | "medications"
-  >,
+  > & { service?: string; startDate?: string; endDate?: string },
   careLog: CareLogEntry[] | undefined,
   day: string,
 ) {
@@ -41,7 +47,11 @@ export function bookingCareEntries(
   const medication = applyMedicationLog(
     booking.medicationInstructions?.length
       ? booking.medicationInstructions
-      : medicationEntriesFromItems(booking.medications, day),
+      : medicationEntriesFromItems(
+          booking.medications,
+          day,
+          booking.startDate ? bookingStay(booking) : undefined,
+        ),
     careLog,
     day,
   );

@@ -18,6 +18,8 @@ import {
   activeFacilityIdForStaff,
   inFacility,
 } from "@/lib/api/facility-context";
+import { stayOf } from "@/lib/medications/schedule";
+import { DEFAULT_TIMEZONE, wallClockParts } from "@/lib/time/facility-time";
 
 // ============================================================================
 // Who is in the building today, with what their owners asked for.
@@ -63,6 +65,7 @@ export interface DailyCarePayload {
  */
 const SELECT = `
   ref, start_at, end_at, details,
+  facilities ( timezone ),
   clients ( name, phone ),
   booking_pets ( pets ( id, ref, name ) ),
   boarding_stays!inner ( checked_in_at, checked_out_at, segment_order, occupies,
@@ -74,6 +77,7 @@ interface Row {
   start_at: string;
   end_at: string;
   details: BookingCareDetails | null;
+  facilities: { timezone: string | null } | null;
   clients: { name: string; phone: string | null } | null;
   booking_pets:
     | { pets: { id: string; ref: number; name: string } | null }[]
@@ -177,6 +181,20 @@ export async function GET(request: NextRequest) {
           scheduledArrival: row.start_at,
           scheduledDeparture: row.end_at,
           nights: nightsBetween(row.start_at, row.end_at),
+          // The stay's days on the facility's own calendar, which a
+          // medication's days ("not on checkout", chosen dates) are read
+          // against.
+          stay: stayOf({
+            overnight: true,
+            start: wallClockParts(
+              row.start_at,
+              row.facilities?.timezone ?? DEFAULT_TIMEZONE,
+            ).date,
+            end: wallClockParts(
+              row.end_at,
+              row.facilities?.timezone ?? DEFAULT_TIMEZONE,
+            ).date,
+          }),
         },
         row.details ?? {},
       );

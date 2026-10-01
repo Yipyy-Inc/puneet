@@ -12,6 +12,10 @@ import {
   medAdminInstructionEnum,
   missedDoseActionEnum,
   medGivenWithEnum,
+  medDayRuleEnum,
+  medFoodEnum,
+  medSplitByEnum,
+  medSideEnum,
 } from "@/types/base";
 
 export type {
@@ -26,6 +30,10 @@ export type {
   MedAdminInstruction,
   MissedDoseAction,
   MedGivenWith,
+  MedDayRule,
+  MedFood,
+  MedSplitBy,
+  MedSide,
 } from "@/types/base";
 
 // ============================================================================
@@ -93,14 +101,58 @@ export const medicationItemSchema = z.object({
   givenWithNotes: z.string().optional(),
   facilityProvidesMedAid: z.boolean().optional(),
   facilityMedAidItem: z.string().optional(),
-  ifMissed: missedDoseActionEnum,
+  /** The medications step no longer asks; older rows carry it. */
+  ifMissed: missedDoseActionEnum.optional(),
   isHighRisk: z.boolean().optional(),
   parentConfirmed: z.boolean().optional(),
   notes: z.string(),
   supplyCount: z.number().optional(),
   drugAllergies: z.array(z.string()).optional(),
+
+  // ── The medications step's own answers (2026-10-01) ─────────────────────
+  //
+  // All optional: a row written before them still reads, and `amount`,
+  // `frequency` and `times` above are still written alongside them, in words
+  // and ids, for every screen that reads those.
+  /** One dose as a number — 0.5 for "½ tablet". `amount` holds the words. */
+  doseAmount: z.number().positive().optional(),
+  /** tablet, capsule, chew, ml, scoop, packet, tsp, pump, application, patch,
+   *  drop, units, or custom (then `customUnit`). */
+  doseUnit: z.string().optional(),
+  customUnit: z.string().optional(),
+  splitBy: medSplitByEnum.optional(),
+  side: medSideEnum.optional(),
+  dayRule: medDayRuleEnum.optional(),
+  food: medFoodEnum.optional(),
+  /**
+   * The facility's charge for what it supplies is waived. Staff only — the
+   * integrity trigger strips it from anything a customer writes.
+   */
+  aidWaived: z.boolean().optional(),
+  /** Keep this medication on the pet's profile for the next booking. */
+  saveToProfile: z.boolean().optional(),
+  /** The profile entry this came from, or became. */
+  profileId: z.string().optional(),
 });
 export type MedicationItem = z.infer<typeof medicationItemSchema>;
+
+/**
+ * A medication kept on a pet's profile (`pets.details.medications`) so the
+ * next booking starts with it: the medication, without what belonged to one
+ * stay — its days, how much was brought, a waiver, the booking's own ids.
+ */
+export const savedMedicationSchema = medicationItemSchema
+  .omit({
+    id: true,
+    petId: true,
+    dayRule: true,
+    specificDays: true,
+    aidWaived: true,
+    supplyCount: true,
+    saveToProfile: true,
+  })
+  .extend({ profileId: z.string().min(1) });
+export type SavedMedication = z.infer<typeof savedMedicationSchema>;
 
 // ============================================================================
 // Supporting Schemas
@@ -836,6 +888,11 @@ export const medicationEntrySchema = z.object({
   instructions: z.string().optional(),
   isCritical: z.boolean(),
   doses: z.array(medicationDoseSchema),
+  /**
+   * The booking's own medication this row was made from, so a panel can say
+   * its dose, days and method in the reader's language (2026-10-01).
+   */
+  item: medicationItemSchema.optional(),
 });
 export type MedicationEntry = z.infer<typeof medicationEntrySchema>;
 

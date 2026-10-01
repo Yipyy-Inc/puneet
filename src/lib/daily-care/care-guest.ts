@@ -2,10 +2,13 @@ import type { IncidentCareAction, IncidentMedication } from "@/types/incidents";
 import type {
   AddonSchedule,
   HeatCycleInfo,
+  MedAdminMethod,
+  MedFrequencyRule,
   MedicationSchedule,
   PostSurgeryInfo,
 } from "@/types/boarding";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
+import { dayRuleOn, type MedStay } from "@/lib/medications/schedule";
 
 // ============================================================================
 // A guest, as the Daily Care scheduler needs one.
@@ -128,6 +131,41 @@ function feedingInstructionsFrom(schedule: FeedingScheduleItem[]): string {
 }
 
 /**
+ * The days a medication is given, as the board's rule: chosen dates, or every
+ * day but the checkout day. None for "every day", and none for a row written
+ * before the rule existed — which is what both always meant. As DATES on the
+ * facility's calendar, so the board compares today's date and never counts
+ * days of a stay from a check-in read in UTC.
+ */
+function dayRuleFrom(
+  med: MedicationItem,
+  stay: MedStay | undefined,
+): MedFrequencyRule | undefined {
+  if (!stay || stay.days.length === 0) {
+    return med.dayRule === "certain_dates"
+      ? { type: "specific_dates", dates: med.specificDays ?? [] }
+      : undefined;
+  }
+  switch (dayRuleOn(med, stay)) {
+    case "certain_dates":
+      return { type: "specific_dates", dates: med.specificDays ?? [] };
+    case "except_checkout":
+      return { type: "except_dates", dates: [stay.days[stay.days.length - 1]] };
+    default:
+      return undefined;
+  }
+}
+
+/** How the dose goes in — the board said "oral" for an eye drop. */
+function adminMethodFrom(med: MedicationItem): MedAdminMethod | undefined {
+  if (med.form === "eye_drops" || med.givenWith === "eye") return "eye_drops";
+  if (med.form === "ear_drops" || med.givenWith === "ear") return "ear_drops";
+  if (med.form === "topical") return "topical";
+  if (med.form === "injection") return "injection";
+  return undefined;
+}
+
+/**
  * The owner's medications as dose rows.
  *
  * `requiresPhotoProof` is FALSE for every one of them, and deliberately: Yipyy
@@ -136,7 +174,10 @@ function feedingInstructionsFrom(schedule: FeedingScheduleItem[]): string {
  * `isHighRisk` flag the booking captures is preserved in the instructions,
  * where a person reads it.
  */
-function medicationsFrom(medications: MedicationItem[]): MedicationSchedule[] {
+function medicationsFrom(
+  medications: MedicationItem[],
+  stay: MedStay | undefined,
+): MedicationSchedule[] {
   return medications.map((med) => ({
     id: med.id,
     medicationName: med.name,
@@ -153,20 +194,25 @@ function medicationsFrom(medications: MedicationItem[]): MedicationSchedule[] {
       .filter(Boolean)
       .join(" · "),
     requiresPhotoProof: false,
+    frequencyRule: dayRuleFrom(med, stay),
+    administrationMethod: adminMethodFrom(med),
     // The board folds a with-food dose into the nearest meal, so staff serve
     // the bowl and give the tablet in one pass. Both spellings the booking flow
     // uses, because a booking taken before the second one existed still says
-    // the first.
+    // the first — and never one the owner said goes on an empty stomach.
     withFood:
-      med.givenWith === "mixed_in_food" ||
-      (med.adminInstructions ?? []).includes("with_food"),
+      med.food !== "empty" &&
+      (med.food === "with" ||
+        med.givenWith === "mixed_in_food" ||
+        (med.adminInstructions ?? []).includes("with_food")),
   })) as MedicationSchedule[];
 }
 
 /**
  * One real booking, as a guest the board can schedule.
  *
- * @param arrival the stay, from the boarding attendance read
+ * @param arrival the stay, from the boarding attendance read; `stay` is its
+ *   days on the facility's calendar, which a medication's days are read against
  * @param details the booking's own `details` jsonb
  */
 export function careGuestFromBooking(
@@ -180,6 +226,7 @@ export function careGuestFromBooking(
     scheduledArrival: string;
     scheduledDeparture: string;
     nights: number;
+    stay?: MedStay;
   },
   details: BookingCareDetails,
 ): CareGuest {
@@ -215,7 +262,7 @@ export function careGuestFromBooking(
     feedingTimes: feedingTimesFrom(schedule),
     feedingAmount:
       schedule[0]?.occasions[0]?.components?.[0]?.amount?.toString() ?? "",
-    medications: medicationsFrom(details.medications ?? []),
+    medications: medicationsFrom(details.medications ?? [], arrival.stay),
     addOns: details.addOns,
     postSurgery: details.postSurgery,
     heatCycle: details.heatCycle,

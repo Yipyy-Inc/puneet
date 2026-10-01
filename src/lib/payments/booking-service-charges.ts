@@ -122,7 +122,7 @@ export async function applyBookingServiceCharges(
     let written = 0;
 
     for (const named of requests.values()) {
-      const parts = await requestParts(admin, named);
+      const parts = await requestParts(admin, named, BOOKING_COLUMNS);
       const first = parts[0];
       if (!first || UNPRICED_STATUSES.has(first.status)) continue;
       // An estimate stated this booking's charges, all of them.
@@ -258,27 +258,36 @@ export async function writeStatedServiceCharges(
 }
 
 /** The key tying a request's bookings together — `{ id, part, of }` in `details`. */
-function groupOf(row: Pick<BookingRow, "details">): string | null {
+export function groupOf(row: {
+  details: Record<string, unknown> | null;
+}): string | null {
   const group = (row.details ?? {})["bookingGroup"];
   if (!group || typeof group !== "object") return null;
   const id = (group as { id?: unknown }).id;
   return typeof id === "string" && id.length > 0 ? id : null;
 }
 
-/** Every booking of the named booking's request, first (lowest ref) first. */
-async function requestParts(
+/**
+ * Every booking of the named booking's request, first (lowest ref) first,
+ * read with `columns` — the care charges (booking-care-charges.ts) read the
+ * same request with columns of their own.
+ */
+export async function requestParts<
+  Row extends { facility_id: string; details: Record<string, unknown> | null },
+>(
   admin: ReturnType<typeof createAdminClient>,
-  named: BookingRow,
-): Promise<BookingRow[]> {
+  named: Row,
+  columns: string,
+): Promise<Row[]> {
   const group = groupOf(named);
   if (!group) return [named];
   const { data } = await admin
     .from("bookings")
-    .select(BOOKING_COLUMNS)
+    .select(columns)
     .eq("facility_id", named.facility_id)
     .eq("details->bookingGroup->>id", group)
     .order("ref", { ascending: true });
-  const parts = (data ?? []) as unknown as BookingRow[];
+  const parts = (data ?? []) as unknown as Row[];
   return parts.length > 0 ? parts : [named];
 }
 

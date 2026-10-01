@@ -207,6 +207,48 @@ export function formatCalendarDayLong(day: string, locale: AppLocale): string {
   }).format(d);
 }
 
+/** A `YYYY-MM-DD` calendar day at UTC midnight, or null. */
+function calendarDay(day: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+  if (!m) return null;
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  return unformattable(d) ? null : d;
+}
+
+/**
+ * `Tue 17` · `mar. 17` — a day inside a stay, where the month is the stay's.
+ * Pinned in UTC like `formatCalendarDayLong`, so no zone moves the day.
+ */
+export function formatStayDay(day: string, locale: AppLocale): string {
+  const d = calendarDay(day);
+  if (!d) return NO_DATE;
+  return dateFmt(locale, "stayDay", {
+    weekday: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(d);
+}
+
+/**
+ * `Mar 17–20` · `17 – 20 mars`, `Mar 17–Apr 2` · `17 mars – 2 avr.` — two
+ * calendar days as one range, the way `Intl` writes ranges in each language.
+ */
+export function formatDayRange(
+  from: string,
+  to: string,
+  locale: AppLocale,
+): string {
+  const a = calendarDay(from);
+  const b = calendarDay(to);
+  if (!a || !b) return NO_DATE;
+  const fmt = dateFmt(locale, "dayRange", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+  return b.getTime() <= a.getTime() ? fmt.format(a) : fmt.formatRange(a, b);
+}
+
 /**
  * `Sep` · `sept.` — a chart axis month, from `YYYY-MM`.
  *
@@ -399,6 +441,22 @@ export function formatMoney(
     currency,
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
+  }).format(Number(value ?? 0));
+}
+
+/**
+ * `0.25` · `0,25`, `2.5` · `2,5`, `3` · `3` — a measured amount, with as many
+ * decimals as it has, up to `maxDigits`. `formatNumber` pads to a fixed count,
+ * which turns a 2.5 ml dose into "2.50 ml".
+ */
+export function formatDecimal(
+  value: number | null | undefined,
+  locale: AppLocale,
+  maxDigits = 2,
+): string {
+  return numFmt(locale, `dec${maxDigits}`, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: maxDigits,
   }).format(Number(value ?? 0));
 }
 

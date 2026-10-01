@@ -7,11 +7,8 @@ import {
 } from "../service-details";
 import type { ChosenBoardingService } from "../service-details/BoardingDetails";
 import type { TrainingSelection } from "../service-details/TrainingScheduleStep";
-import type {
-  ExtraService,
-  FeedingScheduleItem,
-  MedicationItem,
-} from "@/types/booking";
+import type { ExtraService, FeedingScheduleItem } from "@/types/booking";
+import type { MedicationStepState } from "@/components/booking/medications/use-medication-step";
 import type { Pet } from "@/types/pet";
 import type { KennelChange } from "@/lib/boarding/kennel-changes";
 import type { Client } from "@/types/client";
@@ -94,8 +91,10 @@ interface DetailsStepProps {
   // Common
   feedingSchedule: FeedingScheduleItem[];
   setFeedingSchedule: (value: FeedingScheduleItem[]) => void;
-  medications: MedicationItem[];
-  setMedications: (value: MedicationItem[]) => void;
+  /** The Medications step (2026-10-01): its state, held by BookingModal. */
+  medicationStep: MedicationStepState;
+  /** "Step 3 of 4", as the rail counts. */
+  medicationStepLabel: string;
   feedingMedicationTab: "feeding" | "medication";
   setFeedingMedicationTab: (value: "feeding" | "medication") => void;
   extraServices: Array<{ serviceId: string; quantity: number; petId: number }>;
@@ -181,8 +180,8 @@ export function DetailsStep({
   onDaycareServiceChange,
   feedingSchedule,
   setFeedingSchedule,
-  medications,
-  setMedications,
+  medicationStep,
+  medicationStepLabel,
   extraServices,
   setExtraServices,
   selectedPets,
@@ -225,8 +224,8 @@ export function DetailsStep({
           onDaycareServiceChange={onDaycareServiceChange}
           feedingSchedule={feedingSchedule}
           setFeedingSchedule={setFeedingSchedule}
-          medications={medications}
-          setMedications={setMedications}
+          medicationStep={medicationStep}
+          medicationStepLabel={medicationStepLabel}
           roomAssignments={roomAssignments}
           setRoomAssignments={setRoomAssignments}
           extraServices={extraServices}
@@ -256,8 +255,8 @@ export function DetailsStep({
           setRoomAssignments={setRoomAssignments}
           feedingSchedule={feedingSchedule}
           setFeedingSchedule={setFeedingSchedule}
-          medications={medications}
-          setMedications={setMedications}
+          medicationStep={medicationStep}
+          medicationStepLabel={medicationStepLabel}
           extraServices={extraServices}
           setExtraServices={setExtraServices}
           selectedPets={selectedPets}

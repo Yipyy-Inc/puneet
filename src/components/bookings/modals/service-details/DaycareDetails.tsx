@@ -8,11 +8,12 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { PawPrint, Check, Sun, Gift } from "lucide-react";
 import { useSettings } from "@/hooks/use-settings";
-import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
+import type { FeedingScheduleItem } from "@/types/booking";
 import type { Pet } from "@/types/pet";
 import { DaycareServicePicker } from "./DaycareServicePicker";
 import { SimpleFeedingForm } from "@/components/booking/shared/SimpleFeedingForm";
-import { SimpleMedicationForm } from "@/components/booking/shared/SimpleMedicationForm";
+import { MedicationsStep } from "@/components/booking/medications/medications-step";
+import type { MedicationStepState } from "@/components/booking/medications/use-medication-step";
 import { useOfferedAddOns } from "@/lib/add-ons/use-offered-add-ons";
 import { getDaycareAvailabilitySummary } from "@/lib/capacity-engine";
 import { useDaycareAreas } from "@/hooks/use-daycare-areas";
@@ -54,8 +55,10 @@ interface DaycareDetailsProps {
   isCustomerMode?: boolean;
   feedingSchedule: FeedingScheduleItem[];
   setFeedingSchedule: (schedule: FeedingScheduleItem[]) => void;
-  medications: MedicationItem[];
-  setMedications: (medications: MedicationItem[]) => void;
+  /** The Medications step (2026-10-01): its state, held by BookingModal. */
+  medicationStep: MedicationStepState;
+  /** "Step 3 of 4", as the rail counts. */
+  medicationStepLabel: string;
   roomAssignments: Array<{ petId: number; roomId: string }>;
   setRoomAssignments: (
     assignments: Array<{ petId: number; roomId: string }>,
@@ -83,8 +86,8 @@ export function DaycareDetails({
   isCustomerMode = false,
   feedingSchedule,
   setFeedingSchedule,
-  medications,
-  setMedications,
+  medicationStep,
+  medicationStepLabel,
   roomAssignments,
   setRoomAssignments,
   extraServices,
@@ -307,13 +310,6 @@ export function DaycareDetails({
 
         {currentSubStep === 4 && (
           <div className="space-y-4">
-            <div>
-              <h3 className="text-base font-semibold">{t("medication")}</h3>
-              <p className="text-muted-foreground mt-1 text-xs">
-                {t("addAnyMedicationsYourPet")}
-              </p>
-            </div>
-
             {!isStepAccessible(4) && (
               <div className="bg-muted/50 rounded-lg border border-dashed p-8 text-center">
                 <p className="text-muted-foreground">
@@ -322,19 +318,13 @@ export function DaycareDetails({
               </div>
             )}
 
+            {/* The client's Medications design (2026-10-01): its own
+                heading, its pets, its cards and editor. */}
             {isStepAccessible(4) && (
-              <div className="space-y-4">
-                <SimpleMedicationForm
-                  medications={medications}
-                  setMedications={setMedications}
-                  selectedPets={selectedPets.map((p) => ({
-                    id: p.id,
-                    name: p.name,
-                    type: p.type,
-                  }))}
-                  serviceType="daycare"
-                />
-              </div>
+              <MedicationsStep
+                step={medicationStep}
+                stepLabel={medicationStepLabel}
+              />
             )}
           </div>
         )}

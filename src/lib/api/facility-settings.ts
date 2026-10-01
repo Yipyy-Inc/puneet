@@ -9,6 +9,8 @@ import {
 import type { AddOn, AddOnCategory } from "@/types/add-on";
 import type { FacilityDailyCareConfig } from "@/types/boarding";
 import type { CareTaskFeedback } from "@/lib/settings/care-task-feedback";
+import type { FeedingInstructions } from "@/lib/settings/feeding-instructions";
+import type { MedicationInstructions } from "@/lib/settings/medication-instructions";
 
 import type { GiftCardConfig } from "@/lib/settings/gift-cards";
 import type { DaycareRatesConfig } from "@/lib/settings/daycare-rates";
@@ -174,6 +176,13 @@ export interface FacilitySettings {
    * no change.
    */
   care_task_feedback: SettingState<CareTaskFeedback>;
+  /** The choices the booking form's Feeding step offers. */
+  feeding_instructions: SettingState<FeedingInstructions>;
+  /**
+   * What the booking form's Medications step shows, and what the facility
+   * supplies for giving a medication, at what price.
+   */
+  medication_instructions: SettingState<MedicationInstructions>;
   incident_follow_up_protocols: SettingState<IncidentProtocols>;
   form_requirements: SettingState<FormRequirements>;
   form_notifications: SettingState<FormNotifications>;
@@ -528,6 +537,39 @@ export function useCareFees(): {
   return {
     fees: settings.care_fees.value,
     configured: settings.care_fees.configured,
+    isPending,
+  };
+}
+
+/**
+ * What the booking form's Medications step shows and what the facility
+ * supplies. `isPending` travels with it: a page with no pill pockets because
+ * the facility supplies none, and one with none because the row has not
+ * arrived, must not price a booking the same way.
+ */
+export function useMedicationInstructions(): {
+  instructions: MedicationInstructions;
+  configured: boolean;
+  isPending: boolean;
+} {
+  const { settings, isPending } = useFacilitySettings();
+  return {
+    instructions: settings.medication_instructions.value,
+    configured: settings.medication_instructions.configured,
+    isPending,
+  };
+}
+
+/** The choices the booking form's Feeding step offers. */
+export function useFeedingInstructions(): {
+  instructions: FeedingInstructions;
+  configured: boolean;
+  isPending: boolean;
+} {
+  const { settings, isPending } = useFacilitySettings();
+  return {
+    instructions: settings.feeding_instructions.value,
+    configured: settings.feeding_instructions.configured,
     isPending,
   };
 }

@@ -72,6 +72,20 @@ export const medFrequencyRuleSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("first_n_days"), days: z.number() }),
   z.object({ type: z.literal("last_n_days"), days: z.number() }),
   z.object({ type: z.literal("as_needed") }),
+  /**
+   * Only on these days, `YYYY-MM-DD` on the facility's calendar — a booking's
+   * chosen dates. Dates, not a day of the stay: a day count read against a
+   * check-in parsed in UTC is a day out everywhere west of Greenwich.
+   */
+  z.object({
+    type: z.literal("specific_dates"),
+    dates: z.array(z.string()),
+  }),
+  /** Every day but these — the checkout day of "every day except checkout". */
+  z.object({
+    type: z.literal("except_dates"),
+    dates: z.array(z.string()),
+  }),
 ]);
 export type MedFrequencyRule = z.infer<typeof medFrequencyRuleSchema>;
 

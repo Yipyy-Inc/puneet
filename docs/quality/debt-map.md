@@ -21981,3 +21981,91 @@ Also worth knowing: a platform **superadmin** can upload into any
 facility's folder, because `private.platform_may` passes every permission for
 that role — by design (`20260919195116`), the same for logos, and not
 something this bucket introduced.
+
+## 2026-10-01 — The Medications step is the client's page, and what the facility supplies is a line on the bill
+
+The client sent the page they wanted (`docs/Medications_Step.html`, kept as
+the reference) and a list: quick picks per form, − / + steps sized to the
+form, typed amounts for liquids and injections, units only where a form has
+several, an "Other" form with its own unit, the split question for ½ and 1½,
+whole capsules with a note, Eye / Ear asking which side, a supply check that
+counts partial tablets and says when it rounded up, and a summary line ("1½
+tablets per dose"). The booking form's Medication sub-step (Details, id 4,
+boarding and daycare) is now that page, laid out as the mock and drawn in the
+design system (`src/components/booking/medications/`, logic in
+`src/lib/medications/`). Before it, `SimpleMedicationForm` was English-only,
+its "Save to pet profile" saved nothing, and the Care tasks card that claimed
+to configure it wrote to a fixture.
+
+**What is real now.**
+
+- **Two saved settings under Care tasks**: `feeding_instructions` (the lists
+  the Feeding step offers, copied from the old fixture) and
+  `medication_instructions` (forms, ways of giving, what the facility supplies
+  and at what price per dose or per day, the times of day, the choices of
+  days, which parts of the page show). Customers read both (20261001083734),
+  because their own booking form needs them.
+- **Care charges are bill lines.** The medication fee, the daycare meals fee
+  and what the facility supplies are `fee` lines — `care:medication-fee`,
+  `care:meals`, `care:provided:<method>` — worked out by `careChargeLines`
+  (`lib/medications/charges.ts`), the function the form quotes them with, and
+  written by `lib/payments/booking-care-charges.ts` from the settings and the
+  booking's own medications, days and pets. They left `total_cost`
+  (`splitBookingMoney` takes them out), so a customer's request carrying a
+  pill pocket now confirms itself, and the invoice names it. The fees land
+  once per request, on its first open booking; what is supplied, per booking,
+  over its own days and pets. Written at create (requests included — no part
+  of it is a share of the price the trigger zeroes), at approval (anything a
+  request made some other way is missing), and on a STAFF edit, reconciled
+  from the booking as it was to as it is: a line the edit did not move is left
+  alone, so one removed at the till stays removed. Unit prices are rounded to
+  cents in the shared function, so the form and the line cannot disagree by a
+  rounding.
+- **"Waive charge for this booking" is staff-only in the database.** The
+  integrity trigger drops `aidWaived` from every medication a customer inserts
+  and restores it from OLD, by medication id, on a customer's update
+  (`private.keep_medication_waivers`, 20261001083734); the create route drops
+  it too. SQL T25–T28 in `booking-write-integrity.sql`.
+- **A medication's days are honoured where it is given.** `isActiveOn`
+  (`lib/medications/schedule.ts`) decides the booking page's dose rows, the
+  checkout care gate (a dose not given on the checkout day can no longer hold
+  a pet back), the booking journal, and the Daily Care board — where the days
+  travel as DATES on the facility's calendar (`specific_dates` /
+  `except_dates`), never as a day count from a check-in sliced in UTC. A guest
+  still on site after the booked checkout keeps "every day" doses.
+- **The pet's profile keeps them.** "Save to pet profile" writes
+  `pets.details.medications`, after the booking is saved and never instead of
+  it (a refusal is a warning toast); the next booking starts with them as
+  saved cards.
+
+**Adapted on purpose, not oversights.** Every value is a token — the mock's
+purple, Instrument Sans, radii and shadows are not ported; selected is the 2px
+ring, never a tint; status words are `Badge` chips with glyphs. The stay
+panel sits in the wizard's left rail (≥1024px) and under the editor below it.
+Back / Continue are the wizard's Previous / Next, and the step pill repeats
+the rail's own count. × on an EDITED medication restores the saved version
+(the mock deletes it). Daycare offers "Every day of the booking" and certain
+dates, with no check-in / checkout tags. A named, complete draft counts as
+booked, as the mock's panel shows it; Next waits while a named draft is
+incomplete. When the facility charges the Booking-rules medication fee, one
+line under the header says so. Line names are written in the client's
+preferred language (else the booker's) — the e2e client's record says French,
+so `booking-medications.spec.ts` accepts either.
+
+**Still open.**
+
+- The booking page's own "Add medication" form is the old one: it writes
+  valid rows without the new fields (no days, no supplied items).
+- The pre-arrival (Yipyy Go) form's medication section is unchanged, and the
+  per-service "medication required / disabled" setting is still ignored by
+  the booking form.
+- Saved medications show nowhere on the pet's own pages — only in the booking
+  form.
+- The Daily Care board logs a dose as `med-<guest>-<medication>-<time>`, the
+  booking page as `<medication>#<time>`; one dose can be logged twice from the
+  two screens. Older than this change.
+- A care line staff delete from a REQUEST before approving it is written
+  again at approval (`"initial"` inserts what is missing).
+- Bookings made before 2026-10-01 have no care lines, and a later staff edit
+  adds only the charges the edit itself introduces. No facility had care fees
+  or supplied items configured when it shipped, so nothing went unbilled.

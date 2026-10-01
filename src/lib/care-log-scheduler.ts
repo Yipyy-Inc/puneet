@@ -90,6 +90,10 @@ export function shouldGiveMedToday(
       return dayOfStay >= guest.totalNights - rule.days;
     case "as_needed":
       return false;
+    case "specific_dates":
+      return rule.dates.includes(todayIso(today));
+    case "except_dates":
+      return !rule.dates.includes(todayIso(today));
   }
 }
 
@@ -111,6 +115,11 @@ export function getFrequencyLabel(rule: MedFrequencyRule): string {
       return `Last ${rule.days} days only`;
     case "as_needed":
       return "As needed";
+    // The booking chose the days, and they have already decided whether
+    // today has a dose; there is nothing to add beside it.
+    case "specific_dates":
+    case "except_dates":
+      return "";
   }
 }
 
@@ -389,7 +398,7 @@ export function generateScheduledTasks(
     for (const med of guest.medications) {
       if (!shouldGiveMedToday(med, guest, today)) continue;
       const frequencyNote = med.frequencyRule
-        ? getFrequencyLabel(med.frequencyRule as MedFrequencyRule)
+        ? getFrequencyLabel(med.frequencyRule as MedFrequencyRule) || undefined
         : undefined;
       const withFood = medIsWithFood(med);
       for (const time of med.times) {

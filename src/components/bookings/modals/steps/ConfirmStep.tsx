@@ -44,11 +44,14 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { bookableLookup, type BookableAddOn } from "@/lib/add-ons/bookable";
-import { facilityConfig } from "@/data/facility-config";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
-import { useBookingApproval, useCareFees } from "@/lib/api/facility-settings";
+import {
+  useBookingApproval,
+  useMedicationInstructions,
+} from "@/lib/api/facility-settings";
 import { responseHoursFor } from "@/lib/settings/booking-approval";
-import { offeredMedicationAids } from "@/lib/settings/care-fees";
+import { describeMedication } from "@/lib/medications/describe";
+import type { MedStay } from "@/lib/medications/schedule";
 import { staffQueries } from "@/lib/api/staff";
 import { AddOnStaffSelect } from "./AddOnStaffSelect";
 
@@ -89,6 +92,8 @@ interface ConfirmStepProps {
   roomAssignments: Array<{ petId: number; roomId: string }>;
   feedingSchedule: FeedingScheduleItem[];
   medications: MedicationItem[];
+  /** The stay the Medications step counted its days in. */
+  medicationStay?: MedStay;
   extraServices: Array<{
     serviceId: string;
     quantity: number;
@@ -261,6 +266,7 @@ export function ConfirmStep({
   roomAssignments,
   feedingSchedule,
   medications,
+  medicationStay,
   extraServices,
   onAddOnStaffChange,
   addOnsCatalog,
@@ -314,7 +320,7 @@ export function ConfirmStep({
     roomCategories.find((category) => category.id === id)?.name ??
     id;
   const { approval } = useBookingApproval();
-  const { fees: careFees } = useCareFees();
+  const { instructions: medicationSettings } = useMedicationInstructions();
   const { data: staffProfiles } = useQuery(staffQueries.profiles());
   const locale = useShellLocale();
   // Who an add-on may be given to: everybody working here now, and whoever
@@ -1075,68 +1081,58 @@ export function ConfirmStep({
               icon={Pill}
               label={t("medications")}
               onEdit={
-                onEditStep ? () => onEditStep(detailsStepIdx, 3) : undefined
+                onEditStep ? () => onEditStep(detailsStepIdx, 4) : undefined
               }
             />
             {medications.length > 0 ? (
-              <div className="space-y-2">
-                {medications.map((med, idx) => (
-                  <div key={idx} className="space-y-1">
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-xs font-semibold">
+              <div className="space-y-3">
+                {medications.map((med, idx) => {
+                  // The step's own words for it — dose, days and times, how
+                  // it is given and what the facility supplies — so this
+                  // reads exactly as the card the owner saved.
+                  const lines = describeMedication(med, {
+                    t,
+                    locale,
+                    stay: medicationStay,
+                    settings: medicationSettings,
+                  });
+                  const petName =
+                    selectedPets.length > 1
+                      ? selectedPets.find((pet) => pet.id === med.petId)?.name
+                      : undefined;
+                  return (
+                    <div key={med.id || idx} className="space-y-0.5">
+                      <p className="text-body-strong text-body-ink">
                         {med.name ||
                           t("medicationNumber").replace("{n}", String(idx + 1))}
+                        {petName ? (
+                          <span className="text-meta text-ink-tertiary font-normal">
+                            {" "}
+                            · {petName}
+                          </span>
+                        ) : null}
                       </p>
-                      {med.isHighRisk && (
-                        <span className="rounded-sm bg-amber-100 px-1 py-0.5 text-[9px] font-bold text-amber-700">
-                          {t("highRisk")}
-                        </span>
-                      )}
+                      {lines.dose ? (
+                        <p className="text-meta text-ink-secondary">
+                          {lines.dose}
+                        </p>
+                      ) : null}
+                      {lines.schedule ? (
+                        <p className="text-meta text-ink-secondary">
+                          {lines.schedule}
+                        </p>
+                      ) : null}
+                      <p className="text-meta text-ink-tertiary">
+                        {lines.method}
+                      </p>
+                      {lines.extras.map((extra) => (
+                        <p key={extra} className="text-meta text-ink-tertiary">
+                          {extra}
+                        </p>
+                      ))}
                     </div>
-                    <p className="text-muted-foreground text-[11px]">
-                      {med.amount}
-                      {med.strength ? ` (${med.strength})` : ""} ·{" "}
-                      {med.form.replace(/_/g, " ")}
-                      {med.times.length > 0 &&
-                        ` · ${med.times.map((x) => fmtTime(x, locale)).join(", ")}`}
-                    </p>
-                    {med.drugAllergies && med.drugAllergies.length > 0 && (
-                      <p className="text-[11px] text-red-600">
-                        {t("drugAllergiesLabel")} {med.drugAllergies.join(", ")}
-                      </p>
-                    )}
-                    {med.givenWith && (
-                      <p className="text-[11px] text-emerald-700">
-                        {t("givenWithLabel")}{" "}
-                        {facilityConfig.serviceFees.givenWithOptions.find(
-                          (o) => o.value === med.givenWith,
-                        )?.label ?? med.givenWith.replace(/_/g, " ")}
-                        {med.givenWithNotes ? ` — ${med.givenWithNotes}` : ""}
-                      </p>
-                    )}
-                    {med.facilityProvidesMedAid && med.facilityMedAidItem && (
-                      <p className="text-[11px] text-blue-600">
-                        {t("facilityProvidesLabel")}{" "}
-                        {offeredMedicationAids(careFees).find(
-                          (i) => i.id === med.facilityMedAidItem,
-                        )?.name ?? med.facilityMedAidItem}
-                      </p>
-                    )}
-                    {med.supplyCount != null && (
-                      <p className="text-muted-foreground text-[11px]">
-                        {t("supplyDoses").replace(
-                          "{count}",
-                          String(med.supplyCount),
-                        )}
-                      </p>
-                    )}
-                    {med.notes && (
-                      <p className="text-muted-foreground text-[11px] italic">
-                        {med.notes}
-                      </p>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               /* #1 — empty state */

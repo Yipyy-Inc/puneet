@@ -1,4 +1,5 @@
 import type { CareLogEntry } from "@/app/api/care-log/route";
+import { isActiveOn, type MedStay } from "@/lib/medications/schedule";
 import type {
   FeedingEntry,
   FeedingScheduleItem,
@@ -124,10 +125,15 @@ export function feedingEntriesFromSchedule(
  * @param day the stay day these doses belong to, `YYYY-MM-DD`. The panel
  *   formats `scheduledAt` with `new Date(...)`, so a bare "08:00" renders as
  *   "12:undefined AM" — it needs a timestamp, and a timestamp needs a day.
+ * @param stay the booking's days. A medication given "every day except
+ *   checkout", or on chosen dates, has no doses on the days it is not given —
+ *   so the checkout gate, which reads these rows, never holds a pet back over
+ *   a dose nobody was meant to give (2026-10-01).
  */
 export function medicationEntriesFromItems(
   medications: MedicationItem[] | undefined,
   day: string,
+  stay?: MedStay,
 ): MedicationEntry[] {
   if (!medications?.length) return [];
 
@@ -160,11 +166,15 @@ export function medicationEntriesFromItems(
       isCritical: med.isHighRisk === true,
       // One pending dose per scheduled time. A medication with times and no
       // doses renders as a name with nothing to give, which is not what
-      // "twice daily at 08:00 and 20:00" means.
-      doses: med.times.map((t) => ({
-        scheduledAt: `${day}T${t}:00`,
-        status: "pending" as const,
-      })),
+      // "twice daily at 08:00 and 20:00" means — unless today is not one of
+      // its days, and then nothing is due.
+      doses: isActiveOn(med, day, stay)
+        ? med.times.map((t) => ({
+            scheduledAt: `${day}T${t}:00`,
+            status: "pending" as const,
+          }))
+        : [],
+      item: med,
     };
   });
 }

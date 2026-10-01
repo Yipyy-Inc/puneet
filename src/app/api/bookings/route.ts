@@ -40,6 +40,7 @@ import {
   applyBookingServiceCharges,
   writeStatedServiceCharges,
 } from "@/lib/payments/booking-service-charges";
+import { applyBookingCareCharges } from "@/lib/payments/booking-care-charges";
 import { hasServiceRoleKey } from "@/lib/supabase/admin";
 import { requestAddOnLines } from "@/lib/pricing/add-on-lines";
 import {
@@ -285,6 +286,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: "This server cannot write an estimate's fees onto a bill." },
       { status: 500 },
+    );
+  }
+
+  // ── A SUPPLY CHARGE IS WAIVED BY STAFF, AND ONLY BY STAFF ──────────────
+  //
+  // "Waive charge for this booking" is a staff control on the Medications
+  // step (2026-10-01). A customer's request saying their pill pockets are
+  // waived is not heard: it is taken off here, and the integrity trigger
+  // drops it again from any write that does not come through this route.
+  const asStaff = Boolean(
+    viewer && (viewer.memberships.length > 0 || viewer.isPlatformAdmin),
+  );
+  if (!asStaff && input.medications?.length) {
+    input.medications = input.medications.map(
+      ({ aidWaived: _waived, ...item }) => item,
     );
   }
 
@@ -572,6 +588,20 @@ export async function POST(request: NextRequest) {
   }
   await applyBookingServiceCharges([created[0].booking_id]);
 
+  // ── THE CARE CHARGES, AS LINES ON THE BILL (2026-10-01) ─────────────────
+  //
+  // The medication fee, the daycare meals fee and what the facility supplies
+  // to give a medication with, from the facility's settings and the request's
+  // own medications, days and pets — as the form quoted them, by the same
+  // function (lib/payments/booking-care-charges.ts). Every booking of the
+  // request is named: the fees land once, on the first, and what is supplied
+  // on the booking whose days and pets use it. A request is priced too:
+  // nothing here is a share of the price the integrity trigger zeroed.
+  await applyBookingCareCharges(
+    created.map((c) => c.booking_id),
+    "initial",
+  );
+
   const { data: full } = await supabase
     .from("bookings")
     .select(BOOKING_SELECT)
@@ -794,9 +824,7 @@ async function recordDeposit(
   // customer sees before anything else.
   const { data: billRows } = await supabase
     .from("bookings")
-    .select(
-      "id, total_cost, extras_total, taxable_extras_total, taxable, add_ons_total",
-    )
+    .select("id, total_cost, extras_total, taxable_extras_total, taxable")
     .in(
       "id",
       deposit.bookings.map((b) => b.id),
@@ -807,21 +835,20 @@ async function recordDeposit(
   // added to it alongside 20260923200000 rather than cast around — a generated
   // file that is allowed to fall behind makes every select on the table lie.
   const billById = new Map(
-    (
-      (billRows ?? []) as unknown as Array<
-        BookingBill & { id: string; add_ons_total?: number | string | null }
-      >
-    ).map((b) => [b.id, b]),
+    ((billRows ?? []) as unknown as Array<BookingBill & { id: string }>).map(
+      (b) => [b.id, b],
+    ),
   );
 
-  // What each booking costs is its service AND its own add-ons. The add-ons
-  // are bill lines since 2026-09-30, written on the part that holds the pet
-  // they are for, so the planned total no longer says where they landed —
-  // the row does.
+  // What each booking costs is its service AND its own lines: the add-ons
+  // (bill lines since 2026-09-30, on the part that holds the pet they are
+  // for), the service charges and the care charges (2026-10-01, the pill
+  // pockets on the part whose days use them). The planned total no longer
+  // says where they landed — the row does, in `extras_total`.
   const { shares, left } = allocateDeposit(
     deposit.amount,
     deposit.bookings.map(
-      (b) => b.totalCost + Number(billById.get(b.id)?.add_ons_total ?? 0),
+      (b) => b.totalCost + Number(billById.get(b.id)?.extras_total ?? 0),
     ),
   );
   // More than the bookings cost stays on the first: the money was taken, and

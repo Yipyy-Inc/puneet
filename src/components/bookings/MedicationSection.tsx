@@ -36,6 +36,10 @@ import type { MedicationEntry, MedicationItem } from "@/types/booking";
 import type { MedForm, MedFrequency } from "@/types/base";
 import { formatTime } from "@/lib/i18n/format";
 import { useStaffText } from "@/lib/staff/use-staff-text";
+import { useShellText } from "@/lib/shell/use-shell-text";
+import { useMedicationInstructions } from "@/lib/api/facility-settings";
+import { describeMedication, formLabel } from "@/lib/medications/describe";
+import type { MedStay } from "@/lib/medications/schedule";
 
 // ============================================================================
 // The booking's medications and today's doses.
@@ -45,6 +49,12 @@ import { useStaffText } from "@/lib/staff/use-staff-text";
 // of them; the times read in the viewer's clock; and the fallback that added a
 // medication to this component's state — its doses stamped on a hardcoded
 // 15 April 2026 — is gone, since the booking page always saves it (`onAdd`).
+//
+// A medication the booking form's Medications step wrote (2026-10-01) is said
+// the way the step's card says it — dose, times and days, how it is given,
+// the side, food and drug allergies — in the same words, so staff read what
+// the owner wrote. On a day it is not given, it says so instead of asking for
+// a dose.
 // ============================================================================
 
 interface MedicationSectionProps {
@@ -70,9 +80,16 @@ interface MedicationSectionProps {
    * Without it there is no "Add a medication" — it has nowhere to go.
    */
   onAdd?: (item: MedicationItem) => Promise<void>;
+  /** The booking's days, for "· 4 days" and what the facility supplies. */
+  stay?: MedStay;
 }
 
-const FORM_KEYS: Record<MedForm, string> = {
+/**
+ * What the add form offers, in its own words. The forms the booking form
+ * added since (tablet, capsule, chewable, drops, other) are named as it names
+ * them.
+ */
+const FORM_KEYS: Partial<Record<MedForm, string>> = {
   pill: "medFormPill",
   liquid: "medFormLiquid",
   topical: "medFormTopical",
@@ -81,6 +98,7 @@ const FORM_KEYS: Record<MedForm, string> = {
   ear_drops: "medFormEarDrops",
   eye_drops: "medFormEyeDrops",
 };
+const ADD_FORMS = Object.keys(FORM_KEYS) as MedForm[];
 const FREQUENCY_KEYS: Record<MedFrequency, string> = {
   once_daily: "medFreqOnce",
   twice_daily: "medFreqTwice",
@@ -129,8 +147,11 @@ export function MedicationSection({
   canLog = true,
   onLog,
   onAdd,
+  stay,
 }: MedicationSectionProps) {
   const { t, fill, locale } = useStaffText("bookingDetail");
+  const bookingT = useShellText("booking");
+  const { instructions: medicationSettings } = useMedicationInstructions();
   // The booking's own list. It also merged the medication of FIXTURE
   // incidents matched by booking number — a real booking could show a
   // sample dog's prescription.
@@ -141,8 +162,27 @@ export function MedicationSection({
   const [doseNote, setDoseNote] = useState("");
   const [newMed, setNewMed] = useState(EMPTY_MED);
 
+  const formWord = (form: MedForm) => {
+    const key = FORM_KEYS[form];
+    return key ? t(key) : formLabel(bookingT, form);
+  };
   const formName = (med: MedicationEntry) =>
-    med.formId ? t(FORM_KEYS[med.formId]) : med.method;
+    med.formId ? formWord(med.formId) : med.method;
+  // The step's own lines, for a medication it wrote. Its notes stay in the
+  // instructions box below, where a critical one is drawn to the eye.
+  const linesOf = (med: MedicationEntry) =>
+    med.item?.doseAmount
+      ? describeMedication(
+          { ...med.item, notes: "" },
+          {
+            t: bookingT,
+            locale,
+            stay,
+            settings: medicationSettings,
+            priced: false,
+          },
+        )
+      : null;
   const frequencyName = (med: MedicationEntry) =>
     med.frequencyId ? t(FREQUENCY_KEYS[med.frequencyId]) : med.frequency;
 
@@ -304,9 +344,9 @@ export function MedicationSection({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {(Object.keys(FORM_KEYS) as MedForm[]).map((form) => (
+                      {ADD_FORMS.map((form) => (
                         <SelectItem key={form} value={form}>
-                          {t(FORM_KEYS[form])}
+                          {formWord(form)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -411,160 +451,187 @@ export function MedicationSection({
           </div>
         ) : (
           <div className="divide-line divide-y">
-            {meds.map((med) => (
-              <div key={med.id} className="py-4 first:pt-4">
-                {/* Header */}
-                <div className="flex items-start gap-2">
-                  {med.isCritical && (
-                    <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {/* The medication as the owner named it. */}
-                      <span className="text-body-ink text-sm font-semibold">
-                        {med.name}
-                      </span>
-                      {med.isCritical && (
-                        <span className="bg-wash-warning text-warning rounded-full px-2 py-0.5 text-xs font-bold tracking-[.06em] uppercase">
-                          {t("medCritical")}
+            {meds.map((med) => {
+              const lines = linesOf(med);
+              return (
+                <div key={med.id} className="py-4 first:pt-4">
+                  {/* Header */}
+                  <div className="flex items-start gap-2">
+                    {med.isCritical && (
+                      <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* The medication as the owner named it. */}
+                        <span className="text-body-ink text-sm font-semibold">
+                          {med.name}
                         </span>
-                      )}
-                    </div>
-                    <div className="text-ink-secondary mt-0.5 flex flex-wrap items-center gap-x-2 text-xs">
-                      {med.dosage && (
-                        <>
-                          <span className="font-semibold">{med.dosage}</span>
-                          <span>·</span>
-                        </>
-                      )}
-                      <span>{formName(med)}</span>
-                      <span>·</span>
-                      <span>{frequencyName(med)}</span>
-                    </div>
-                    {med.purpose && (
-                      <p className="text-ink-secondary mt-0.5 text-xs">
-                        {fill("medPurpose", { purpose: med.purpose })}
-                      </p>
-                    )}
-                    {med.instructions && (
-                      <p
-                        className={
-                          med.isCritical
-                            ? "border-warning text-body-ink mt-1.5 rounded-2xl border px-2.5 py-1.5 text-xs font-semibold"
-                            : "border-line text-ink-secondary mt-1.5 rounded-2xl border px-2.5 py-1.5 text-xs"
-                        }
-                      >
-                        {med.instructions}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Doses timeline */}
-                <div className="mt-3 space-y-1.5 pl-1">
-                  {med.doses.map((dose, idx) => {
-                    const doseKey = `${med.id}-${idx}`;
-                    return (
-                      <div
-                        key={idx}
-                        className="border-line flex flex-wrap items-center gap-2.5 rounded-2xl border px-3 py-2"
-                      >
-                        {doseStatusIcon[dose.status]}
-                        <div className="min-w-0 flex-1">
-                          <span className="text-body-ink text-sm tabular-nums">
-                            <Clock className="mr-1 inline size-4" />
-                            {formatTime(dose.scheduledAt, locale)}
+                        {med.isCritical && (
+                          <span className="bg-wash-warning text-warning rounded-full px-2 py-0.5 text-xs font-bold tracking-[.06em] uppercase">
+                            {t("medCritical")}
                           </span>
-                          {dose.administeredBy && (
-                            <span className="text-ink-tertiary ml-2 text-xs">
-                              {dose.administeredAt
-                                ? fill("doseByAt", {
-                                    status: t(DOSE_KEYS[dose.status]),
-                                    name: dose.administeredBy,
-                                    time: formatTime(
-                                      dose.administeredAt,
-                                      locale,
-                                    ),
-                                  })
-                                : fill("doseBy", {
-                                    status: t(DOSE_KEYS[dose.status]),
-                                    name: dose.administeredBy,
-                                  })}
-                            </span>
-                          )}
-                          {dose.skipReason && (
-                            <span className="text-ink-tertiary ml-2 text-xs">
-                              — {dose.skipReason}
-                            </span>
-                          )}
-                          {dose.notes && (
-                            <p className="text-ink-secondary mt-0.5 text-xs">
-                              {fill("doseNote", { note: dose.notes })}
-                            </p>
-                          )}
-                        </div>
-                        {canLog && onLog && dose.status === "pending" && (
-                          <div className="flex items-center gap-1">
-                            {/* Note popover */}
-                            <Popover
-                              open={notePopover === doseKey}
-                              onOpenChange={(open) => {
-                                setNotePopover(open ? doseKey : null);
-                                if (!open) setDoseNote("");
-                              }}
-                            >
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  aria-label={t("doseAddNote")}
-                                >
-                                  <MessageSquare className="size-4" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent
-                                align="end"
-                                className="w-[240px] p-3"
-                              >
-                                <Textarea
-                                  value={doseNote}
-                                  onChange={(e) => setDoseNote(e.target.value)}
-                                  placeholder={t("doseNotePlaceholder")}
-                                  aria-label={t("doseAddNote")}
-                                  className="min-h-[60px] text-sm"
-                                  rows={2}
-                                />
-                                <Button
-                                  size="sm"
-                                  className="mt-2 w-full"
-                                  onClick={() => handleAddNote(med.id, idx)}
-                                >
-                                  {t("doseKeepNote")}
-                                </Button>
-                              </PopoverContent>
-                            </Popover>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                handleAdminister(
-                                  med.id,
-                                  idx,
-                                  doseNote || undefined,
-                                )
-                              }
-                            >
-                              <CheckCircle2 className="size-4" />
-                              {fill("doseGive", { name: med.name })}
-                            </Button>
-                          </div>
                         )}
                       </div>
-                    );
-                  })}
+                      {lines ? (
+                        <div className="text-ink-secondary mt-0.5 space-y-0.5 text-xs">
+                          {lines.dose && (
+                            <p className="font-semibold">{lines.dose}</p>
+                          )}
+                          {lines.schedule && (
+                            <p className="tabular-nums">{lines.schedule}</p>
+                          )}
+                          {med.item?.givenWith && <p>{lines.method}</p>}
+                          {lines.extras.map((extra) => (
+                            <p key={extra}>{extra}</p>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-ink-secondary mt-0.5 flex flex-wrap items-center gap-x-2 text-xs">
+                          {med.dosage && (
+                            <>
+                              <span className="font-semibold">
+                                {med.dosage}
+                              </span>
+                              <span>·</span>
+                            </>
+                          )}
+                          <span>{formName(med)}</span>
+                          <span>·</span>
+                          <span>{frequencyName(med)}</span>
+                        </div>
+                      )}
+                      {med.purpose && (
+                        <p className="text-ink-secondary mt-0.5 text-xs">
+                          {fill("medPurpose", { purpose: med.purpose })}
+                        </p>
+                      )}
+                      {med.instructions && (
+                        <p
+                          className={
+                            med.isCritical
+                              ? "border-warning text-body-ink mt-1.5 rounded-2xl border px-2.5 py-1.5 text-xs font-semibold"
+                              : "border-line text-ink-secondary mt-1.5 rounded-2xl border px-2.5 py-1.5 text-xs"
+                          }
+                        >
+                          {med.instructions}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Doses timeline */}
+                  {med.doses.length === 0 && med.times.length > 0 && (
+                    <p className="text-ink-tertiary mt-3 pl-1 text-xs">
+                      {t("dosesNoneToday")}
+                    </p>
+                  )}
+                  <div className="mt-3 space-y-1.5 pl-1">
+                    {med.doses.map((dose, idx) => {
+                      const doseKey = `${med.id}-${idx}`;
+                      return (
+                        <div
+                          key={idx}
+                          className="border-line flex flex-wrap items-center gap-2.5 rounded-2xl border px-3 py-2"
+                        >
+                          {doseStatusIcon[dose.status]}
+                          <div className="min-w-0 flex-1">
+                            <span className="text-body-ink text-sm tabular-nums">
+                              <Clock className="mr-1 inline size-4" />
+                              {formatTime(dose.scheduledAt, locale)}
+                            </span>
+                            {dose.administeredBy && (
+                              <span className="text-ink-tertiary ml-2 text-xs">
+                                {dose.administeredAt
+                                  ? fill("doseByAt", {
+                                      status: t(DOSE_KEYS[dose.status]),
+                                      name: dose.administeredBy,
+                                      time: formatTime(
+                                        dose.administeredAt,
+                                        locale,
+                                      ),
+                                    })
+                                  : fill("doseBy", {
+                                      status: t(DOSE_KEYS[dose.status]),
+                                      name: dose.administeredBy,
+                                    })}
+                              </span>
+                            )}
+                            {dose.skipReason && (
+                              <span className="text-ink-tertiary ml-2 text-xs">
+                                — {dose.skipReason}
+                              </span>
+                            )}
+                            {dose.notes && (
+                              <p className="text-ink-secondary mt-0.5 text-xs">
+                                {fill("doseNote", { note: dose.notes })}
+                              </p>
+                            )}
+                          </div>
+                          {canLog && onLog && dose.status === "pending" && (
+                            <div className="flex items-center gap-1">
+                              {/* Note popover */}
+                              <Popover
+                                open={notePopover === doseKey}
+                                onOpenChange={(open) => {
+                                  setNotePopover(open ? doseKey : null);
+                                  if (!open) setDoseNote("");
+                                }}
+                              >
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    aria-label={t("doseAddNote")}
+                                  >
+                                    <MessageSquare className="size-4" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                  align="end"
+                                  className="w-[240px] p-3"
+                                >
+                                  <Textarea
+                                    value={doseNote}
+                                    onChange={(e) =>
+                                      setDoseNote(e.target.value)
+                                    }
+                                    placeholder={t("doseNotePlaceholder")}
+                                    aria-label={t("doseAddNote")}
+                                    className="min-h-[60px] text-sm"
+                                    rows={2}
+                                  />
+                                  <Button
+                                    size="sm"
+                                    className="mt-2 w-full"
+                                    onClick={() => handleAddNote(med.id, idx)}
+                                  >
+                                    {t("doseKeepNote")}
+                                  </Button>
+                                </PopoverContent>
+                              </Popover>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  handleAdminister(
+                                    med.id,
+                                    idx,
+                                    doseNote || undefined,
+                                  )
+                                }
+                              >
+                                <CheckCircle2 className="size-4" />
+                                {fill("doseGive", { name: med.name })}
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </CardContent>

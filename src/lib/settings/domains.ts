@@ -39,6 +39,14 @@ import {
   SHIPPED_CARE_TASK_FEEDBACK,
 } from "@/lib/settings/care-task-feedback";
 import {
+  feedingInstructionsSchema,
+  SHIPPED_FEEDING_INSTRUCTIONS,
+} from "@/lib/settings/feeding-instructions";
+import {
+  medicationInstructionsSchema,
+  SHIPPED_MEDICATION_INSTRUCTIONS,
+} from "@/lib/settings/medication-instructions";
+import {
   daycareRatesSchema,
   NO_DAYCARE_RATES,
 } from "@/lib/settings/daycare-rates";
@@ -538,6 +546,21 @@ export const SETTING_DOMAINS = {
   care_task_feedback: {
     schema: careTaskFeedbackSchema,
     fallback: SHIPPED_CARE_TASK_FEEDBACK,
+  },
+  // The choices the booking form's Feeding step offers. Spliced into a fixture
+  // until 2026-10-01, so no edit ever reached the form; the fallback is the
+  // lists every facility has seen — lib/settings/feeding-instructions.ts.
+  feeding_instructions: {
+    schema: feedingInstructionsSchema,
+    fallback: SHIPPED_FEEDING_INSTRUCTIONS,
+  },
+  // What the booking form's Medications step shows, and what the facility
+  // supplies for giving a medication, at what price (2026-10-01). The fallback
+  // is the client's whole design, supplying nothing —
+  // lib/settings/medication-instructions.ts.
+  medication_instructions: {
+    schema: medicationInstructionsSchema,
+    fallback: SHIPPED_MEDICATION_INSTRUCTIONS,
   },
   // The follow-up protocols an incident can start. A useState seeded from the
   // fixture until 2026-09-14; the fallback is the shipped set — see the banner
