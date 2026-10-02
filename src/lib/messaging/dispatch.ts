@@ -277,7 +277,14 @@ async function confirmationChannelsSwitchedOff(
   event: EventRow,
 ): Promise<Set<"email" | "sms">> {
   const off = new Set<"email" | "sms">();
-  if (event.kind !== "booking_created" || !event.booking_id) return off;
+  // The confirmation, and since 2026-10-02 the day-before reminder: the
+  // wizard's "Text reminder" switch is about that message.
+  if (
+    (event.kind !== "booking_created" && event.kind !== "24h_before") ||
+    !event.booking_id
+  ) {
+    return off;
+  }
   const { data } = await db
     .from("bookings")
     .select("details")

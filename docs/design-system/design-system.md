@@ -863,6 +863,15 @@ no longer in view while a record is open.** If a second product decision lands i
 this row changes rather than being excepted again. Two sheets stayed on purpose — `ui/sidebar` and
 `EmployeeBottomNav` are the mobile navigation, which the Sheet row still covers.
 
+**Logged exception, 2026-10-02 (§5v rule 10).** The booking wizard, in both portals, is the
+client's own layout: a centred dialog up to **1280px** at ≥640px (the screen less 48px, a 296px
+step rail beside the step from 1024px), and a bottom sheet below 640px with 24px top corners. At
+960px the Room type and Package cards fall to one column beside the rail. What it replaced was a
+STACK — the discard confirmation, agreement signing, the grooming waitlist and the forms override
+each opened over the wizard, against the rule above — and those are inline panels and checklist
+rows now, so the width is the only exception taken. If a second flow asks for this width, the
+Modal row grows a size rather than logging another exception.
+
 ## 5j. Destructive actions
 
 Name the object in the title — never "Are you sure?". State what survives, what does not, and
@@ -1153,6 +1162,14 @@ between is `--inset` with body ink — a neutral, not a tint. Blocked days keep 
 `--ink-disabled` with a strikethrough, never hidden — a missing day looks like a bug. A day at
 capacity carries a 7px `--warning-dot`. Preset rail: Today, Tomorrow, This week, Next week, This
 month. Under the field, the count that matters: "Sep 1 → Sep 4 · 3 nights".
+
+**Logged exception, 2026-10-02 (§5v rule 10).** The booking wizard's Schedule step shows **one
+month at every width**, as the client's layout has it: the month sits beside the times card —
+drop-off and pick-up chips for the day, "YOUR STAY", "3 nights" — which is where the count above
+lives. A day that cannot be booked keeps its struck-through number in `--ink-disabled` and says
+why under it: "Full" (no room of the types on offer) or "Closed". No preset rail: a stay starts on
+a day somebody names, and the rail's presets were never asked for. The date picker's other callers
+are unchanged.
 
 **File dropzone** — seven document types run through it and there is no pattern at all today
 (vaccination records, waivers, pet photos, vet notes, invoices, grooming before/after, ID).

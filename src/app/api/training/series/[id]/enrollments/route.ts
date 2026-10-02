@@ -4,8 +4,12 @@ import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeEnrolmentCare } from "@/lib/api/enrolment-care";
 import { writeFailure } from "@/lib/api/write-failure";
 import { applyBookingCareCharges } from "@/lib/payments/booking-care-charges";
+import { autoConfirmCustomerBookings } from "@/lib/bookings/auto-confirm";
+import { collectDepositOnConfirm } from "@/lib/payments/booking-deposit-server";
+import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { bookingCareSchema, type BookingCare } from "@/types/booking";
 import type { RealTrainingSeriesEnrollment } from "@/types/training-series";
+import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
@@ -66,7 +70,16 @@ interface EnrollInput {
   joinWaitlist?: boolean;
   /** The pet's feeding and medications for the class (2026-10-01). */
   care?: unknown;
+  intake?: unknown;
+  depositCardId?: unknown;
 }
+
+/** The booking wizard's Goals step: what the trainer reads first. */
+const intakeSchema = z.object({
+  goals: z.array(z.string().trim().min(1).max(80)).max(20).optional(),
+  experience: z.enum(["none", "some", "lots"]).nullable().optional(),
+  notes: z.string().max(2000).optional(),
+});
 
 interface EnrollRpcResult {
   enrollment: { id: string };
@@ -111,6 +124,23 @@ export async function POST(
     }
     care = parsed.data;
   }
+
+  // What the owner asked the trainer to work on — words, bounded.
+  const intake = intakeSchema.safeParse(input.intake ?? {});
+  const intakeDetails =
+    intake.success && input.intake
+      ? {
+          ...(intake.data.goals?.length
+            ? { trainingGoals: intake.data.goals }
+            : {}),
+          ...(intake.data.experience
+            ? { trainingExperience: intake.data.experience }
+            : {}),
+          ...(intake.data.notes?.trim()
+            ? { trainerNotes: intake.data.notes.trim() }
+            : {}),
+        }
+      : {};
 
   const supabase = await createServerClient();
 
@@ -174,11 +204,23 @@ export async function POST(
   const bookingIds = (result.bookings ?? []).map(
     (booking) => booking.bookingId,
   );
-  if (care && bookingIds.length > 0) {
+  // A customer's class request carries the card the deposit is charged to
+  // at confirmation — checked against the client and its consent then.
+  const depositCardId =
+    typeof input.depositCardId === "string" &&
+    /^[0-9a-f-]{36}$/i.test(input.depositCardId)
+      ? input.depositCardId
+      : null;
+  if (depositCardId) {
+    (intakeDetails as Record<string, unknown>).depositCardId = depositCardId;
+  }
+  const hasIntake = Object.keys(intakeDetails).length > 0;
+  if ((care || hasIntake) && bookingIds.length > 0) {
     const written = await writeEnrolmentCare({
       enrollmentId: result.enrollment.id,
       bookingIds,
       care,
+      extra: intakeDetails,
     });
     if (!written.ok) {
       return NextResponse.json(
@@ -186,8 +228,84 @@ export async function POST(
         { status: 201 },
       );
     }
-    await applyBookingCareCharges(bookingIds, "initial");
+    if (care) await applyBookingCareCharges(bookingIds, "initial");
   }
 
-  return NextResponse.json(data, { status: 201 });
+  // ── ONE ENROLMENT IS ONE REQUEST ───────────────────────────────────────
+  //
+  // Its sessions' bookings carry the enrolment as their group (2026-10-02),
+  // as a multi-day booking's parts do: staff approve or decline a customer's
+  // class request whole, a deposit is the class's, spread over its sessions,
+  // and a facility that confirms training on arrival confirms all of them.
+  if (bookingIds.length > 0 && hasServiceRoleKey()) {
+    const admin = createAdminClient();
+    const { data: rows } = await admin
+      .from("bookings")
+      .select("id, details, status")
+      .in("id", bookingIds);
+    const byId = new Map(
+      (
+        (rows ?? []) as Array<{
+          id: string;
+          details: Record<string, unknown> | null;
+          status: string;
+        }>
+      ).map((row) => [row.id, row]),
+    );
+    for (const [index, bookingId] of bookingIds.entries()) {
+      const row = byId.get(bookingId);
+      if (!row) continue;
+      // rls-write-ok: the service role, on bookings this enrolment just made;
+      // RLS cannot refuse it, and a missed group is a request decided by day.
+      await admin
+        .from("bookings")
+        .update({
+          details: {
+            ...(row.details ?? {}),
+            bookingGroup: {
+              id: result.enrollment.id,
+              part: index + 1,
+              of: bookingIds.length,
+            },
+          },
+        } as never)
+        .eq("id", bookingId);
+    }
+    // A customer's enrolment is a request; the facility's own rule may
+    // confirm it now, and then its deposit is taken.
+    if ([...byId.values()].some((row) => row.status === "request_submitted")) {
+      const confirmed = await autoConfirmCustomerBookings(bookingIds);
+      if (confirmed > 0) {
+        await collectDepositOnConfirm({
+          bookingIds,
+          request,
+          createdBy: user.id,
+        });
+      }
+    }
+  }
+
+  // The sessions' booking numbers, in order: what a pass from a pack is
+  // redeemed against (the booking wizard, 2026-10-01).
+  let bookingRefs: number[] = [];
+  if (bookingIds.length > 0) {
+    const { data: refs } = await supabase
+      .from("bookings")
+      .select("id, ref")
+      .in("id", bookingIds);
+    const refOf = new Map(
+      ((refs ?? []) as Array<{ id: string; ref: number }>).map((r) => [
+        r.id,
+        r.ref,
+      ]),
+    );
+    bookingRefs = bookingIds
+      .map((id) => refOf.get(id))
+      .filter((ref): ref is number => typeof ref === "number");
+  }
+
+  return NextResponse.json(
+    { ...(data as object), bookingRefs },
+    { status: 201 },
+  );
 }

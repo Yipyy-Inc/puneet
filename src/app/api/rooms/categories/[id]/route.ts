@@ -7,6 +7,7 @@ import {
   deniedIfUntouched,
 } from "@/lib/api/rls-write";
 import type { RoomCategory } from "@/types/rooms";
+import { cleanDimensions, cleanFeatures } from "@/lib/rooms/room-facts";
 
 // ============================================================================
 // Editing and removing a room category.
@@ -154,6 +155,12 @@ export async function PATCH(
     patch.visible_to_clients = input.visibleToClients;
   }
   if (input.imageUrl !== undefined) patch.image_url = input.imageUrl ?? null;
+  if (input.dimensionsLabel !== undefined) {
+    patch.dimensions_label = cleanDimensions(input.dimensionsLabel);
+  }
+  if (input.features !== undefined) {
+    patch.features = cleanFeatures(input.features);
+  }
   if (input.rules !== undefined) patch.rules = input.rules;
   // Closing a daycare play area for the season. Boarding never sends it.
   if (input.active !== undefined) patch.active = input.active;

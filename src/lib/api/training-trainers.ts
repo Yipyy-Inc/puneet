@@ -35,9 +35,10 @@ export const trainingTrainerKeys = {
   all: ["training-trainers"] as const,
 };
 
-export function useTrainingTrainers() {
+export function useTrainingTrainers(options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: trainingTrainerKeys.all,
+    enabled: options.enabled ?? true,
     queryFn: async (): Promise<TrainingTrainer[]> => {
       const response = await fetch("/api/training/trainers");
       if (!response.ok) {

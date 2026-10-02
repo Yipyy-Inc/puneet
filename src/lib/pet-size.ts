@@ -11,17 +11,3 @@ export function getPetSize(pet: Pet): PetSize {
   if (w < 80) return "large";
   return "giant";
 }
-
-/**
- * Returns true when at least one of the client's pets falls into one of the
- * allowed sizes. An empty/undefined `eligibleSizes` means "no restriction"
- * and always returns true.
- */
-export function petsMatchEligibleSizes(
-  pets: Pet[],
-  eligibleSizes: PetSize[] | undefined,
-): boolean {
-  if (!eligibleSizes || eligibleSizes.length === 0) return true;
-  if (pets.length === 0) return true; // No pet context yet — don't pre-hide.
-  return pets.some((p) => eligibleSizes.includes(getPetSize(p)));
-}

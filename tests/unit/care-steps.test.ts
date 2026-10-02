@@ -5,11 +5,9 @@ import {
   careStayFor,
   FEEDING_SUB_STEP_ID,
   legacySubStepId,
-  mergeCare,
   MEDICATION_SUB_STEP_ID,
   subStepIndexOf,
 } from "@/lib/bookings/care-steps";
-import type { MedicationItem } from "@/types/booking";
 
 // Where the Feeding and Medications steps sit in a booking (2026-10-01): in
 // every service the facility turns them on for, at fixed ids, so the form —
@@ -24,12 +22,15 @@ describe("each service's sub-steps", () => {
     expect(
       ids(detailSubSteps("boarding", { customer: false, care: ON })),
     ).toEqual([0, 1, 2, FEEDING_SUB_STEP_ID, MEDICATION_SUB_STEP_ID]);
+    // Daycare's play area is not a screen since 2026-10-01 (staff change it
+    // on Confirm), so its ids run 0, 2.
     expect(
       ids(detailSubSteps("daycare", { customer: false, care: OFF })),
-    ).toEqual([0, 1, 2]);
+    ).toEqual([0, 2]);
     expect(
       ids(detailSubSteps("grooming", { customer: false, care: ON })),
     ).toEqual([0, 1, 2, 3, 4]);
+    // Training (the client's mock): Program · Trainer & time · Goals.
     expect(
       ids(
         detailSubSteps("training", {
@@ -37,13 +38,17 @@ describe("each service's sub-steps", () => {
           care: { feeding: "disabled", medication: "optional" },
         }),
       ),
-    ).toEqual([0, 4]);
+    ).toEqual([0, 1, 2, 4]);
   });
 
-  test("a customer never sees Room Assignment; an evaluation never the care steps", () => {
+  test("a customer chooses a room type too; an evaluation never the care steps", () => {
     expect(
       ids(detailSubSteps("daycare", { customer: true, care: ON })),
     ).toEqual([0, 2, 3, 4]);
+    // The client's mock: a customer picks the room type (never its count).
+    expect(
+      ids(detailSubSteps("boarding", { customer: true, care: ON })),
+    ).toEqual([0, 1, 2, 3, 4]);
     expect(
       ids(detailSubSteps("evaluation", { customer: false, care: ON })),
     ).toEqual([0, 1]);
@@ -102,28 +107,5 @@ describe("the days the care steps plan over", () => {
       days: [],
       overnight: false,
     });
-  });
-});
-
-describe("several pets' care as one", () => {
-  const med = (id: string, petId: number) =>
-    ({ id, petId, name: id }) as unknown as MedicationItem;
-  test("lists join, answers and vets merge", () => {
-    expect(
-      mergeCare([
-        { medications: [med("a", 1)], noMedication: [2] },
-        undefined,
-        {
-          medications: [med("b", 3)],
-          noMedication: [2, 4],
-          vetContacts: { "3": { clinic: "Vet One" } },
-        },
-      ]),
-    ).toEqual({
-      medications: [med("a", 1), med("b", 3)],
-      noMedication: [2, 4],
-      vetContacts: { "3": { clinic: "Vet One" } },
-    });
-    expect(mergeCare([])).toEqual({});
   });
 });

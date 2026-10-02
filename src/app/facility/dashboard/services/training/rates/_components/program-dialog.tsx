@@ -36,6 +36,10 @@ import {
 } from "@/types/training";
 import { detectCircularPrerequisite } from "@/lib/training-program-prereqs";
 import { settingsHref } from "@/lib/settings/nav";
+import {
+  ProgramBookingFields,
+  type ProgramBookingForm,
+} from "./program-booking-fields";
 
 export interface ProgramFormState {
   name: string;
@@ -54,6 +58,8 @@ export interface ProgramFormState {
   disciplineId: string;
   maxGroupSize: number | "";
   imageUrl: string;
+  /** A private program: lesson or consult, its length, a lesson's packs. */
+  booking: ProgramBookingForm;
 }
 
 const EMPTY_PROGRAM: ProgramFormState = {
@@ -73,6 +79,7 @@ const EMPTY_PROGRAM: ProgramFormState = {
   disciplineId: "",
   maxGroupSize: "",
   imageUrl: "",
+  booking: { format: "lesson", sessionMinutes: "", packs: [] },
 };
 
 function seedFromPackage(pkg: TrainingPackage): ProgramFormState {
@@ -95,6 +102,11 @@ function seedFromPackage(pkg: TrainingPackage): ProgramFormState {
     disciplineId: pkg.disciplineId ?? "",
     maxGroupSize: pkg.maxGroupSize ?? "",
     imageUrl: pkg.imageUrl ?? "",
+    booking: {
+      format: pkg.format === "consult" ? "consult" : "lesson",
+      sessionMinutes: pkg.sessionMinutes ?? "",
+      packs: (pkg.packs ?? []).map((p) => ({ ...p })),
+    },
   };
 }
 
@@ -345,6 +357,15 @@ export function ProgramDialog({ open, onOpenChange, editing, onSave }: Props) {
               />
             </div>
           </div>
+
+          {/* How a private program is booked (the booking wizard) ──── */}
+          {isPrivate && (
+            <ProgramBookingFields
+              value={form.booking}
+              onChange={(booking) => setForm({ ...form, booking })}
+              singlePrice={form.price}
+            />
+          )}
 
           {/* Max group size — only meaningful for group classes ────────── */}
           {!isPrivate && (

@@ -75,6 +75,8 @@ export async function PATCH(
   const input = (await request.json().catch(() => null)) as
     | (Record<string, unknown> & {
         sizePricing?: Record<string, number>;
+        /** Minutes per size, written with the prices (see sizePricesToRows). */
+        sizeDurations?: Record<string, number>;
         /** Which branch these sizePricing values are FOR, when set. Absent
          *  (or null) means the facility-wide price -- unchanged behaviour. */
         locationId?: string | null;
@@ -139,7 +141,7 @@ export async function PATCH(
   // facility-wide row every unset branch still falls back to.
   let pricesWritten = true;
   if (input.sizePricing !== undefined) {
-    const rows = sizePricesToRows(input.sizePricing);
+    const rows = sizePricesToRows(input.sizePricing, input.sizeDurations);
     const scope = supabase
       .from("grooming_service_size_prices")
       .select("service_id", { count: "exact", head: true })

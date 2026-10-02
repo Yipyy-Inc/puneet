@@ -1,7 +1,8 @@
 -- ============================================================================
 -- A customer reads the boarding menu they are offered — at ONE business. See
 -- 20260924220000_a_customer_reads_the_boarding_menu_they_are_offered.sql and
--- 20260925173458_a_customer_menu_carries_default_add_ons.sql
+-- 20260925173458_a_customer_menu_carries_default_add_ons.sql and
+-- 20261002122808_a_room_card_says_its_size_its_features_and_the_second_pet_rate.sql
 --
 --   bun run test:sql boarding-customer-services
 --
@@ -36,6 +37,12 @@
 --     length. They are part of the price the customer is quoted, so a menu
 --     without them would put the customer's total on a different footing
 --     from the till's. A service with none carries an empty list, not null.
+-- B8  It carries the LODGING each service may be booked into, as the room
+--     card draws it — size words, features, whether it holds several pets,
+--     the enabled rules with their client message — and the second-pet
+--     rate. Never a count or a unit ("only the facility side needs to see
+--     how many rooms are left"), never a type the facility hides from
+--     clients or has retired, never a disabled rule.
 -- ============================================================================
 
 begin;
@@ -97,8 +104,14 @@ begin
   -- Two lodging types, so B2's restriction is a real narrowing rather than a
   -- list that happens to hold everything.
   insert into public.room_categories
-    (facility_id, legacy_id, service, name, default_capacity, default_base_price)
-  values (v_nu, 'obs-suite', 'boarding', 'OBS Suite', 2, 80)
+    (facility_id, legacy_id, service, name, default_capacity, default_base_price,
+     dimensions_label, features, rules)
+  values (v_nu, 'obs-suite', 'boarding', 'OBS Suite', 2, 80,
+          '6 × 8 ft', array['Raised bed', 'Webcam'],
+          '[{"id": "r1", "type": "max_weight", "value": 60, "enabled": true,
+             "clientMessage": "Up to 60 lb"},
+            {"id": "r2", "type": "pet_type", "value": ["Dog"], "enabled": false,
+             "clientMessage": ""}]'::jsonb)
   returning id into v_suite;
 
   insert into public.room_categories
@@ -106,13 +119,22 @@ begin
   values (v_nu, 'obs-condo', 'boarding', 'OBS Condo', 1, 38)
   returning id into v_condo;
 
+  -- B8: hidden from clients, and retired. Neither may reach a customer's
+  -- card, even under a service that is restricted to no type at all.
+  insert into public.room_categories
+    (facility_id, legacy_id, service, name, visible_to_clients)
+  values (v_nu, 'obs-hidden', 'boarding', 'OBS Staff-only run', false);
+  insert into public.room_categories
+    (facility_id, legacy_id, service, name, active)
+  values (v_nu, 'obs-retired', 'boarding', 'OBS Retired run', false);
+
   -- THE THING PHASE 5 MADE POSSIBLE: two priced services in ONE lodging type.
   insert into public.boarding_services
     (facility_id, legacy_id, name, description, price, unit,
      lodging_type_ids, color, requires_evaluation, requires_evaluation_online,
-     display_order)
+     display_order, additional_pet_price)
   values (v_nu, 'obs-standard', 'OBS Standard stay', 'A kennel and four walks',
-          80, 'night', array[v_suite], '#123456', true, false, 1)
+          80, 'night', array[v_suite], '#123456', true, false, 1, 45)
   returning id into v_standard;
 
   -- B7: two walks a day, every day, once a stay is three nights.
@@ -366,6 +388,49 @@ begin
     format('standard=%s allin=%s',
            coalesce(standard->>'defaultAddOns', 'absent'),
            coalesce(allin->>'defaultAddOns', 'absent')));
+end $$;
+
+-- ── B8 the lodging, as the room card draws it ─────────────────────────────
+
+do $$
+declare
+  offered jsonb; standard jsonb; allin jsonb; suite jsonb; v_fac uuid;
+  v_allin_names text[];
+begin
+  select id into v_fac from public.facilities where slug = 'nu-pets-obs';
+  offered := public.offered_boarding_services(v_fac);
+  select e into standard from jsonb_array_elements(offered) e
+   where e->>'name' = 'OBS Standard stay';
+  select e into allin from jsonb_array_elements(offered) e
+   where e->>'name' = 'OBS All-inclusive';
+  suite := standard->'lodging'->0;
+  select array_agg(l->>'name' order by l->>'name') into v_allin_names
+    from jsonb_array_elements(allin->'lodging') l;
+
+  perform pg_temp.t(8,
+    'the lodging is sent as the card draws it, with the second-pet rate, and never a count',
+    jsonb_array_length(standard->'lodging') = 1
+      and suite->>'name' = 'OBS Suite'
+      and suite->>'dimensions' = '6 × 8 ft'
+      and suite->'features' = '["Raised bed", "Webcam"]'::jsonb
+      and (suite->>'holdsSeveral')::boolean = true
+      -- The enabled rule, with the words the facility wrote for clients; the
+      -- disabled one is not a rule at all.
+      and suite->'rules' = '[{"type": "max_weight", "value": 60,
+                              "clientMessage": "Up to 60 lb"}]'::jsonb
+      and (standard->>'additionalPetPrice')::numeric = 45
+      and allin->'additionalPetPrice' = 'null'::jsonb
+      -- ABSENCE, so a key a later change adds has to be let in on purpose.
+      and not (suite ? 'availableUnits')
+      and not (suite ? 'totalActive')
+      and not (suite ? 'units')
+      and not (suite ? 'color')
+      and not (suite ? 'defaultBasePrice')
+      -- Every type the client may see, and not the hidden or retired one.
+      and v_allin_names = array['OBS Condo', 'OBS Suite'],
+    format('standard=%s allin=%s',
+           coalesce(standard->>'lodging', 'absent'),
+           coalesce(v_allin_names::text, 'none')));
 end $$;
 
 reset role;

@@ -19,7 +19,7 @@ import type {
 // ============================================================================
 
 export const ROOM_CATEGORY_SELECT =
-  "id, legacy_id, service, name, description, color, sort_order, default_capacity, default_base_price, taxable, visible_to_clients, image_url, rules, active, space_type, max_pets_per_area, room_category_location_prices ( location_id, price )";
+  "id, legacy_id, service, name, description, color, sort_order, default_capacity, default_base_price, taxable, visible_to_clients, image_url, dimensions_label, features, rules, active, space_type, max_pets_per_area, room_category_location_prices ( location_id, price )";
 
 export const FACILITY_ROOM_SELECT =
   "id, legacy_id, category_id, name, active, capacity, staff_notes, image_url, sort_order, description, color, rules";
@@ -39,6 +39,8 @@ export interface RoomCategoryRow {
   taxable: boolean | null;
   visible_to_clients: boolean;
   image_url: string | null;
+  dimensions_label: string | null;
+  features: string[] | null;
   rules: RoomRule[] | null;
   active: boolean;
   room_category_location_prices: { location_id: string; price: number }[];
@@ -126,6 +128,8 @@ export function rowToRoomCategory(
     taxable: row.taxable !== false,
     visibleToClients: row.visible_to_clients,
     imageUrl: row.image_url ?? undefined,
+    dimensionsLabel: row.dimensions_label ?? undefined,
+    features: row.features ?? [],
     active: row.active,
     locationPricing: (row.room_category_location_prices ?? []).map((p) => ({
       locationId: p.location_id,

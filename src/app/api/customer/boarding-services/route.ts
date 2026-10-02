@@ -6,7 +6,9 @@ import {
   type BoardingDefaultAddOnRow,
   type BoardingPriceUnit,
   type BoardingService,
+  type OfferedLodging,
 } from "@/lib/api/mappers/boarding-service";
+import type { RoomRule } from "@/types/rooms";
 
 // ============================================================================
 // The boarding services a CUSTOMER's own facility offers online.
@@ -49,7 +51,11 @@ interface OfferedRow {
   facilityPrice: number | string;
   unit: string;
   taxable: boolean;
+  /** Each pet after the first, sharing one room (20261002122808). */
+  additionalPetPrice?: number | string | null;
   lodgingTypeIds: string[];
+  /** Those types as the room card shows them — never a count. */
+  lodging?: OfferedLodgingRow[] | null;
   eligibleSpecies: string[];
   eligibleBreeds: string[];
   eligibleWeightTiers: string[];
@@ -58,6 +64,42 @@ interface OfferedRow {
   displayOrder: number;
   /** What a stay of it gets by its length (20260925173458). */
   defaultAddOns?: BoardingDefaultAddOnRow[] | null;
+}
+
+interface OfferedLodgingRow {
+  id: string;
+  name: string;
+  description: string | null;
+  imageUrl: string | null;
+  dimensions: string | null;
+  features: string[] | null;
+  holdsSeveral: boolean;
+  rules: Array<{
+    type: RoomRule["type"];
+    value: RoomRule["value"];
+    clientMessage: string;
+  }> | null;
+}
+
+/** The projection's lodging, as the room card reads a type's rules. */
+function toLodging(row: OfferedLodgingRow): OfferedLodging {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    imageUrl: row.imageUrl,
+    dimensions: row.dimensions,
+    features: row.features ?? [],
+    holdsSeveral: row.holdsSeveral === true,
+    // Only enabled rules are sent, so every one of them is enabled here.
+    rules: (row.rules ?? []).map((rule, index) => ({
+      id: `rule-${index}`,
+      type: rule.type,
+      value: rule.value,
+      clientMessage: rule.clientMessage ?? "",
+      enabled: true,
+    })),
+  };
 }
 
 function num(value: number | string | null | undefined): number {
@@ -89,7 +131,12 @@ function toService(row: OfferedRow): BoardingService {
     // own default and the unit every carried-over service uses.
     unit: (row.unit === "day" ? "day" : "night") satisfies BoardingPriceUnit,
     taxable: row.taxable,
+    additionalPetPrice:
+      row.additionalPetPrice === null || row.additionalPetPrice === undefined
+        ? null
+        : num(row.additionalPetPrice),
     lodgingTypeIds: row.lodgingTypeIds ?? [],
+    lodging: (row.lodging ?? []).map(toLodging),
     eligibleSpecies: row.eligibleSpecies ?? [],
     eligibleBreeds: row.eligibleBreeds ?? [],
     eligibleWeightTiers: row.eligibleWeightTiers ?? [],

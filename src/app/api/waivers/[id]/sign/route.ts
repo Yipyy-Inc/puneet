@@ -64,6 +64,8 @@ export async function POST(
     signatureData?: string;
     witnessName?: string;
     witnessSignatureData?: string;
+    /** The signing panel's "I have read and agree" (2026-10-02). */
+    consent?: boolean;
   } | null;
 
   const signatureName = body?.signatureName?.trim();
@@ -71,6 +73,15 @@ export async function POST(
     return NextResponse.json(
       { error: "A signature needs the name of the person agreeing." },
       { status: 400 },
+    );
+  }
+
+  // Consent is recorded, not only ticked in a browser: a signature without
+  // it is refused (2026-10-02).
+  if (body?.consent !== true) {
+    return NextResponse.json(
+      { error: "Confirm you have read and agree to it first." },
+      { status: 422 },
     );
   }
 
@@ -106,6 +117,13 @@ export async function POST(
     // proof and is not one, and storing it is worse than storing nothing.
     return NextResponse.json(
       { error: "That waiver has no text to sign." },
+      { status: 422 },
+    );
+  }
+
+  if (doc.requires_digital_signature && !body?.signatureData?.trim()) {
+    return NextResponse.json(
+      { error: "That waiver needs a drawn signature." },
       { status: 422 },
     );
   }
@@ -197,6 +215,7 @@ export async function POST(
       user_agent: request.headers.get("user-agent")?.slice(0, 500) ?? null,
       signed_by: viewer.userId,
       expires_at: expiresAt,
+      consented_at: new Date().toISOString(),
     })
     .select(SIGNATURE_SELECT)
     .single();

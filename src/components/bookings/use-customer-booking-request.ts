@@ -50,11 +50,6 @@ export function useCustomerBookingRequest(options?: {
   return async (booking: NewBooking): Promise<false | { ref: number }> => {
     if (!customer || !selectedFacility) return false;
 
-    const petId = Array.isArray(booking.petId)
-      ? booking.petId[0]
-      : booking.petId;
-    const pet = customer.pets?.find((p) => p.id === petId);
-
     try {
       const created = await bookingMutations.create({
         ...booking,
@@ -87,22 +82,13 @@ export function useCustomerBookingRequest(options?: {
       // lists — after the request was already written.
       void queryClient.invalidateQueries({ queryKey: ["bookings"] });
 
-      // ── ONE MESSAGE, BECAUSE THERE IS ONE OUTCOME ─────────────────────────
+      // ── NO TOAST: THE WIZARD SAYS IT (2026-10-02) ─────────────────────────
       //
-      // This used to say "<pet> is confirmed! Skipped staff approval" when
-      // `resolveInstabookEligibility` said so. The database contradicts that:
-      // the insert trigger forces `request_submitted`, so an
-      // instabook-eligible customer was told their dog had a place while the
-      // row said otherwise. Instabook is in the debt map. Until then this says
-      // what happened.
-      toast.success(
-        t("requestSentTo").replace("{facility}", selectedFacility.name),
-        {
-          description: t("bookingAwaitingConfirmation")
-            .replace("{id}", String(created.id))
-            .replace("{pet}", pet?.name ?? t("yourPetLower")),
-        },
-      );
+      // The wizard now stays open on its done screen, which reads the
+      // server's real status — "Request sent to the team", or "You're
+      // booked!" when the facility confirms the service without review. The
+      // toast that was here said "awaiting confirmation" either way, named
+      // only the first pet, and sat over "Start another booking".
 
       options?.onSent?.();
       return { ref: created.id };

@@ -44,6 +44,9 @@ export interface RealTrainingSeries {
    * the program it was modelled on. See lib/payments/service-tax.ts.
    */
   taxable: boolean;
+  /** The facility program (the `training_programs` setting id) it runs —
+   *  what the booking wizard lists it under. Null: matched by its name. */
+  programId: string | null;
   status: TrainingSeriesStatus;
   enrolledCount: number;
   waitlistedCount: number;
@@ -90,4 +93,9 @@ export interface CreateTrainingSeriesInput {
   locationId?: string | null;
   staffId?: string | null;
   courseTypeName?: string;
+  /** The facility program (the `training_programs` setting id) it runs. */
+  programId?: string | null;
+  /** A one-on-one session (a lesson, a consult) rather than a class.
+   *  Absent: a class, unless it holds one dog. */
+  kind?: "class" | "private";
 }

@@ -33,7 +33,7 @@ export const dynamic = "force-dynamic";
 const SERIES_SELECT = `
   id, facility_id, location_id, staff_id, name, course_type_name,
   day_of_week, start_time, duration_minutes, start_date, number_of_sessions,
-  capacity, total_price, taxable, status, created_at, updated_at,
+  capacity, total_price, taxable, program_id, status, created_at, updated_at,
   locations(name), staff(first_name, last_name)
 `;
 
@@ -52,6 +52,7 @@ interface SeriesRow {
   capacity: number;
   total_price: number;
   taxable: boolean | null;
+  program_id: string | null;
   status: RealTrainingSeries["status"];
   created_at: string;
   updated_at: string;
@@ -131,6 +132,7 @@ function toApi(
     capacity: row.capacity,
     totalPrice: row.total_price,
     taxable: row.taxable !== false,
+    programId: row.program_id,
     status: row.status,
     enrolledCount: bucket.enrolled,
     waitlistedCount: bucket.waitlisted,
@@ -239,6 +241,25 @@ export async function POST(request: NextRequest) {
       taxProblem =
         "The series was created, but tax could not be switched off for it. Edit the series to try again.";
     }
+  }
+
+  // ── WHICH PROGRAM, AND CLASS OR ONE-ON-ONE (20261002122924) ────────────
+  //
+  // Set after the fact for the reason tax is: the RPC's signature stays as
+  // the whole module knows it. A one-dog series is a private session however
+  // it was asked for — the book mapper has always read it so. Failing here
+  // leaves a class matched to its program by name, as before, so it is not
+  // worth refusing a series that exists.
+  const kind = input.kind ?? (input.capacity === 1 ? "private" : "class");
+  if (input.programId || kind !== "class") {
+    await supabase
+      .from("training_series")
+      .update({
+        ...(input.programId ? { program_id: input.programId } : {}),
+        kind,
+      } as never)
+      .eq("id", seriesId)
+      .select("id");
   }
 
   return NextResponse.json(

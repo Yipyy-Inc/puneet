@@ -184,6 +184,24 @@ export function formatDateShort(
 }
 
 /**
+ * `Thu, Oct 1` · `jeu. 1 oct.` — a day near enough that its year goes without
+ * saying, with the weekday people plan by: a stay's check-in, the booking
+ * wizard's summary lines (the client's mock, 2026-10-01).
+ */
+export function formatWeekdayDate(
+  value: Date | string | number,
+  locale: AppLocale,
+): string {
+  const d = asDate(value);
+  if (unformattable(d)) return NO_DATE;
+  return dateFmt(locale, "weekdayDate", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  }).format(d);
+}
+
+/**
  * `Tue, Sep 1, 2026` · `mar. 1 sept. 2026` — a calendar DAY, `YYYY-MM-DD`,
  * already worked out in the zone it belongs to (a facility's, on a server).
  *

@@ -259,18 +259,14 @@ test("D3 a stay booked with the service carries them, counted by the stay", asyn
     .click();
   await next(dialog);
 
-  // The service first, then a room of a type it may be sold into.
+  // The room types are the facility's boarding services (the client's flow,
+  // 2026-10-01). This one may be sold into any lodging type, so staff pick
+  // the type under the cards.
   await dialog
     .getByRole("button", { name: new RegExp("Stay with walks") })
     .click();
-  // The ROOM card, not the text: the demo facility's services were carried
-  // over from its classes and share their names, so "Condominium" is also
-  // a service card above — and clicking that one switches the service.
-  await dialog
-    .locator("div.group.rounded-2xl")
-    .filter({ hasText: "Condominium" })
-    .first()
-    .click();
+  await dialog.getByLabel("Lodging type", { exact: true }).click();
+  await page.getByRole("option", { name: "Condominium", exact: true }).click();
   await next(dialog);
 
   // The add-ons step names what the service adds by itself.

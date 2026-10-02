@@ -41,6 +41,7 @@ import type { PetSize } from "@/types/base";
 export const SERVICE_SELECT = `
   id, legacy_id, name, description, base_price, duration_min,
   coat_adjustments, coat_adjustment_mode, matted_surcharge_default,
+  matted_extra_minutes,
   includes, is_active, is_popular, taxable,
   eligible_pet_sizes, eligible_coat_types, eligible_breeds,
   required_skill_level, min_booking_notice_hours, max_per_day,
@@ -68,6 +69,7 @@ export interface ServiceRow {
   coat_adjustments: unknown;
   coat_adjustment_mode: string;
   matted_surcharge_default: number;
+  matted_extra_minutes: number | null;
   includes: string[] | null;
   is_active: boolean;
   is_popular: boolean;
@@ -139,6 +141,41 @@ function effectiveSizePricing(
   return sizePricing;
 }
 
+/**
+ * The minutes per size, resolved like the prices: the branch's own row where
+ * it set minutes, the facility-wide row otherwise. A size with no minutes is
+ * left out — it takes the service's `duration`, which is what
+ * `create_booking` falls back to as well.
+ */
+function effectiveSizeDurations(
+  rows: SizePriceRow[],
+  locationId?: string | null,
+): Partial<Record<PetSize, number>> {
+  const timed = rows.filter((p) => p.duration_min !== null);
+  const facilityWide = new Map(
+    timed.filter((p) => p.location_id === null).map((p) => [p.size_label, p]),
+  );
+  const branch = locationId
+    ? new Map(
+        timed
+          .filter((p) => p.location_id === locationId)
+          .map((p) => [p.size_label, p]),
+      )
+    : new Map<string, SizePriceRow>();
+  const out: Partial<Record<PetSize, number>> = {};
+  for (const p of new Map([...facilityWide, ...branch]).values()) {
+    if (
+      p.size_label === "small" ||
+      p.size_label === "medium" ||
+      p.size_label === "large" ||
+      p.size_label === "giant"
+    ) {
+      out[p.size_label] = Number(p.duration_min);
+    }
+  }
+  return out;
+}
+
 /** One location's own size-price rows, for a cross-location comparison.
  *
  * Every row here is an OVERRIDE -- `location_id is null` (the facility-wide
@@ -196,11 +233,16 @@ export function rowToService(
     basePrice: Number(row.base_price),
     duration: row.duration_min,
     sizePricing,
+    sizeDurations: effectiveSizeDurations(
+      row.grooming_service_size_prices ?? [],
+      opts?.locationId,
+    ),
     coatAdjustments: {
       ...(row.coat_adjustments as Record<string, number>),
       mode: row.coat_adjustment_mode as "flat" | "percent",
     },
     mattedSurchargeDefault: Number(row.matted_surcharge_default),
+    mattedExtraMinutes: Number(row.matted_extra_minutes ?? 0),
     includes: row.includes ?? [],
     isActive: row.is_active,
     isPopular: row.is_popular,
@@ -243,6 +285,11 @@ export function serviceToRow(
   if (input.duration !== undefined) row.duration_min = input.duration;
   if (input.mattedSurchargeDefault !== undefined)
     row.matted_surcharge_default = input.mattedSurchargeDefault;
+  if (input.mattedExtraMinutes !== undefined)
+    row.matted_extra_minutes = Math.max(
+      0,
+      Math.min(240, Math.round(input.mattedExtraMinutes)),
+    );
   if (input.includes !== undefined) row.includes = input.includes;
   if (input.isActive !== undefined) row.is_active = input.isActive;
   if (input.isPopular !== undefined) row.is_popular = input.isPopular;
@@ -277,12 +324,28 @@ export function serviceToRow(
 }
 
 /** Size prices are a child table, so they are written separately — see the
- *  route. Returned as rows ready to insert, minus the service id. */
+ *  route. Returned as rows ready to insert, minus the service id.
+ *
+ *  The MINUTES travel with them. The route replaces a service's rows on every
+ *  save, and these rows used to carry the price alone — so each edit wiped
+ *  the per-size minutes `create_booking` books by (found 2026-10-01). */
 export function sizePricesToRows(
   sizePricing: Partial<Record<PetSize, number>> | undefined,
-): { size_label: string; price: number }[] {
+  sizeDurations?: Partial<Record<PetSize, number>> | Record<string, number>,
+): { size_label: string; price: number; duration_min: number | null }[] {
   if (!sizePricing) return [];
+  const minutes = (sizeDurations ?? {}) as Record<string, number | undefined>;
   return Object.entries(sizePricing)
     .filter(([, price]) => typeof price === "number")
-    .map(([size_label, price]) => ({ size_label, price: price as number }));
+    .map(([size_label, price]) => {
+      const m = minutes[size_label];
+      return {
+        size_label,
+        price: price as number,
+        duration_min:
+          typeof m === "number" && Number.isFinite(m) && m > 0
+            ? Math.round(m)
+            : null,
+      };
+    });
 }

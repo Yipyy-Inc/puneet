@@ -3,12 +3,17 @@
 import {
   AlertTriangle,
   Banknote,
+  Check,
   CheckCircle2,
   ClipboardList,
   Clock,
+  Mail,
+  MessageSquare,
+  FileSignature,
   XCircle,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { formatDateLong, formatMoney, formatTime } from "@/lib/i18n/format";
@@ -54,6 +59,14 @@ export interface BookingNoticesProps {
   /** Money taken and still owed, when some but not all has been paid. */
   partPaid: { paid: number; owed: number } | null;
   finished: boolean;
+  /** Made Pending for agreements still to sign (the booking wizard,
+   * 2026-10-02): who to send the signing link to. Null otherwise. */
+  awaitingAgreements?: {
+    clientRef: number;
+    service: string;
+    email: string | null;
+    phone: string | null;
+  } | null;
   /** The client cancelled it themselves (details.cancellation, written by
    * the database with the terms it was made under). */
   customerCancellation?: {
@@ -79,6 +92,7 @@ export function BookingNotices({
   partPaid,
   finished,
   customerCancellation,
+  awaitingAgreements,
 }: BookingNoticesProps) {
   const { t, fill, locale } = useStaffText("bookingDetail");
   const { t: actT } = useStaffText("bookingActions");
@@ -133,6 +147,15 @@ export function BookingNotices({
               )}
             </>
           }
+        />
+      )}
+
+      {awaitingAgreements && (
+        <Notice
+          icon={<FileSignature className="text-warning size-4" />}
+          title={fill("awaitingTitle", { client: clientName })}
+          body={t("awaitingBody")}
+          action={<SigningLinkButtons {...awaitingAgreements} />}
         />
       )}
 
@@ -232,6 +255,92 @@ export function BookingNotices({
         />
       )}
     </>
+  );
+}
+
+/**
+ * "Email signing link" / "Text signing link" — the link the client signs the
+ * facility's agreements from (/api/waivers/send-signing-link). Says to whom
+ * it went once it did; says why not when it did not.
+ */
+function SigningLinkButtons({
+  clientRef,
+  service,
+  email,
+  phone,
+}: {
+  clientRef: number;
+  service: string;
+  email: string | null;
+  phone: string | null;
+}) {
+  const { t, fill } = useStaffText("bookingDetail");
+  const [sending, setSending] = useState<"email" | "sms" | null>(null);
+  const [sent, setSent] = useState<{ email?: string; sms?: string }>({});
+
+  const send = async (channel: "email" | "sms") => {
+    if (sending) return;
+    setSending(channel);
+    try {
+      const response = await fetch("/api/waivers/send-signing-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientRef, service, channel }),
+      });
+      const body = (await response.json().catch(() => null)) as {
+        sent?: boolean;
+        to?: string;
+        detail?: string;
+        error?: string;
+      } | null;
+      if (!response.ok || !body?.sent) {
+        toast.error(t("signingLinkNotSent"), {
+          description: body?.error ?? body?.detail,
+        });
+        return;
+      }
+      setSent((prev) => ({ ...prev, [channel]: body.to ?? "" }));
+    } finally {
+      setSending(null);
+    }
+  };
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {(["email", "sms"] as const).map((channel) => {
+        const to = sent[channel];
+        if (to !== undefined) {
+          return (
+            <span
+              key={channel}
+              className="text-success inline-flex min-h-10 items-center gap-1.5 text-sm font-semibold"
+            >
+              <Check aria-hidden className="size-4" />
+              {fill(
+                channel === "email"
+                  ? "signingLinkEmailed"
+                  : "signingLinkTexted",
+                { to },
+              )}
+            </span>
+          );
+        }
+        const Glyph = channel === "email" ? Mail : MessageSquare;
+        return (
+          <Button
+            key={channel}
+            size="sm"
+            variant="outline"
+            disabled={channel === "email" ? !email : !phone}
+            loading={sending === channel}
+            onClick={() => void send(channel)}
+          >
+            <Glyph aria-hidden className="size-3.5" />
+            {t(channel === "email" ? "emailSigningLink" : "textSigningLink")}
+          </Button>
+        );
+      })}
+    </div>
   );
 }
 

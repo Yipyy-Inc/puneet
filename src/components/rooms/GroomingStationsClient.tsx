@@ -210,20 +210,6 @@ const SIZE_BADGE_PALETTE: Record<GroomingStationPetSize, string> = {
     "bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-950/40 dark:text-fuchsia-300",
 };
 
-/**
- * True if the station can accept a pet of `size`. Empty allowedPetSizes (or
- * undefined) means multi-purpose — accepts every size.
- */
-export function isStationEligibleForPetSize(
-  station: GroomingStation,
-  size: GroomingStationPetSize,
-): boolean {
-  if (!station.allowedPetSizes || station.allowedPetSizes.length === 0) {
-    return true;
-  }
-  return station.allowedPetSizes.includes(size);
-}
-
 function PetSizeBadges({
   sizes,
   className,

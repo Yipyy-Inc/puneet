@@ -394,6 +394,7 @@ export type Database = {
       };
       boarding_services: {
         Row: {
+          additional_pet_price: number | null;
           blocked_pet_tags: string[];
           category_id: string | null;
           color: string | null;
@@ -420,6 +421,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          additional_pet_price?: number | null;
           blocked_pet_tags?: string[];
           category_id?: string | null;
           color?: string | null;
@@ -446,6 +448,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          additional_pet_price?: number | null;
           blocked_pet_tags?: string[];
           category_id?: string | null;
           color?: string | null;
@@ -4801,6 +4804,7 @@ export type Database = {
           is_popular: boolean;
           legacy_id: string | null;
           matted_surcharge_default: number;
+          matted_extra_minutes: number;
           max_per_day: number | null;
           min_booking_notice_hours: number | null;
           name: string;
@@ -4829,6 +4833,7 @@ export type Database = {
           is_popular?: boolean;
           legacy_id?: string | null;
           matted_surcharge_default?: number;
+          matted_extra_minutes?: number;
           max_per_day?: number | null;
           min_booking_notice_hours?: number | null;
           name: string;
@@ -4857,6 +4862,7 @@ export type Database = {
           is_popular?: boolean;
           legacy_id?: string | null;
           matted_surcharge_default?: number;
+          matted_extra_minutes?: number;
           max_per_day?: number | null;
           min_booking_notice_hours?: number | null;
           name?: string;
@@ -9776,7 +9782,9 @@ export type Database = {
           default_base_price: number | null;
           default_capacity: number;
           description: string | null;
+          dimensions_label: string | null;
           facility_id: string;
+          features: string[];
           id: string;
           image_url: string | null;
           legacy_id: string;
@@ -9797,7 +9805,9 @@ export type Database = {
           default_base_price?: number | null;
           default_capacity?: number;
           description?: string | null;
+          dimensions_label?: string | null;
           facility_id: string;
+          features?: string[];
           id?: string;
           image_url?: string | null;
           legacy_id: string;
@@ -9818,7 +9828,9 @@ export type Database = {
           default_base_price?: number | null;
           default_capacity?: number;
           description?: string | null;
+          dimensions_label?: string | null;
           facility_id?: string;
+          features?: string[];
           id?: string;
           image_url?: string | null;
           legacy_id?: string;
@@ -12140,9 +12152,11 @@ export type Database = {
           duration_minutes: number;
           facility_id: string;
           id: string;
+          kind: string;
           location_id: string | null;
           name: string;
           number_of_sessions: number;
+          program_id: string | null;
           staff_id: string | null;
           start_date: string;
           start_time: string;
@@ -12159,9 +12173,11 @@ export type Database = {
           duration_minutes: number;
           facility_id: string;
           id?: string;
+          kind?: string;
           location_id?: string | null;
           name: string;
           number_of_sessions: number;
+          program_id?: string | null;
           staff_id?: string | null;
           start_date: string;
           start_time: string;
@@ -12178,9 +12194,11 @@ export type Database = {
           duration_minutes?: number;
           facility_id?: string;
           id?: string;
+          kind?: string;
           location_id?: string | null;
           name?: string;
           number_of_sessions?: number;
+          program_id?: string | null;
           staff_id?: string | null;
           start_date?: string;
           start_time?: string;
@@ -12663,6 +12681,7 @@ export type Database = {
       waiver_signatures: {
         Row: {
           client_id: string;
+          consented_at: string | null;
           created_at: string;
           expires_at: string | null;
           facility_id: string;
@@ -12687,6 +12706,7 @@ export type Database = {
         };
         Insert: {
           client_id: string;
+          consented_at?: string | null;
           created_at?: string;
           expires_at?: string | null;
           facility_id: string;
@@ -12711,6 +12731,7 @@ export type Database = {
         };
         Update: {
           client_id?: string;
+          consented_at?: string | null;
           created_at?: string;
           expires_at?: string | null;
           facility_id?: string;
@@ -12749,6 +12770,51 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      waiver_signing_links: {
+        Row: {
+          booking_id: string | null;
+          channel: string;
+          client_id: string;
+          created_at: string;
+          created_by: string | null;
+          expires_at: string;
+          facility_id: string;
+          id: string;
+          sent_to: string;
+          service: string | null;
+          token_hash: string;
+          waiver_ids: string[];
+        };
+        Insert: {
+          booking_id?: string | null;
+          channel: string;
+          client_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          expires_at: string;
+          facility_id: string;
+          id?: string;
+          sent_to?: string;
+          service?: string | null;
+          token_hash: string;
+          waiver_ids?: string[];
+        };
+        Update: {
+          booking_id?: string | null;
+          channel?: string;
+          client_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          expires_at?: string;
+          facility_id?: string;
+          id?: string;
+          sent_to?: string;
+          service?: string | null;
+          token_hash?: string;
+          waiver_ids?: string[];
+        };
+        Relationships: [];
       };
       waivers: {
         Row: {
@@ -13720,6 +13786,21 @@ export type Database = {
       };
     };
     Functions: {
+      agreement_link_by_token: { Args: { p_token: string }; Returns: Json };
+      sign_agreement_by_token: {
+        Args: {
+          p_consent?: boolean;
+          p_ip_address?: string;
+          p_signature_data?: string;
+          p_signature_name: string;
+          p_token: string;
+          p_user_agent?: string;
+          p_waiver_id: string;
+          p_witness_name?: string;
+          p_witness_signature_data?: string;
+        };
+        Returns: Json;
+      };
       accept_platform_invitation: {
         Args: { p_profile_id: string; p_token_hash: string };
         Returns: Json;
@@ -14697,6 +14778,14 @@ export type Database = {
           p_location_id?: string | null;
           p_pet_ids?: string[];
         };
+        Returns: Json;
+      };
+      grooming_size_tiers: {
+        Args: { p_facility_id: string };
+        Returns: Json;
+      };
+      offered_training_classes: {
+        Args: { p_facility_id: string };
         Returns: Json;
       };
       offered_grooming_services: {

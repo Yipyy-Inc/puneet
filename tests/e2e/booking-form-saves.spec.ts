@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 
 import { ACCOUNTS, signIn } from "./_auth";
 import { bookingsMarked } from "./_sweep";
+import { closeDoneScreen } from "./_wizard";
 
 // ============================================================================
 // The New Booking form saves what it was given — every day, every room, the
@@ -372,12 +373,9 @@ test.describe("the New Booking form saves all of it, or none of it", () => {
       .click();
     await dialog.getByRole("button", { name: /^next$/i }).click();
 
-    // A play area Buddy is allowed in: the first one that takes a click.
-    await dialog
-      .locator("div.group.bg-card.rounded-2xl.cursor-pointer")
-      .first()
-      .click();
-    // Add-ons, feeding, medication — and a package offer, if one applies.
+    // The play area is assigned as a customer's is (the client's flow,
+    // 2026-10-01); staff can change it on Confirm.
+    // Add-ons, feeding, medication.
     const create = dialog.getByRole("button", { name: /^create booking$/i });
     for (let i = 0; i < 6 && !(await create.isVisible()); i += 1) {
       await dialog.getByRole("button", { name: /^(next|skip)$/i }).click();
@@ -401,7 +399,7 @@ test.describe("the New Booking form saves all of it, or none of it", () => {
     await expect(page.getByText(/2 bookings created/i)).toBeVisible({
       timeout: 120_000,
     });
-    await expect(dialog).toBeHidden();
+    await closeDoneScreen(dialog);
     // Alice, and only next month: her list alone is big enough to be cancelled
     // by the statement timeout (see the note on `marked`).
     const month = nextMonthWindow();

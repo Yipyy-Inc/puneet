@@ -60,6 +60,8 @@ export interface PayBookingProps {
    * RLS, so this cannot be fetched from here.
    */
   tipConfig: TipConfig | null;
+  /** A deposit link: the amount is this booking's share of the deposit. */
+  deposit?: boolean;
   /**
    * The tip the booking carries that no payment has collected — the owner's
    * pledge from the pre-arrival form. The tip starts at it; zero when there is
@@ -92,6 +94,7 @@ export function PayBooking({
   publicApiKey,
   sdkUrl,
   tipConfig,
+  deposit = false,
   pledgedTipCents = 0,
 }: PayBookingProps) {
   const { t, fill, locale } = useCustomerText("pay");
@@ -155,7 +158,7 @@ export function PayBooking({
       <section className="bg-card border-line shadow-card space-y-5 rounded-3xl border p-5">
         <div className="border-line rounded-2xl border p-4 text-center">
           <p className="text-ink-tertiary text-[13.5px]">
-            {fill("balanceOn", { ref: bookingRef })}
+            {fill(deposit ? "depositOn" : "balanceOn", { ref: bookingRef })}
           </p>
           <p className="text-body-ink text-3xl font-bold tabular-nums">
             {money(amountCents, currency)}
@@ -206,6 +209,7 @@ export function PayBooking({
           amountCents={amountCents}
           currency={currency}
           tipCents={tipCents}
+          purpose={deposit ? "deposit" : undefined}
           onPaid={onPaid}
         />
       </section>

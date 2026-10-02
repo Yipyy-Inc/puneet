@@ -36,6 +36,7 @@ const CATALOGUES: Record<string, { en: Areas; fr: Areas }> = {
 const SAME_IN_BOTH = new Set([
   // The operations calendar (2026-09-20) — each the same word in French.
   "staff.opsCalendar.colService", // Service / Service
+  "staff.groomingServices.minutesUnit", // min / min
   "staff.opsCalendar.tipService", // Service / Service
   "staff.opsCalendar.tipNotes", // Notes / Notes
   "staff.opsCalendar.fNotes", // Notes / Notes

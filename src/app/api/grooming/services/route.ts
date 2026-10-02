@@ -81,7 +81,10 @@ export async function POST(request: NextRequest) {
   }
 
   const input = (await request.json().catch(() => null)) as
-    | (Record<string, unknown> & { sizePricing?: Record<string, number> })
+    | (Record<string, unknown> & {
+        sizePricing?: Record<string, number>;
+        sizeDurations?: Record<string, number>;
+      })
     | null;
 
   if (!input?.name || typeof input.duration !== "number") {
@@ -121,7 +124,7 @@ export async function POST(request: NextRequest) {
   // `manage_rates` are separate keys, so "created the service, could not set
   // the prices" is a real and legitimate outcome — reporting it as a failed
   // creation would be a lie about a row that exists.
-  const priceRows = sizePricesToRows(input.sizePricing);
+  const priceRows = sizePricesToRows(input.sizePricing, input.sizeDurations);
   let pricesWritten = true;
   if (priceRows.length > 0) {
     const { error: priceError } = await supabase

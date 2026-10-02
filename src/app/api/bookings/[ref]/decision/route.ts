@@ -23,6 +23,10 @@ import {
   type RequestAction,
 } from "@/lib/bookings/request-decision";
 import type { NewBooking } from "@/types/booking";
+import { collectDepositOnConfirm } from "@/lib/payments/booking-deposit-server";
+import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
+import { shellText } from "@/lib/shell/text";
+import { grantLessonPack } from "@/lib/training/lesson-pack.server";
 
 // ============================================================================
 // STAFF DECIDE A CUSTOMER'S REQUEST — every day of it, or none.
@@ -250,6 +254,32 @@ export async function POST(
     );
   }
 
+  // ── A TRAINING REQUEST (the booking wizard, 2026-10-02) ───────────────
+  //
+  // A class is an enrolment whose sessions are the request's days: declined,
+  // its place in the class is given back. A lesson pack approved: the first
+  // session is this booking, at the pack's quoted price, and the rest become
+  // passes the client books from the booking page.
+  const training = await settleTrainingRequest(supabase, action, {
+    facilityId: context.facilityId,
+    clientId: (current as unknown as { client_id: string }).client_id,
+    groupId: booking.bookingGroup?.id ?? null,
+    details: (current as unknown as { details: Record<string, unknown> | null })
+      .details,
+  });
+
+  // The deposit the customer agreed to with the request: their card charged
+  // now that it is confirmed, else the deposit link by email (the booking
+  // wizard, 2026-10-02). After the charges above, which it is a share of.
+  const deposit =
+    action === "approve"
+      ? await collectDepositOnConfirm({
+          bookingIds: days.map((day) => day.row.id),
+          request,
+          createdBy: user?.id ?? null,
+        })
+      : "none";
+
   const messaged = await tellTheCustomer(supabase, action, {
     facilityId: context.facilityId,
     clientId: (current as unknown as { client_id: string }).client_id,
@@ -263,7 +293,90 @@ export async function POST(
     refs: days.map((day) => day.booking.id),
     messaged,
     kennels,
+    deposit,
+    training,
   });
+}
+
+/**
+ * What a training request's decision does beyond its bookings' status: a
+ * declined class gives its place back; an approved lesson pack becomes passes.
+ * Best effort — the decision stands, and the answer says what happened.
+ */
+async function settleTrainingRequest(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  action: RequestAction,
+  request: {
+    facilityId: string;
+    clientId: string;
+    groupId: string | null;
+    details: Record<string, unknown> | null;
+  },
+): Promise<"none" | "place_released" | "pack_granted" | "pack_not_granted"> {
+  try {
+    if (action === "decline" && request.groupId && hasServiceRoleKey()) {
+      // The group of an enrolment's sessions IS the enrolment.
+      const admin = createAdminClient();
+      const { data } = await admin
+        .from("training_series_enrollments")
+        .update({ status: "cancelled" })
+        .eq("id", request.groupId)
+        .eq("client_id", request.clientId)
+        .in("status", ["enrolled", "waitlisted"])
+        .select("id");
+      return (data ?? []).length > 0 ? "place_released" : "none";
+    }
+    const details = request.details ?? {};
+    const pack = Number(details["trainingPack"] ?? 0);
+    const programId = details["trainingProgramId"];
+    if (
+      action === "approve" &&
+      details["trainingFormat"] === "lesson" &&
+      Number.isInteger(pack) &&
+      pack > 1 &&
+      typeof programId === "string"
+    ) {
+      const { data: client } = await supabase
+        .from("clients")
+        .select("preferred_language")
+        .eq("id", request.clientId)
+        .maybeSingle();
+      const locale = (
+        client as { preferred_language: string | null } | null
+      )?.preferred_language?.startsWith("fr")
+        ? "fr"
+        : "en";
+      const petIds = details["petId"];
+      const pets = Array.isArray(petIds) ? petIds.length : 1;
+      const { data: setting } = await supabase
+        .from("facility_settings")
+        .select("value")
+        .eq("facility_id", request.facilityId)
+        .eq("domain", "training_programs")
+        .maybeSingle();
+      const programs =
+        (
+          setting?.value as {
+            programs?: Array<{ id: string; name: string }>;
+          } | null
+        )?.programs ?? [];
+      const name = programs.find((p) => p.id === programId)?.name ?? "";
+      const granted = await grantLessonPack({
+        supabase: supabase as unknown as SupabaseClient,
+        facilityId: request.facilityId,
+        clientId: request.clientId,
+        programId,
+        sessions: pack,
+        pets: Math.max(1, pets),
+        packageName: `${name} · ${shellText(locale, "booking", "wizSessionPack").replace("{count}", String(pack))}`,
+      });
+      return granted.ok ? "pack_granted" : "pack_not_granted";
+    }
+    return "none";
+  } catch (failure) {
+    console.warn("[requests] training request not settled:", failure);
+    return "none";
+  }
 }
 
 /**

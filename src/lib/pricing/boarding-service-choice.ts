@@ -340,3 +340,45 @@ export function stayUnits(unit: BoardingPriceUnit, nights: number): number {
   const n = Number.isFinite(nights) ? Math.max(0, Math.trunc(nights)) : 0;
   return unit === "day" ? Math.max(n + 1, 1) : Math.max(n, 1);
 }
+
+/**
+ * A household's stay when each pet was given its own service (the booking
+ * wizard's Room type step, 2026-10-01): a room each at its service's rate —
+ * or, sharing, ONE room per service, at its rate plus its second-pet rate
+ * for every pet after the first (`additionalPetPrice`; null charges the room
+ * once, which is what a shared room always cost).
+ *
+ * The server's re-price and the wizard's quote both come down to this sum,
+ * so a request auto-confirms only when the customer was shown this number.
+ * Null when any service has no usable price: a gap is refused, not guessed.
+ */
+export function householdStayTotal(input: {
+  pets: ReadonlyArray<{
+    service: Pick<
+      BoardingService,
+      "rowId" | "price" | "unit" | "additionalPetPrice"
+    >;
+  }>;
+  share: boolean;
+  nights: number;
+}): number | null {
+  const rooms = new Map<
+    string,
+    { service: (typeof input.pets)[number]["service"]; pets: number }
+  >();
+  input.pets.forEach(({ service }, index) => {
+    const key = input.share ? service.rowId : `${service.rowId}#${index}`;
+    const room = rooms.get(key);
+    if (room) room.pets += 1;
+    else rooms.set(key, { service, pets: 1 });
+  });
+  let total = 0;
+  for (const { service, pets } of rooms.values()) {
+    const rate = Number(service.price);
+    if (!Number.isFinite(rate) || rate <= 0) return null;
+    const extra = Number(service.additionalPetPrice ?? 0);
+    const perUnit = rate + (Number.isFinite(extra) ? extra : 0) * (pets - 1);
+    total += perUnit * stayUnits(service.unit, input.nights);
+  }
+  return total;
+}

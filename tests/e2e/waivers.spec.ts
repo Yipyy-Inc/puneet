@@ -59,6 +59,14 @@ const SIGNATURES = "/api/waivers/signatures";
 /** Every waiver this file creates carries it, and cleanup sweeps only those. */
 const MARKER = "[e2e]";
 
+/**
+ * A drawn signature: one transparent pixel. A waiver needs one unless it
+ * says otherwise — `requires_digital_signature` defaults to true — and the
+ * sign route has held it to that since 2026-10-02.
+ */
+const DRAWING =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+
 type Page = import("@playwright/test").Page;
 
 interface Waiver {
@@ -202,8 +210,26 @@ test.describe("waivers", () => {
       services: ["boarding"],
     });
 
+    // Consent is recorded, not only ticked (2026-10-02): without it, nothing.
+    const unconsented = await page.request.post(
+      `${WAIVERS}/${waiver.id}/sign`,
+      {
+        data: {
+          clientRef,
+          signatureName: "E2E Signer",
+          signatureData: DRAWING,
+        },
+      },
+    );
+    expect(unconsented.status()).toBe(422);
+
     const signed = await page.request.post(`${WAIVERS}/${waiver.id}/sign`, {
-      data: { clientRef, signatureName: "E2E Signer" },
+      data: {
+        clientRef,
+        signatureName: "E2E Signer",
+        signatureData: DRAWING,
+        consent: true,
+      },
     });
     expect(signed.ok(), await signed.text()).toBe(true);
     const signature = ((await signed.json()) as { signature: Signature })
@@ -243,7 +269,12 @@ test.describe("waivers", () => {
     });
 
     const signed = await page.request.post(`${WAIVERS}/${waiver.id}/sign`, {
-      data: { clientRef, signatureName: "E2E Signer" },
+      data: {
+        clientRef,
+        signatureName: "E2E Signer",
+        signatureData: DRAWING,
+        consent: true,
+      },
     });
     expect(signed.ok(), await signed.text()).toBe(true);
     const signature = ((await signed.json()) as { signature: Signature })
@@ -275,7 +306,12 @@ test.describe("waivers", () => {
     });
 
     const res = await page.request.post(`${WAIVERS}/${waiver.id}/sign`, {
-      data: { clientRef, signatureName: "E2E Signer" },
+      data: {
+        clientRef,
+        signatureName: "E2E Signer",
+        signatureData: DRAWING,
+        consent: true,
+      },
     });
     // A retired waiver is one the business has stopped standing behind. Signing
     // it would record agreement to something withdrawn.
@@ -290,7 +326,12 @@ test.describe("waivers", () => {
       body: "Consent that gets withdrawn.",
     });
     const signed = await page.request.post(`${WAIVERS}/${waiver.id}/sign`, {
-      data: { clientRef, signatureName: "E2E Signer" },
+      data: {
+        clientRef,
+        signatureName: "E2E Signer",
+        signatureData: DRAWING,
+        consent: true,
+      },
     });
     const signature = ((await signed.json()) as { signature: Signature })
       .signature;
@@ -370,7 +411,12 @@ test.describe("waivers", () => {
     );
     if (target) {
       const signed = await page.request.post(`${WAIVERS}/${target.id}/sign`, {
-        data: { clientRef, signatureName: "Forged" },
+        data: {
+          clientRef,
+          signatureName: "Forged",
+          signatureData: DRAWING,
+          consent: true,
+        },
       });
       expect(signed.status()).toBe(403);
     }

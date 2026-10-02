@@ -35,13 +35,14 @@ import {
 } from "@/lib/api/booking-list-params";
 import { statedServiceChargeSchema, type NewBooking } from "@/types/booking";
 import { autoConfirmCustomerBookings } from "@/lib/bookings/auto-confirm";
+import { collectDepositOnConfirm } from "@/lib/payments/booking-deposit-server";
 import { stampBookingTaxable } from "@/lib/payments/booking-service-tax";
 import {
   applyBookingServiceCharges,
   writeStatedServiceCharges,
 } from "@/lib/payments/booking-service-charges";
 import { applyBookingCareCharges } from "@/lib/payments/booking-care-charges";
-import { hasServiceRoleKey } from "@/lib/supabase/admin";
+import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { requestAddOnLines } from "@/lib/pricing/add-on-lines";
 import {
   FORM_OVERRIDE_REASON_REQUIRED,
@@ -609,6 +610,17 @@ export async function POST(request: NextRequest) {
     "initial",
   );
 
+  // A request the facility confirms on arrival takes its deposit now, on the
+  // card the customer chose with it, else by a link (2026-10-02). After the
+  // charges above: the deposit is a share of what the booking costs.
+  if (autoConfirmed > 0) {
+    await collectDepositOnConfirm({
+      bookingIds: created.map((c) => c.booking_id),
+      request,
+      createdBy: viewer?.userId ?? null,
+    });
+  }
+
   const { data: full } = await supabase
     .from("bookings")
     .select(BOOKING_SELECT)
@@ -668,15 +680,26 @@ export async function POST(request: NextRequest) {
   //
   // One event per booking made, so a three-day request is three confirmations
   // if the facility has a rule that sends them — each for its own day.
-  for (const made of created) {
+  //
+  // A CUSTOMER's booking raises it as the facility (2026-10-02): the event
+  // function refuses a caller who is not a member, so every customer's
+  // booking raised nothing and no customer was ever told. And a request that
+  // waits for the facility is not a confirmation — it raises
+  // `booking_request_submitted`, once for the request.
+  const asRequest = !isStaff && autoConfirmed === 0;
+  const emitter = isStaff
+    ? supabase
+    : (createAdminClient() as unknown as typeof supabase);
+  for (const made of asRequest ? created.slice(0, 1) : created) {
+    const kind = asRequest ? "booking_request_submitted" : "booking_created";
     let eventId: number | null = null;
     try {
-      const { data: emitted, error: emitError } = await supabase.rpc(
+      const { data: emitted, error: emitError } = await emitter.rpc(
         "emit_automation_event",
         {
           p_facility_id: facility.facilityId,
-          p_kind: "booking_created",
-          p_dedupe_key: `booking_created:${made.booking_id}`,
+          p_kind: kind,
+          p_dedupe_key: `${kind}:${made.booking_id}`,
           p_client_id: client.id,
           p_booking_id: made.booking_id,
           ...(facility.locationId

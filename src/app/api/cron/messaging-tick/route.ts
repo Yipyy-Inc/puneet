@@ -11,6 +11,7 @@ import { queueDueRecoveryMessages } from "@/lib/unfinished-bookings/recovery-tic
 import { queueDueFormReminders } from "@/lib/forms/reminder-tick";
 import { queueDueEstimateFollowUps } from "@/lib/estimates/follow-up-tick";
 import { queueDueEstimateExpiryWarnings } from "@/lib/estimates/expiry-warning-tick";
+import { queueDueBookingReminders } from "@/lib/messaging/booking-reminders";
 
 // ============================================================================
 // The messaging tick: sending what was queued for later.
@@ -89,6 +90,8 @@ export async function GET(request: NextRequest) {
   const estimateFollowUps = await queueDueEstimateFollowUps();
   // Open estimates inside their facility's expiry-warning window.
   const expiryWarnings = await queueDueEstimateExpiryWarnings();
+  // Tomorrow's bookings, at facilities with a day-before rule switched on.
+  const reminders = await queueDueBookingReminders();
   const result = await sendDueMessages();
 
   // The counts are the point. A tick that reports `sent: 0, skipped: 12` is a
@@ -110,6 +113,7 @@ export async function GET(request: NextRequest) {
     formReminders: formReminders.queued,
     estimateFollowUps: estimateFollowUps.queued,
     expiryWarnings: expiryWarnings.queued,
+    reminders: reminders.queued,
     advanced: advanced.advanced,
     completed: advanced.completed,
     stopped: advanced.stopped,
@@ -122,6 +126,7 @@ export async function GET(request: NextRequest) {
       ...formReminders.problems,
       ...estimateFollowUps.problems,
       ...expiryWarnings.problems,
+      ...reminders.problems,
     ].slice(0, 20),
   });
 }

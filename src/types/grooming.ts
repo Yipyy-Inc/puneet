@@ -694,6 +694,8 @@ export type AppointmentHistoryEntry = z.infer<
 >;
 
 export const groomingAppointmentSchema = z.object({
+  /** Matting was priced into the booking (`details.groomingMatted`). */
+  mattedAtBooking: z.boolean().optional(),
   id: z.string(),
   date: z.string(),
   startTime: z.string(),
@@ -958,6 +960,11 @@ export const groomingPackageSchema = z.object({
    * The keys correspond to the `id` of a `petSizeTier` defined in `GroomingFacilityConfig`.
    */
   sizePricing: z.record(z.string(), z.number()),
+  /**
+   * Minutes per size (`grooming_service_size_prices.duration_min`) — what
+   * `create_booking` books. A size absent takes `duration`.
+   */
+  sizeDurations: z.record(z.string(), z.number()).optional(),
   coatAdjustments: z
     .object({
       short: z.number(),
@@ -980,6 +987,11 @@ export const groomingPackageSchema = z.object({
    * to let staff enter the amount freely.
    */
   mattedSurchargeDefault: z.number().nonnegative().optional(),
+  /**
+   * Minutes a matted coat adds to the groom (`matted_extra_minutes`,
+   * 20261002122850), set with the matting at booking or intake. 0 = none.
+   */
+  mattedExtraMinutes: z.number().nonnegative().optional(),
   breedOverrides: z.record(z.string(), z.number()).optional(),
   includes: z.array(z.string()),
   isActive: z.boolean(),

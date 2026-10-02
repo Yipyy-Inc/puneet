@@ -141,6 +141,10 @@ export const defaultCustomerSettings: CustomerSettings = {
 
 export const clientSchema = z.object({
   id: z.number(),
+  /** The database row id (a uuid) — what saved cards are keyed by. */
+  rowId: z.string().optional(),
+  /** When the client was added, as an ISO timestamp. */
+  createdAt: z.string().optional(),
   name: z.string(),
   email: z.string().email(),
   phone: z.string().optional(),

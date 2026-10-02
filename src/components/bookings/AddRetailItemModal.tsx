@@ -396,7 +396,7 @@ export function AddRetailItemModal({
 
       {/* Camera scanner dialog — same as retail module */}
       <Dialog open={cameraOpen} onOpenChange={setCameraOpen}>
-        <DialogContent className="flex flex-col gap-0 p-0 max-sm:inset-0 max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none sm:max-w-sm">
+        <DialogContent className="flex flex-col gap-0 p-0 max-sm:inset-0 max-sm:max-w-none max-sm:translate-0 max-sm:rounded-none sm:max-w-sm">
           <DialogHeader className="px-5 pt-5 pb-3">
             <DialogTitle className="flex items-center gap-2">
               <Barcode className="size-5" />

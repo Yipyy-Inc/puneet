@@ -19218,7 +19218,7 @@ and the add-pet page posts `clientId: undefined`, which `/api/pets` correctly
 refuses 422 "A pet needs an owner" — a true sentence about a false premise.
 
 **How it was proved, which is the transferable part.** Client ref 855 at
-doggieville-mtl carried `singhparminder360@gmail.com`, a dog, and a null
+doggieville-mtl carried a real client's email address, a dog, and a null
 `profile_id`; a profile with that exact address existed with zero linked client
 rows. The row was **still unclaimed after the client had tried** — which is
 what distinguishes "the heal never ran" from "the heal ran and failed", and it
@@ -22301,3 +22301,86 @@ required / disabled setting is now read by the booking form.
   the app).
 - Required applies to staff edits as well as new bookings; one tick answers
   it.
+
+## 2026-10-02 — The booking wizard is the client's flow, in both portals, at every width
+
+The client sent their booking flow as an HTML mock (`docs/Facility_01_-_Find_client.html`, kept as
+the reference): one wizard for staff and pet owners — Client & pet, Service, Details with a
+service's own sub-steps, Confirm — at desktop, tablet and phone. It replaced the old modal's steps
+screen by screen. Layout is the mock's; the look is the design system's (two exceptions logged in
+§5i and §5t). What a reader needs before touching it:
+
+- **Where it lives.** `components/bookings/modals/BookingModal.tsx` still owns the state and the
+  saving; every screen it draws is under `components/bookings/wizard/` (`shell/`, `steps/…`), and
+  every rule worth a test is pure, under `lib/bookings/wizard/` and `lib/bookings/quote/` (the
+  estimate, golden-tested). The old detail screens — BoardingDetails, DaycareDetails,
+  GroomingDetails, the training series step and its multi-dog cart — were reachable only from the
+  old steps and are deleted.
+- **Sub-step ids are fixed per service** (boarding 0 Schedule · 1 Room type · 2 Add-ons; daycare
+  0 · 2; grooming 0 Package · 1 Add-ons · 2 Groomer & time; training 0 Program · 1 Trainer & time ·
+  2 Goals; 3 Feeding and 4 Medication everywhere they are on). Drafts keep the id.
+- **A room type is a boarding service** (the mock's list). Staff see "8 of 14 free"; a customer
+  sees only whether it can be booked (`boarding_service_availability`, yes or no), never a count.
+  Several pets get a room each unless staff (or the customer) say they share, at the service's
+  second-pet rate.
+- **Drop-off and pick-up hours are the facility's** (`service_time_windows`, Boarding/Daycare ›
+  Settings › Drop-off and pick-up hours), falling back to business hours; every day ends in Custom
+  time — a customer within that day's open hours, staff at any time with a warning outside them.
+- **Staff decide the evaluation on Confirm**, not on the service card: on by default (evaluated on
+  the first day), off with a reason kept on the booking (`evaluationOverride`).
+- **Agreements.** A client with something unsigned is booked "Pending — awaiting agreements"; staff
+  send an email or text signing link (`waiver_signing_links`, hashed tokens, the public
+  `/agreements/[token]` page), and the database confirms the booking when the last one is signed.
+  A customer reads and signs inline before requesting.
+- **Deposits** are computed by the server from `deposit_rules`. Staff charge the saved card, send a
+  payment link, take cash or collect later; a customer's request carries the card they agreed to,
+  and it is charged when the booking is confirmed (decision route, auto-confirm), with a payment
+  link when there is no card or the charge fails. Idempotency keys `deposit:<booking>` and
+  `deposit-auto:<booking>`.
+- **Training** in the wizard: private lessons in packs (session one booked at the pack price, the
+  rest written as passes), group classes (an enrolment; a customer's is a request decided whole),
+  and behaviour consults; a trainer's free times come from `/api/training/availability`.
+- **Messages.** The done screen says an email is on its way only when a booking-created email rule
+  is on and the client has an address; the messaging tick raises the day-before reminder for
+  bookings 20–28 hours out; a customer's request raises "request submitted" once.
+- **Migrations** (local first, applied to production with the push): a room card's size, features
+  and second-pet rate; a groom's minutes by size and the size tiers; a class's program and the
+  spots a customer sees; a class priced to the cent; the drop-off hours a customer reads; an
+  agreement link that signs without a login. SQL: `agreement-links.sql`,
+  `training-offered-classes.sql`, plus additions to `training-series-enrollment.sql` and
+  `rpc-session-required.sql`.
+
+**The e2e suite's test facility had three agreements nobody could see.** A `waivers.spec` run that
+crashed on 2026-09-11 left three `[e2e]` waivers active, in production and so in every copy of it;
+every client of the demo facility had something unsigned. Nothing noticed until staff bookings
+became Pending for exactly that reason. The global setup (`tests/e2e/_notification-sweep.ts`) now
+retires active `[e2e]` waivers before each run — on the copy the run uses. The three rows in
+production were retired the same day, with the owner's go-ahead (signatures kept).
+
+**Not carried over, on purpose — none was ever used.** Measured on production's rows: of 54
+grooming bookings, none was mobile, had co-groomers or stages, or carried a duration override; no
+training booking was ever a drop-in.
+
+- Grooming's Salon | Mobile switch (arrival windows, travel fee), co-groomers, split stages, and the
+  staff price and duration override. Their state is still in `BookingModal` — reset, never set —
+  and the estimate's mobile travel-fee branch is dormant; re-home them as a disclosure on the
+  Package step if a facility asks.
+- Training drop-ins (one session of a running class) and the one-dog-at-a-time cart. Several dogs
+  are several pets in step 1.
+- The grooming waitlist from inside the wizard (the stacked dialog). The grooming calendar's New
+  appointment dialog still offers it.
+
+**Still open.**
+
+- A trainer's calendar time blocks are not read by the trainer's free times
+  (`lib/training/availability-server.ts`): a lesson can be offered over a blocked hour.
+- A training enrolment is not held for agreements — only a booking made through
+  `POST /api/bookings` becomes "Pending — awaiting agreements".
+- A deposit on a request in several parts is one card charge per part, and a client without a
+  card gets one payment link per part.
+- Cancelling the first session of a lesson pack leaves the pack's passes.
+- Staff cannot send a link to a missing required form from the wizard; they give the override
+  reason, which the booking keeps.
+- A booking made inside 20 hours of its start gets no day-before reminder.
+- A play area's capacity counts bookings, not pets (`getDaycareSectionUsage`), and the Confirm row
+  puts every pet of a booking in one area — the old screen placed pets one by one.

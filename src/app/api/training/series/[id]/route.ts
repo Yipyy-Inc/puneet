@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 const SERIES_SELECT = `
   id, facility_id, location_id, staff_id, name, course_type_name,
   day_of_week, start_time, duration_minutes, start_date, number_of_sessions,
-  capacity, total_price, taxable, status, created_at, updated_at,
+  capacity, total_price, taxable, program_id, status, created_at, updated_at,
   locations(name), staff(first_name, last_name), facilities(timezone)
 `;
 
@@ -33,6 +33,7 @@ interface SeriesRow {
   capacity: number;
   total_price: number;
   taxable: boolean | null;
+  program_id: string | null;
   status: RealTrainingSeries["status"];
   created_at: string;
   updated_at: string;
@@ -117,6 +118,7 @@ export async function GET(
     capacity: row.capacity,
     totalPrice: row.total_price,
     taxable: row.taxable !== false,
+    programId: row.program_id,
     status: row.status,
     enrolledCount: counts.enrolled,
     waitlistedCount: counts.waitlisted,
@@ -153,6 +155,8 @@ interface SeriesPatchInput {
   totalPrice?: number;
   /** Absent means taxed — see lib/payments/service-tax.ts. */
   taxable?: boolean;
+  /** The program it runs; null unlinks it. */
+  programId?: string | null;
 }
 
 /**
@@ -202,6 +206,12 @@ export async function PATCH(
   if (input.capacity !== undefined) patch.capacity = input.capacity;
   if (input.totalPrice !== undefined) patch.total_price = input.totalPrice;
   if (input.taxable !== undefined) patch.taxable = input.taxable !== false;
+  if (input.programId !== undefined) {
+    patch.program_id =
+      typeof input.programId === "string" && input.programId.trim()
+        ? input.programId.trim().slice(0, 120)
+        : null;
+  }
 
   const supabase = await createServerClient();
   const { data, error } = await supabase

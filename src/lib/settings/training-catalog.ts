@@ -183,6 +183,9 @@ export type TrainingCatalogDomain = keyof typeof TRAINING_CATALOG_LIST_KEY;
 // read back over the shipped defaults so a field added later has one.
 export const trainingModuleSettingsSchema = z
   .object({
+    /** The booking wizard's Goals step: the facility's own words. Absent:
+     *  the eight it ships, in the reader's language. */
+    goalOptions: z.array(z.string().trim().min(1)).optional(),
     enabled: z.boolean(),
     visibleToCustomers: z.boolean(),
     locations: z.array(

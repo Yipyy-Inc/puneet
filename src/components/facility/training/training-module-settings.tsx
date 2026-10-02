@@ -71,6 +71,8 @@ import {
   type TrainingModuleSettings,
 } from "@/lib/training-module-settings";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { cleanGoalOptions } from "@/lib/training/goal-options";
+import { TrainingGoalsCard } from "./training-goals-card";
 import { useTrainingLabels } from "@/lib/settings/use-training-labels";
 import { formatDuration, formatNumber } from "@/lib/i18n/format";
 import { waiverQueries, type WaiverRow } from "@/lib/api/waivers";
@@ -213,9 +215,14 @@ function TrainingModuleSettingsForm({
   // pathways list — and the toast waits for both. It wrote them into the
   // query cache ("Persistence to a real backend lands later").
   async function handleSave() {
+    // The goals as typed, a line each, saved clean: no blank line, no twin.
+    const value: TrainingModuleSettings = {
+      ...draft,
+      goalOptions: cleanGoalOptions(draft.goalOptions),
+    };
     try {
       await Promise.all([
-        saveSetting({ domain: "training_module_settings", value: draft }),
+        saveSetting({ domain: "training_module_settings", value }),
         savePathways(pathwaysDraft),
       ]);
     } catch (error) {
@@ -225,7 +232,8 @@ function TrainingModuleSettingsForm({
     await queryClient.invalidateQueries({
       queryKey: trainingQueries.moduleSettings().queryKey,
     });
-    setSaved(draft);
+    setDraft(value);
+    setSaved(value);
     setPathwaysSaved(pathwaysDraft);
     toast.success(t("savedToast"));
   }
@@ -325,6 +333,12 @@ function TrainingModuleSettingsForm({
             />
           </CardContent>
         </Card>
+
+        {/* ── The goals a booking offers ─────────────────────────────── */}
+        <TrainingGoalsCard
+          value={draft.goalOptions}
+          onChange={(goals) => update("goalOptions", goals)}
+        />
 
         {/* ── Training locations ────────────────────────────────────── */}
         <Card>

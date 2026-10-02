@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { GroomingAddOnOption } from "@/app/api/grooming/add-ons/route";
 
+import type { GroomingSizeTier } from "@/lib/grooming/size-tier";
 import type { GroomingPackage } from "@/types/grooming";
 
 // ============================================================================
@@ -141,6 +142,30 @@ export function useGroomingMenu(options: {
 
 export function useGroomingServices(locationId?: string | null) {
   return useQuery(groomingCatalogueQueries.services(locationId));
+}
+
+/**
+ * The facility's grooming size bands — the ones `create_booking` prices by
+ * (`groomingSizeFor`). A customer's come through their own client row; the
+ * key carries the mode, as the menu's does.
+ */
+export function useGroomingSizeTiers(options: { asCustomer: boolean }) {
+  return useQuery({
+    queryKey: [
+      ...groomingCatalogueKeys.all,
+      "size-tiers",
+      options.asCustomer ? "customer" : "staff",
+    ] as const,
+    queryFn: async () =>
+      (
+        await json<{ tiers: GroomingSizeTier[] }>(
+          options.asCustomer
+            ? "/api/customer/grooming-size-tiers"
+            : "/api/grooming/size-tiers",
+        )
+      ).tiers,
+    staleTime: 5 * 60_000,
+  });
 }
 
 /**

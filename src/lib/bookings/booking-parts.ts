@@ -80,6 +80,49 @@ function withMoney<T>(
   }));
 }
 
+/**
+ * Grooming: one appointment per pet, back to back on the groomer's table
+ * (the client's mock, 2026-10-01 — "Bubu and Mango are groomed back-to-back ·
+ * 3h 45m total"). Each pet keeps its own package, its own length — the groom,
+ * matting and its add-ons — and its share of the money by its own price.
+ */
+export function groomingParts(input: {
+  date: string;
+  /** "HH:MM", when the first pet starts. */
+  start: string;
+  pets: ReadonlyArray<{
+    petId: number;
+    serviceType: string;
+    minutes: number;
+    price: number;
+    matted: boolean;
+  }>;
+  money: Money;
+}): BookingPart[] {
+  const [h, m] = input.start.split(":").map(Number);
+  let at = (h ?? 0) * 60 + (m ?? 0);
+  const clock = (minutes: number) =>
+    `${String(Math.floor(minutes / 60) % 24).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+  const slots = input.pets.map((pet) => {
+    const from = at;
+    at += Math.max(1, Math.round(pet.minutes));
+    return {
+      petIds: [pet.petId],
+      startDate: input.date,
+      endDate: input.date,
+      checkInTime: clock(from),
+      checkOutTime: clock(at),
+      serviceType: pet.serviceType,
+      ...(pet.matted ? { matted: true } : {}),
+    };
+  });
+  return withMoney(
+    slots,
+    input.money,
+    input.pets.map((pet) => pet.price),
+  );
+}
+
 /** Daycare: one booking per day, every selected dog on each, equal shares. */
 export function daycareParts(input: {
   dates: string[];
@@ -124,20 +167,38 @@ export function boardingParts(input: {
   checkOutTime: string;
   money: Money;
   weightOf: (roomId: string | undefined, petIds: number[]) => number;
+  /**
+   * Which pets are ONE room (2026-10-01). Default: the pets given the same
+   * room or room type. The Room type step keys a pet on its own unless the
+   * household shares, so two dogs in Suites are two suites.
+   */
+  unitOf?: (petId: number, roomId: string | undefined) => string;
+  /** Each part's boarding service, when the pets' differ. */
+  serviceOf?: (petIds: number[]) => string | undefined;
 }): BookingPart[] {
-  const byRoom = new Map<string | undefined, number[]>();
+  const byUnit = new Map<
+    string,
+    { roomId: string | undefined; petIds: number[] }
+  >();
   for (const petId of input.petIds) {
     const roomId = input.roomAssignments.find((a) => a.petId === petId)?.roomId;
-    byRoom.set(roomId, [...(byRoom.get(roomId) ?? []), petId]);
+    const key = input.unitOf ? input.unitOf(petId, roomId) : (roomId ?? "");
+    const unit = byUnit.get(key);
+    if (unit) unit.petIds.push(petId);
+    else byUnit.set(key, { roomId, petIds: [petId] });
   }
-  const groups = [...byRoom.entries()].map(([roomId, petIds]) => ({
-    petIds,
-    startDate: input.startDate,
-    endDate: input.endDate,
-    checkInTime: input.checkInTime,
-    checkOutTime: input.checkOutTime,
-    ...(roomId ? { unitAssignment: roomId } : {}),
-  }));
+  const groups = [...byUnit.values()].map(({ roomId, petIds }) => {
+    const serviceId = input.serviceOf?.(petIds);
+    return {
+      petIds,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      checkInTime: input.checkInTime,
+      checkOutTime: input.checkOutTime,
+      ...(roomId ? { unitAssignment: roomId } : {}),
+      ...(serviceId ? { boardingServiceId: serviceId } : {}),
+    };
+  });
   const weights = groups.map((g) => input.weightOf(g.unitAssignment, g.petIds));
   // No weight at all (no prices yet) falls back to sharing by dog.
   const usable = weights.some((w) => w > 0)
@@ -173,7 +234,10 @@ export function expandBookingParts(
       discount: part.discount,
       totalCost: part.totalCost,
       unitAssignment: part.unitAssignment ?? rest.unitAssignment,
+      boardingServiceId: part.boardingServiceId ?? rest.boardingServiceId,
       trainingSessionId: part.trainingSessionId ?? rest.trainingSessionId,
+      serviceType: part.serviceType ?? rest.serviceType,
+      groomingMatted: part.matted ?? rest.groomingMatted,
       // A kennel change is the move of ONE kennel's guests. Copied onto every
       // part it would move each room's dogs into the same kennel; the form
       // plans changes only for a stay in one kennel, which has no parts.

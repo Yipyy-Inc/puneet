@@ -6,6 +6,13 @@ import { createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { chargeCard } from "@/lib/clover/charge";
 import { facilityTaxConfig, taxToAddCents } from "@/lib/payments/booking-tax";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  DEPOSIT_ROW_SELECT,
+  planDeposit,
+  requestRows,
+  type DepositRow,
+} from "@/lib/payments/booking-deposit-server";
 
 // ============================================================================
 // Charging a card against a booking.
@@ -57,12 +64,15 @@ const ChargeInput = z.union([
     source: z.string().min(8).max(200),
     savedCardId: z.undefined().optional(),
     tipCents: z.number().int().min(0).max(100_000).default(0),
+    /** A deposit link (/pay/{ref}?deposit=1): the share, not the balance. */
+    purpose: z.literal("deposit").optional(),
   }),
   z.object({
     bookingId: z.uuid(),
     source: z.undefined().optional(),
     savedCardId: z.uuid(),
     tipCents: z.number().int().min(0).max(100_000).default(0),
+    purpose: z.literal("deposit").optional(),
   }),
 ]);
 
@@ -126,6 +136,37 @@ export async function POST(request: NextRequest) {
       { error: "That booking is already paid." },
       { status: 409 },
     );
+  }
+
+  // ── A DEPOSIT IS ITS SHARE, WORKED OUT HERE ─────────────────────────────
+  //
+  // The deposit link (the booking wizard, 2026-10-02) names no amount: this
+  // booking's share of the deposit its request owes, by the facility's rule,
+  // from the rows — the same arithmetic as the wizard and the cash path. No
+  // tip rides on a deposit.
+  let subtotalCents = owedCents;
+  let tipCents = parsed.data.tipCents;
+  if (parsed.data.purpose === "deposit") {
+    const admin = createAdminClient() as unknown as SupabaseClient;
+    const { data: full } = await admin
+      .from("bookings")
+      .select(DEPOSIT_ROW_SELECT)
+      .eq("id", booking.id)
+      .maybeSingle();
+    const rows = full
+      ? await requestRows(admin, full as unknown as DepositRow)
+      : [];
+    const share = (await planDeposit(admin, rows)).shares.find(
+      (s) => s.bookingId === booking.id,
+    );
+    if (!share) {
+      return NextResponse.json(
+        { error: "No deposit is due on this booking." },
+        { status: 409 },
+      );
+    }
+    subtotalCents = Math.min(owedCents, Math.round(share.amount * 100));
+    tipCents = 0;
   }
 
   // ── A STORED CARD IS RESOLVED HERE, AS THE CALLER ───────────────────────
@@ -193,7 +234,7 @@ export async function POST(request: NextRequest) {
   // already established above through the caller's own client.
   const taxCents = taxToAddCents(
     await facilityTaxConfig(createAdminClient(), booking.facility_id),
-    owedCents,
+    subtotalCents,
     booking,
   );
 
@@ -201,9 +242,9 @@ export async function POST(request: NextRequest) {
     facilityId: booking.facility_id,
     bookingId: booking.id,
     clientId: booking.client_id,
-    subtotalCents: owedCents,
+    subtotalCents,
     taxCents,
-    tipCents: parsed.data.tipCents,
+    tipCents,
     source,
     storedCard,
     createdBy: viewer.userId,

@@ -27,6 +27,8 @@ export interface AddOnStaffOption {
   /** The staff member as the staff list names them — legacy id, or uuid. */
   id: string;
   name: string;
+  /** Listed with its reason, but not choosable — a full play area, say. */
+  disabled?: boolean;
 }
 
 export function AddOnStaffSelect({
@@ -64,7 +66,7 @@ export function AddOnStaffSelect({
         <SelectContent>
           <SelectItem value={NOBODY}>{nobodyLabel}</SelectItem>
           {staff.map((s) => (
-            <SelectItem key={s.id} value={s.id}>
+            <SelectItem key={s.id} value={s.id} disabled={s.disabled}>
               {s.name}
             </SelectItem>
           ))}

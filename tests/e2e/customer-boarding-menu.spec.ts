@@ -14,7 +14,10 @@ import { ACCOUNTS, signIn } from "./_auth";
 //
 // ── WHAT THIS PINS ────────────────────────────────────────────────────────
 //
-// M1  The customer meets the menu on the dates step, with a service this spec
+// Since 2026-10-01 the menu IS the Room type step (the client's flow): the
+// dates first, then "Choose a room", where each card is a boarding service.
+//
+// M1  The customer meets the menu after the dates, with a service this spec
 //     made on it.
 // M2  With dates chosen and no service, Next stays disabled: when there is a
 //     menu, the customer buys from it.
@@ -97,7 +100,7 @@ test.afterAll(async ({ browser }) => {
   await sweep(browser, "after");
 });
 
-test("a customer chooses boarding from the menu before the dates", async ({
+test("a customer chooses boarding from the menu after the dates", async ({
   page,
 }) => {
   test.slow();
@@ -115,17 +118,8 @@ test("a customer chooses boarding from the menu before the dates", async ({
     .first()
     .click();
 
-  // M1 — the menu, on the step a customer actually sees.
-  await expect(wizard.getByText("Which boarding service?")).toBeVisible({
-    timeout: 30_000,
-  });
-  const card = wizard.getByRole("button", {
-    name: new RegExp(MARKER.replace(/[[\]]/g, "\\$&")),
-  });
-  await expect(card).toBeVisible();
-
-  // M2 — dates alone are not enough when there is a menu.
-  await wizard.locator("button:has(svg.lucide-chevron-right)").first().click();
+  // The dates come first.
+  await wizard.getByRole("button", { name: /^next month$/i }).click();
   const [tuesday, wednesday] = nextMonthTuesday();
   await wizard
     .getByRole("button", { name: String(tuesday), exact: true })
@@ -134,6 +128,18 @@ test("a customer chooses boarding from the menu before the dates", async ({
     .getByRole("button", { name: String(wednesday), exact: true })
     .click();
   const next = wizard.getByRole("button", { name: /^next$/i }).first();
+  await next.click();
+
+  // M1 — the menu, on the step a customer actually sees.
+  await expect(
+    wizard.getByRole("heading", { name: /^choose a room$/i }),
+  ).toBeVisible({ timeout: 30_000 });
+  const card = wizard
+    .locator("button[aria-pressed]")
+    .filter({ hasText: SERVICE_NAME });
+  await expect(card).toBeVisible();
+
+  // M2 — dates alone are not enough when there is a menu.
   await expect(next, "no service chosen yet").toBeDisabled();
 
   // M3 — choosing it is what lets them on.

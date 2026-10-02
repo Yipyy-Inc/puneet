@@ -85,6 +85,7 @@ const PORTAL_AUDIENCE: ReadonlyArray<readonly [string, HostAudience]> = [
   ["/review", "customer"],
   ["/forms", "customer"],
   ["/pay", "customer"],
+  ["/agreements", "customer"],
 ];
 
 function audienceForPath(pathname: string): HostAudience | null {

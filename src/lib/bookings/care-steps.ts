@@ -1,6 +1,5 @@
 import { stayOf, type MedStay } from "@/lib/medications/schedule";
 import type { CareStepUse } from "@/lib/settings/care-setup";
-import type { BookingCare } from "@/types/booking";
 
 // ============================================================================
 // WHERE THE FEEDING AND MEDICATIONS STEPS SIT IN A BOOKING (2026-10-01).
@@ -129,32 +128,4 @@ export function legacySubStepId(
   };
   const list = (service && lists[service]) || [0];
   return list[Math.min(position, list.length - 1)];
-}
-
-/** Several pets' care as one — a training request's drop-ins, say. */
-export function mergeCare(
-  cares: readonly (BookingCare | undefined)[],
-): BookingCare {
-  const out: BookingCare = {};
-  for (const care of cares) {
-    if (!care) continue;
-    if (care.feedingSchedule?.length) {
-      out.feedingSchedule = [
-        ...(out.feedingSchedule ?? []),
-        ...care.feedingSchedule,
-      ];
-    }
-    if (care.medications?.length) {
-      out.medications = [...(out.medications ?? []), ...care.medications];
-    }
-    if (care.noMedication?.length) {
-      out.noMedication = [
-        ...new Set([...(out.noMedication ?? []), ...care.noMedication]),
-      ];
-    }
-    if (care.vetContacts) {
-      out.vetContacts = { ...(out.vetContacts ?? {}), ...care.vetContacts };
-    }
-  }
-  return out;
 }

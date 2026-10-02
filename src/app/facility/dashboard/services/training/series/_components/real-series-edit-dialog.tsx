@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,12 @@ import {
   useUpdateTrainingSeries,
 } from "@/lib/api/training-series";
 import type { RealTrainingSeries } from "@/types/training-series";
+import { fetchTrainingPrograms } from "@/lib/api/training-book";
+import { programFormat } from "@/lib/training/program-offer";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import type { TrainingPackage } from "@/types/training";
+
+const NO_PROGRAMS: TrainingPackage[] = [];
 
 // ============================================================================
 // Create/edit a real training series.
@@ -69,6 +76,16 @@ export function RealSeriesEditDialog({
   const { data: trainers } = useTrainingTrainers();
   const create = useCreateTrainingSeries();
   const update = useUpdateTrainingSeries();
+  const { t: tSeries } = useStaffText("trainingSeries");
+  // The group programs a class can run — what the booking wizard lists it
+  // under (the client's mock, 2026-10-01).
+  const { data: programs = NO_PROGRAMS } = useQuery({
+    queryKey: ["training", "packages", "staff"] as const,
+    queryFn: () => fetchTrainingPrograms("staff"),
+  });
+  const groupPrograms = programs.filter(
+    (p) => programFormat(p) === "group" && p.isActive !== false,
+  );
 
   const [name, setName] = useState(editing?.name ?? "");
   const [courseTypeName, setCourseTypeName] = useState(
@@ -80,6 +97,7 @@ export function RealSeriesEditDialog({
   const [totalPrice, setTotalPrice] = useState(editing?.totalPrice ?? 0);
   // Absent means taxed — see lib/payments/service-tax.ts.
   const [taxable, setTaxable] = useState(editing?.taxable !== false);
+  const [programId, setProgramId] = useState(editing?.programId ?? "");
 
   const [dayOfWeek, setDayOfWeek] = useState(1);
   const [startTime, setStartTime] = useState("17:00");
@@ -101,6 +119,7 @@ export function RealSeriesEditDialog({
     setCapacity(editing.capacity);
     setTotalPrice(editing.totalPrice);
     setTaxable(editing.taxable !== false);
+    setProgramId(editing.programId ?? "");
   }
 
   function save() {
@@ -122,6 +141,7 @@ export function RealSeriesEditDialog({
             capacity,
             totalPrice,
             taxable,
+            programId: programId || null,
           },
         },
         {
@@ -154,6 +174,8 @@ export function RealSeriesEditDialog({
         taxable,
         locationId: locationId || null,
         staffId: staffId || null,
+        programId: programId || null,
+        kind: "class",
       },
       {
         onSuccess: (created) => {
@@ -204,6 +226,31 @@ export function RealSeriesEditDialog({
               placeholder="e.g., Puppy Class"
             />
           </div>
+
+          {groupPrograms.length > 0 || programId ? (
+            <div className="space-y-2">
+              <Label htmlFor="series-program">{tSeries("program")}</Label>
+              <Select
+                value={programId || NONE}
+                onValueChange={(v) => setProgramId(v === NONE ? "" : v)}
+              >
+                <SelectTrigger id="series-program">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>{tSeries("programNone")}</SelectItem>
+                  {groupPrograms.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-meta text-ink-tertiary">
+                {tSeries("programHint")}
+              </p>
+            </div>
+          ) : null}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">

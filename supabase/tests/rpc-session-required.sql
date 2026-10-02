@@ -312,6 +312,16 @@ end $$;
 --       visit. `submit_review_response` writes one row for the request the
 --       token names and is rate-once by a unique constraint.
 --
+--   agreement_link_by_token, sign_agreement_by_token
+--       The facility's agreements, signed from a link staff send by email or
+--       text (20261002123123) — the client has no account and is not being
+--       asked for one; signing IS the thing they are there to do. The review
+--       survey's shape exactly: an opaque 32-byte token as an ARGUMENT, hashed
+--       inside the function against a unique index, every failure answered
+--       alike. What comes back is the facility name, the client's first name
+--       and the agreements' own text; what is written is one signature of an
+--       agreement on that link, with consent, its text read from `waivers`.
+--
 --   published_reviews_for, published_review_summary
 --       The reviews a facility chose to put on its own booking page
 --       (20260829200000). Somebody deciding whether to book has no account and
@@ -348,7 +358,8 @@ begin
                            'facility_branding_by_slug',
                            'review_request_by_token', 'submit_review_response',
                            'record_review_click',
-                           'published_reviews_for', 'published_review_summary');
+                           'published_reviews_for', 'published_review_summary',
+                           'agreement_link_by_token', 'sign_agreement_by_token');
   perform pg_temp.t('V7 no unexpected anon-callable function in public',
     unexpected is null, coalesce('anon can call: ' || unexpected, 'none'));
 end $$;

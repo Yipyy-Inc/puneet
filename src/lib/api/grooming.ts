@@ -581,6 +581,13 @@ export function resolveEffectivePricing(args: {
     petPricingOverrides,
   } = args;
 
+  // How long THIS pet's groom runs: the size's own minutes where the
+  // facility set them (`create_booking` books the same), else the service's.
+  const sizeMinutes =
+    petSize && pkg.sizeDurations?.[petSize] !== undefined
+      ? pkg.sizeDurations[petSize]!
+      : pkg.duration;
+
   // 1. Pet-specific override — saved override for this exact pet/package
   //    combination wins over every other tier.
   if (petId !== undefined) {
@@ -590,7 +597,7 @@ export function resolveEffectivePricing(args: {
     if (petOverride && petOverride.customPrice !== undefined) {
       return {
         price: petOverride.customPrice,
-        durationMin: petOverride.customDurationMin ?? pkg.duration,
+        durationMin: petOverride.customDurationMin ?? sizeMinutes,
         source: "pet-custom",
         note: petOverride.note,
       };
@@ -608,7 +615,7 @@ export function resolveEffectivePricing(args: {
     if (match) {
       return {
         price: match[1],
-        durationMin: pkg.duration,
+        durationMin: sizeMinutes,
         source: "breed-override",
       };
     }
@@ -620,7 +627,7 @@ export function resolveEffectivePricing(args: {
   if (stylistId && pkg.stylistPricing && pkg.stylistPricing[stylistId]) {
     return {
       price: pkg.stylistPricing[stylistId],
-      durationMin: pkg.duration,
+      durationMin: sizeMinutes,
       source: "stylist-specific",
     };
   }
@@ -683,7 +690,7 @@ export function resolveEffectivePricing(args: {
 
   return {
     price: finalPrice,
-    durationMin: pkg.duration,
+    durationMin: sizeMinutes,
     source: "service-default",
     baseBeforeAdjustment:
       ageAdjustment || coatAdjustment || tierAdjustment ? sizePrice : undefined,

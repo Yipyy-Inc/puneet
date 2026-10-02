@@ -10,6 +10,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Pen, Eraser, Download, Check, Type } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { shellText } from "@/lib/shell/text";
+import type { AppLocale } from "@/lib/language-settings";
 import { formatNoteDate } from "@/lib/format-utils";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -30,6 +32,9 @@ interface SignaturePadProps {
   onClear?: () => void;
   agreementText?: string;
   label?: string;
+  /** Words in this language rather than the app's — a page the signer
+   *  reaches signed out, in their own (the agreements link, 2026-10-02). */
+  locale?: AppLocale;
   witnessMode?: boolean;
   disabled?: boolean;
   initialSignature?: string;
@@ -87,9 +92,14 @@ export function SignaturePad({
   readOnly = false,
   compact = false,
   className,
+  locale: localeOverride,
 }: SignaturePadProps) {
-  const t = useShellText("shared");
-  const locale = useShellLocale();
+  const appText = useShellText("shared");
+  const appLocale = useShellLocale();
+  const locale = localeOverride ?? appLocale;
+  const t = localeOverride
+    ? (key: string) => shellText(localeOverride, "shared", key)
+    : appText;
   const labelText = label ?? t("signature");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const padRef = useRef<SignaturePadLib | null>(null);
@@ -241,10 +251,10 @@ export function SignaturePad({
   if (readOnly && initialSignature) {
     return (
       <div className={cn("space-y-2", className)}>
-        <Label className="text-xs font-semibold tracking-wider text-slate-400 uppercase">
+        <Label className="text-micro text-ink-tertiary uppercase">
           {labelText}
         </Label>
-        <div className="rounded-xl border-2 border-slate-200 bg-white p-3">
+        <div className="border-line bg-card rounded-2xl border p-3">
           <img
             src={initialSignature}
             alt={t("signature")}
@@ -252,7 +262,7 @@ export function SignaturePad({
           />
         </div>
         {signedMeta && (
-          <p className="text-[11px] text-slate-400">
+          <p className="text-meta text-ink-tertiary">
             {t("signedOn").replace(
               "{date}",
               formatNoteDate(signedMeta.date, locale),
@@ -285,8 +295,8 @@ export function SignaturePad({
       {/* Agreement text */}
       {agreementText && (
         <div className="space-y-2">
-          <ScrollArea className="h-[200px] rounded-lg border bg-slate-50/50">
-            <div className="prose prose-sm max-w-none p-4 text-sm/relaxed text-slate-600">
+          <ScrollArea className="border-line bg-card h-[200px] rounded-2xl border">
+            <div className="text-meta text-ink-secondary max-w-none p-4 whitespace-pre-line">
               {agreementText}
             </div>
           </ScrollArea>
@@ -295,39 +305,37 @@ export function SignaturePad({
               checked={agreed}
               onCheckedChange={(c) => setAgreed(c === true)}
             />
-            <span className="text-xs font-medium text-slate-600">
-              {t("agreeToTerms")}
-            </span>
+            <span className="text-meta text-body-ink">{t("agreeToTerms")}</span>
           </label>
         </div>
       )}
 
       {/* Mode tabs */}
-      <div className="flex items-center gap-1 rounded-lg bg-slate-100 p-0.5">
+      <div className="bg-surface-inset flex items-center gap-0.5 rounded-full p-0.75">
         <button
           type="button"
           onClick={() => setMode("draw")}
           className={cn(
-            "flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-semibold transition-all",
+            "text-body flex min-h-8.5 flex-1 items-center justify-center gap-1.5 rounded-full font-semibold transition-[background-color,box-shadow,color] duration-120 ease-[ease] motion-reduce:transition-none max-lg:min-h-10.5",
             mode === "draw"
-              ? "bg-white text-slate-800 shadow-sm"
-              : "text-slate-400 hover:text-slate-600",
+              ? "bg-card text-body-ink shadow-card"
+              : "text-ink-secondary hover:text-body-ink",
           )}
         >
-          <Pen className="size-3.5" />
+          <Pen aria-hidden className="size-4" />
           {t("modeDraw")}
         </button>
         <button
           type="button"
           onClick={() => setMode("type")}
           className={cn(
-            "flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-semibold transition-all",
+            "text-body flex min-h-8.5 flex-1 items-center justify-center gap-1.5 rounded-full font-semibold transition-[background-color,box-shadow,color] duration-120 ease-[ease] motion-reduce:transition-none max-lg:min-h-10.5",
             mode === "type"
-              ? "bg-white text-slate-800 shadow-sm"
-              : "text-slate-400 hover:text-slate-600",
+              ? "bg-card text-body-ink shadow-card"
+              : "text-ink-secondary hover:text-body-ink",
           )}
         >
-          <Type className="size-3.5" />
+          <Type aria-hidden className="size-4" />
           {t("modeType")}
         </button>
       </div>
@@ -336,8 +344,8 @@ export function SignaturePad({
       {mode === "draw" ? (
         <div
           className={cn(
-            "relative overflow-hidden rounded-xl border-2 border-dashed border-slate-200 bg-white",
-            !agreed && "opacity-50",
+            "border-line-strong relative overflow-hidden rounded-2xl border-[1.5px] border-dashed",
+            agreed ? "bg-card" : "bg-surface-inset cursor-not-allowed",
             compact ? "h-28" : "h-40",
           )}
         >
@@ -348,8 +356,10 @@ export function SignaturePad({
           />
           {isEmpty && (
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1">
-              <Pen className="size-5 text-slate-300" />
-              <span className="text-sm text-slate-300">{t("signHere")}</span>
+              <Pen aria-hidden className="text-ink-disabled size-5" />
+              <span className="text-meta text-ink-tertiary">
+                {t("signHere")}
+              </span>
             </div>
           )}
         </div>
@@ -364,19 +374,19 @@ export function SignaturePad({
           />
           <div
             className={cn(
-              "flex items-center justify-center rounded-xl border-2 border-slate-200 bg-white",
+              "border-line bg-card flex items-center justify-center rounded-2xl border",
               compact ? "h-28" : "h-40",
             )}
           >
             {typedName.trim() ? (
               <span
-                className="text-3xl text-slate-700"
+                className="text-body-ink text-3xl"
                 style={{ fontFamily: "Georgia, serif", fontStyle: "italic" }}
               >
                 {typedName}
               </span>
             ) : (
-              <span className="text-sm text-slate-300">
+              <span className="text-meta text-ink-tertiary">
                 {t("signatureAppearsHere")}
               </span>
             )}
@@ -386,17 +396,17 @@ export function SignaturePad({
 
       {/* Controls */}
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium tracking-wider text-slate-400 uppercase">
+        <span className="text-micro text-ink-tertiary uppercase">
           {labelText}
         </span>
         {mode === "draw" && (
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 gap-1.5 text-xs text-slate-400"
+            className="gap-1.5"
             onClick={handleClear}
           >
-            <Eraser className="size-3.5" />
+            <Eraser aria-hidden className="size-4" />
             {t("clearSignature")}
           </Button>
         )}
@@ -405,7 +415,7 @@ export function SignaturePad({
       {/* Witness */}
       {witnessMode && (
         <div className="space-y-1.5">
-          <Label className="text-xs">{t("witnessName")}</Label>
+          <Label className="text-meta text-body-ink">{t("witnessName")}</Label>
           <Input
             value={witnessName}
             onChange={(e) => setWitnessName(e.target.value)}
@@ -431,7 +441,7 @@ export function SignaturePad({
       </Button>
 
       {/* Legal text */}
-      <p className="text-[10px] leading-relaxed text-slate-400">
+      <p className="text-meta text-ink-tertiary text-pretty">
         {t("legalNotice")}
       </p>
     </div>

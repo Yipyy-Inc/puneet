@@ -14,8 +14,11 @@ import type { CustomerFacility } from "@/app/api/customer/facility/route";
 // request.
 // ============================================================================
 
-export function useCustomerFacility(): CustomerFacility | undefined {
+export function useCustomerFacility(
+  options: { enabled?: boolean } = {},
+): CustomerFacility | undefined {
   const { data } = useQuery({
+    enabled: options.enabled ?? true,
     queryKey: ["customer", "facility"],
     queryFn: async (): Promise<CustomerFacility> => {
       const response = await fetch("/api/customer/facility");

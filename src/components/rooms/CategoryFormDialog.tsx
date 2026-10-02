@@ -21,6 +21,7 @@ import { Separator } from "@/components/ui/separator";
 import { Loader2 } from "lucide-react";
 import type { RoomCategory, RoomCategoryColor } from "@/types/rooms";
 import { RoomImageUpload } from "@/components/rooms/RoomImageUpload";
+import { RoomCardFactsField } from "@/components/rooms/RoomCardFactsField";
 import { LodgingEligibilityField } from "@/components/rooms/LodgingEligibilityField";
 import {
   limitsConflict,
@@ -158,6 +159,13 @@ export function CategoryFormDialog({
               onChange={(url) => setForm({ ...form, imageUrl: url })}
               label="Cover Photo"
               hint="Shown to clients when browsing room categories during booking"
+            />
+
+            {/* The booking wizard's room card: its size words and chips. */}
+            <RoomCardFactsField
+              dimensions={form.dimensionsLabel ?? ""}
+              features={form.features ?? []}
+              onChange={(patch) => setForm({ ...form, ...patch })}
             />
 
             {/* The reference asks the space type before the capacity,

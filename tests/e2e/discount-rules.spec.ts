@@ -5,6 +5,7 @@ import { NO_PRICING_RULES } from "@/lib/settings/pricing";
 import { ACCOUNTS, signIn } from "./_auth";
 import { withoutTestItems } from "./_settings-snapshot";
 import { bookingsMarked } from "./_sweep";
+import { closeDoneScreen } from "./_wizard";
 
 // ============================================================================
 // WHAT A DISCOUNTED BOOKING COSTS.
@@ -372,10 +373,8 @@ test.describe("what the booking FORM writes for a discounted booking", () => {
       .click();
     await dialog.getByRole("button", { name: /^next$/i }).click();
 
-    await dialog
-      .locator("div.group.bg-card.rounded-2xl.cursor-pointer")
-      .first()
-      .click();
+    // The play area is assigned as a customer's is (the client's flow,
+    // 2026-10-01); staff can change it on Confirm.
     const create = dialog.getByRole("button", { name: /^create booking$/i });
     for (let i = 0; i < 6 && !(await create.isVisible()); i += 1) {
       await dialog.getByRole("button", { name: /^(next|skip)$/i }).click();
@@ -391,7 +390,7 @@ test.describe("what the booking FORM writes for a discounted booking", () => {
     await expect(page.getByText(/2 bookings created/i)).toBeVisible({
       timeout: 120_000,
     });
-    await expect(dialog).toBeHidden();
+    await closeDoneScreen(dialog);
 
     // Alice alone, and only next month: her whole list is big enough to be
     // cancelled by the statement timeout.

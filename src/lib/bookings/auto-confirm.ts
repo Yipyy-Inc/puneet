@@ -135,7 +135,7 @@ export async function autoConfirmCustomerBookings(
     const { data } = await admin
       .from("bookings")
       .select(
-        "id, facility_id, service, status, start_at, end_at, details, location_id, add_ons_total",
+        "id, facility_id, service, status, start_at, end_at, details, location_id, add_ons_total, training_series_session_id",
       )
       .in("id", bookingIds);
 
@@ -251,11 +251,12 @@ export async function autoConfirmCustomerBookings(
       // balance owed and nothing said a deposit was due, so their own policy
       // was silently ignored for every online booking.
       //
-      // It is RECORDED, never taken. Confirming a booking and charging a card
-      // in the same breath — without the customer pressing pay — is how a
-      // chargeback starts, and card-on-file capture wants its own flow with
-      // its own consent. What this writes is a number the customer is then
-      // ASKED for, through the pay link that already exists.
+      // It is RECORDED here. It is TAKEN only where the customer agreed to
+      // it with the request — the booking wizard says "Charged to Visa ••••
+      // 1234 when your booking is confirmed" and the request carries that
+      // card (`details.depositCardId`, 2026-10-02); the caller charges it
+      // once this has confirmed, and anybody else is sent the deposit link.
+      // Never a card the customer did not choose for this booking.
       const priced = await priceCustomerBooking({
         facilityId: row.facility_id,
         service: row.service!,
@@ -287,6 +288,20 @@ export async function autoConfirmCustomerBookings(
         // facility's own.
         extraServices: row.details?.["extraServices"],
         petRefs: petRefsByBooking.get(row.id) ?? [],
+        // Each pet's room, as the customer chose it (2026-10-01).
+        boardingPetServices: row.details?.["boardingPetServices"],
+        boardingShare: row.details?.["boardingShare"] === true,
+        // Training (2026-10-02): a class session prices from its series, a
+        // lesson or a consult from the program the customer chose.
+        trainingSessionId:
+          (row as { training_series_session_id?: string | null })
+            .training_series_session_id ?? null,
+        trainingProgramId:
+          (row.details?.["trainingProgramId"] as string | undefined) ?? null,
+        trainingPack:
+          typeof row.details?.["trainingPack"] === "number"
+            ? (row.details["trainingPack"] as number)
+            : null,
         locationId: row.location_id ?? null,
         quotedTotal: quoted,
       });

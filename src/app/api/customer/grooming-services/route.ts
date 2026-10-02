@@ -53,6 +53,10 @@ interface OfferedRow {
   eligibleBreeds: string[];
   displayOrder: number;
   sizePricing: Record<string, number | string>;
+  /** The service's uuid (20261002122850). */
+  rowId?: string | null;
+  /** Minutes per size, resolved for the branch (20261002122850). */
+  sizeDurations?: Record<string, number | string> | null;
 }
 
 function num(value: number | string | null | undefined): number {
@@ -80,15 +84,34 @@ function toPackage(row: OfferedRow): GroomingPackage {
     }
   }
 
+  const sizeDurations: Record<string, number> = {};
+  for (const [label, minutes] of Object.entries(row.sizeDurations ?? {})) {
+    if (
+      label === "small" ||
+      label === "medium" ||
+      label === "large" ||
+      label === "giant"
+    ) {
+      sizeDurations[label] = num(minutes);
+    }
+  }
+
   return {
     id: row.id,
+    // What an add-on offered for ONE service names it by; without it a
+    // customer was never offered those add-ons.
+    ...(row.rowId ? { rowId: row.rowId } : {}),
     name: row.name,
     description: row.description ?? "",
     basePrice: num(row.basePrice),
     duration: row.duration ?? 0,
     sizePricing,
+    sizeDurations,
+    // The amounts are the keys themselves, as the staff mapper reads them.
+    // They were nested under `values`, which `resolveEffectivePricing` never
+    // looks in — so no customer was ever quoted a coat adjustment.
     coatAdjustments: {
-      values: row.coatAdjustments ?? {},
+      ...(row.coatAdjustments ?? {}),
       mode: (row.coatAdjustmentMode as "flat" | "percent") ?? "flat",
     },
     mattedSurchargeDefault: num(row.mattedSurchargeDefault),

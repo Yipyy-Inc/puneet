@@ -518,7 +518,7 @@ export function ServiceDialog({
   // The heading it is listed under on the Rates page (20260926181007). The
   // field makes, renames and removes categories too, as boarding's and
   // daycare's editors do; the page's Categories button is the other door.
-  const { t: catText } = useStaffText("groomingServices");
+  const { t: catText, fill: catFill } = useStaffText("groomingServices");
   const { data: categories = NO_ITEMS } = useGroomingServiceCategories();
   const saveCategory = useSaveGroomingServiceCategory();
   const renameCategory = useRenameGroomingServiceCategory();
@@ -559,6 +559,12 @@ export function ServiceDialog({
 
   // Smart pricing
   const [sizePricing, setSizePricing] = useState<Record<string, number>>({});
+  // Minutes per size — what `create_booking` books and the wizard's
+  // Groomer & time fits. Blank takes the service's own length.
+  const [sizeDurations, setSizeDurations] = useState<Record<string, number>>(
+    {},
+  );
+  const [mattedExtraMinutes, setMattedExtraMinutes] = useState(0);
   const [coatEnabled, setCoatEnabled] = useState(false);
 
   // Groomer Tier Modifiers
@@ -638,6 +644,8 @@ export function ServiceDialog({
       setMinBookingNoticeHours(editingPackage.minBookingNoticeHours ?? 0);
       setMaxPerDay(editingPackage.maxPerDay ?? 0);
       setSizePricing(editingPackage.sizePricing);
+      setSizeDurations(editingPackage.sizeDurations ?? {});
+      setMattedExtraMinutes(editingPackage.mattedExtraMinutes ?? 0);
       const existingCoat = editingPackage.coatAdjustments ?? null;
       setCoatEnabled(!!existingCoat);
       if (existingCoat) {
@@ -684,6 +692,8 @@ export function ServiceDialog({
       setMinBookingNoticeHours(0);
       setMaxPerDay(0);
       setSizePricing({});
+      setSizeDurations({});
+      setMattedExtraMinutes(0);
       setCoatEnabled(false);
       setMattedSurchargeDefault(0);
       setBreedEnabled(false);
@@ -786,9 +796,11 @@ export function ServiceDialog({
       basePrice,
       duration,
       sizePricing,
+      sizeDurations,
       coatAdjustments: coatEnabled ? coatAdjustments : undefined,
       mattedSurchargeDefault:
         mattedSurchargeDefault > 0 ? mattedSurchargeDefault : undefined,
+      mattedExtraMinutes,
       breedOverrides:
         breedEnabled && Object.keys(breedOverrides).length > 0
           ? breedOverrides
@@ -870,7 +882,10 @@ export function ServiceDialog({
       const sizePricingChanged =
         JSON.stringify(prev.sizePricing) !== JSON.stringify(next.sizePricing);
       const basePriceChanged = prev.basePrice !== next.basePrice;
-      const durationChanged = prev.duration !== next.duration;
+      const durationChanged =
+        prev.duration !== next.duration ||
+        JSON.stringify(prev.sizeDurations ?? {}) !==
+          JSON.stringify(next.sizeDurations ?? {});
       const ageOrStylistOrCoatChanged =
         JSON.stringify(prev.ageGroupPricing ?? null) !==
           JSON.stringify(next.ageGroupPricing ?? null) ||
@@ -1237,6 +1252,28 @@ export function ServiceDialog({
                             className="h-8 pl-7 text-sm"
                           />
                         </div>
+                        <div className="relative w-[120px]">
+                          <Input
+                            type="number"
+                            min={0}
+                            inputMode="numeric"
+                            aria-label={catFill("sizeMinutesFor", {
+                              size: label,
+                            })}
+                            value={sizeDurations[id] || ""}
+                            placeholder={String(duration)}
+                            onChange={(e) =>
+                              setSizeDurations((prev) => ({
+                                ...prev,
+                                [id]: Number(e.target.value),
+                              }))
+                            }
+                            className="pr-12 text-sm"
+                          />
+                          <span className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs">
+                            {catText("minutesUnit")}
+                          </span>
+                        </div>
                       </div>
                     ),
                   )}
@@ -1341,6 +1378,36 @@ export function ServiceDialog({
                           }
                           className="h-8 pl-8 text-sm"
                         />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between border-b px-4 py-2">
+                      <div>
+                        <p className="text-xs font-semibold">
+                          {catText("mattedMinutes")}
+                        </p>
+                        <p className="text-muted-foreground text-[10px]">
+                          {catText("mattedMinutesHint")}
+                        </p>
+                      </div>
+                      <div className="relative w-28">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={240}
+                          inputMode="numeric"
+                          aria-label={catText("mattedMinutes")}
+                          value={mattedExtraMinutes || ""}
+                          placeholder="0"
+                          onChange={(e) =>
+                            setMattedExtraMinutes(
+                              Math.max(0, Number(e.target.value) || 0),
+                            )
+                          }
+                          className="pr-12 text-sm"
+                        />
+                        <span className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs">
+                          {catText("minutesUnit")}
+                        </span>
                       </div>
                     </div>
                   </div>

@@ -56,7 +56,7 @@ import { cn } from "@/lib/utils";
 import { Clock, DollarSign, Plus, Scissors, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useGroomingStations } from "@/hooks/use-grooming-stations";
-import { isStationEligibleForPetSize } from "@/components/rooms/GroomingStationsClient";
+import { isStationEligibleForPetSize } from "@/lib/grooming/stations";
 import type { GroomingStationPetSize } from "@/types/rooms";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
 import {

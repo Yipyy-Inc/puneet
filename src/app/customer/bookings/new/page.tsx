@@ -36,16 +36,22 @@ export default function NewBookingPage() {
   // If the customer clicked a recovery link in an email we'll restore every
   // field they had previously entered.
   // The saved draft, read through RLS: a link to somebody else's is a 404.
-  const { data: resumed } = useQuery(
+  const { data: resumed, isPending: draftPending } = useQuery(
     unfinishedBookingQueries.one(resumeBookingId),
   );
+  // The wizard reads a resumed draft once, when it mounts — its step, its
+  // pets, its dates are where it STARTS. Mounted before the draft arrived,
+  // it opened at the beginning with nothing chosen, and whether that
+  // happened was a race against the customer's own record loading
+  // (2026-10-02). So it waits for the draft, found or not.
+  const waitingForDraft = Boolean(resumeBookingId) && draftPending;
   const markRecovered = useMarkUnfinishedBookingRecovered();
   const requestBooking = useCustomerBookingRequest({
     onSent: () => {
       // They came back and booked: the draft is recovered. Never blocking —
-      // the booking is already made.
+      // the booking is already made. The wizard stays open on its "Request
+      // sent" screen; closing it is what returns to My bookings.
       if (resumeBookingId) markRecovered.mutate(resumeBookingId);
-      router.push("/customer/bookings");
     },
   });
   const resumePreselection = useMemo(() => {
@@ -102,67 +108,77 @@ export default function NewBookingPage() {
         </div>
       </div>
       <div className="mx-auto max-w-5xl">
-        <BookingModal
-          open={true}
-          onOpenChange={(nextOpen) => {
-            if (!nextOpen) router.push("/customer/bookings");
-          }}
-          clients={[customer]}
-          facilityId={selectedFacility.id}
-          facilityName={selectedFacility.name}
-          preSelectedClientId={customer.id}
-          preSelectedService={
-            resumePreselection?.preSelectedService ?? preSelectedService
-          }
-          preSelectedProgramId={
-            resumePreselection ? undefined : preSelectedProgramId
-          }
-          preSelectedCourseTypeId={
-            resumePreselection ? undefined : preSelectedCourseTypeId
-          }
-          // When a service-specific program is deep-linked (e.g. customer
-          // tapped Enroll on a training catalog card), lock the wizard to
-          // that service so Step 2 is hidden + skipped.
-          lockService={!resumePreselection && !!preSelectedService}
-          preSelectedPetId={resumePreselection?.preSelectedPetId}
-          preSelectedPetIds={resumePreselection?.preSelectedPetIds}
-          preSelectedStartDate={resumePreselection?.preSelectedStartDate}
-          preSelectedEndDate={resumePreselection?.preSelectedEndDate}
-          preSelectedCheckInTime={resumePreselection?.preSelectedCheckInTime}
-          preSelectedCheckOutTime={resumePreselection?.preSelectedCheckOutTime}
-          preSelectedDaycareDates={resumePreselection?.preSelectedDaycareDates}
-          preSelectedRoomId={resumePreselection?.preSelectedRoomId}
-          preSelectedDaycareSectionId={
-            resumePreselection?.preSelectedDaycareSectionId
-          }
-          preSelectedExtraServices={
-            resumePreselection?.preSelectedExtraServices
-          }
-          preSelectedFeedingSchedule={
-            resumePreselection?.preSelectedFeedingSchedule
-          }
-          preSelectedMedications={resumePreselection?.preSelectedMedications}
-          preSelectedSpecialRequests={
-            resumePreselection?.preSelectedSpecialRequests
-          }
-          // The step they left on. Without this the wizard guesses one from
-          // what is preselected, which sends somebody who left on Review back
-          // to Details to click forward again.
-          preSelectedStep={resumePreselection?.preSelectedStep}
-          preSelectedSubStep={resumePreselection?.preSelectedSubStep}
-          preSelectedSubStepId={resumePreselection?.preSelectedSubStepId}
-          preSelectedNoMedication={resumePreselection?.preSelectedNoMedication}
-          preSelectedVetContacts={resumePreselection?.preSelectedVetContacts}
-          preSelectedNotificationEmail={
-            resumePreselection?.preSelectedNotificationEmail
-          }
-          preSelectedNotificationSMS={
-            resumePreselection?.preSelectedNotificationSMS
-          }
-          isCustomerMode={true}
-          bookingRequestMessage={bookingFlow.bookingRequestConfirmationMessage}
-          onCreateBooking={requestBooking}
-        />
+        {waitingForDraft ? null : (
+          <BookingModal
+            open={true}
+            onOpenChange={(nextOpen) => {
+              if (!nextOpen) router.push("/customer/bookings");
+            }}
+            clients={[customer]}
+            facilityId={selectedFacility.id}
+            facilityName={selectedFacility.name}
+            preSelectedClientId={customer.id}
+            preSelectedService={
+              resumePreselection?.preSelectedService ?? preSelectedService
+            }
+            preSelectedProgramId={
+              resumePreselection ? undefined : preSelectedProgramId
+            }
+            preSelectedCourseTypeId={
+              resumePreselection ? undefined : preSelectedCourseTypeId
+            }
+            // When a service-specific program is deep-linked (e.g. customer
+            // tapped Enroll on a training catalog card), lock the wizard to
+            // that service so Step 2 is hidden + skipped.
+            lockService={!resumePreselection && !!preSelectedService}
+            preSelectedPetId={resumePreselection?.preSelectedPetId}
+            preSelectedPetIds={resumePreselection?.preSelectedPetIds}
+            preSelectedStartDate={resumePreselection?.preSelectedStartDate}
+            preSelectedEndDate={resumePreselection?.preSelectedEndDate}
+            preSelectedCheckInTime={resumePreselection?.preSelectedCheckInTime}
+            preSelectedCheckOutTime={
+              resumePreselection?.preSelectedCheckOutTime
+            }
+            preSelectedDaycareDates={
+              resumePreselection?.preSelectedDaycareDates
+            }
+            preSelectedRoomId={resumePreselection?.preSelectedRoomId}
+            preSelectedDaycareSectionId={
+              resumePreselection?.preSelectedDaycareSectionId
+            }
+            preSelectedExtraServices={
+              resumePreselection?.preSelectedExtraServices
+            }
+            preSelectedFeedingSchedule={
+              resumePreselection?.preSelectedFeedingSchedule
+            }
+            preSelectedMedications={resumePreselection?.preSelectedMedications}
+            preSelectedSpecialRequests={
+              resumePreselection?.preSelectedSpecialRequests
+            }
+            // The step they left on. Without this the wizard guesses one from
+            // what is preselected, which sends somebody who left on Review back
+            // to Details to click forward again.
+            preSelectedStep={resumePreselection?.preSelectedStep}
+            preSelectedSubStep={resumePreselection?.preSelectedSubStep}
+            preSelectedSubStepId={resumePreselection?.preSelectedSubStepId}
+            preSelectedNoMedication={
+              resumePreselection?.preSelectedNoMedication
+            }
+            preSelectedVetContacts={resumePreselection?.preSelectedVetContacts}
+            preSelectedNotificationEmail={
+              resumePreselection?.preSelectedNotificationEmail
+            }
+            preSelectedNotificationSMS={
+              resumePreselection?.preSelectedNotificationSMS
+            }
+            isCustomerMode={true}
+            bookingRequestMessage={
+              bookingFlow.bookingRequestConfirmationMessage
+            }
+            onCreateBooking={requestBooking}
+          />
+        )}
       </div>
     </div>
   );

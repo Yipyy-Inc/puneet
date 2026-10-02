@@ -61,6 +61,22 @@ const SAME_IN_BOTH = new Set([
   // construction rather than by oversight.
   "booking.clientAndPets", // {client} · {pets}
   "booking.feedCalcOwn", // {meals} × {portion} — the packing sum (2026-10-01)
+  // The booking wizard (2026-10-01): placeholders and separators only, and
+  // four words French writes the same way.
+  "booking.wizKindService", // {kind} · {service}
+  "booking.wizLineQty", // {count} × {price}
+  "booking.wizHeroStay", // {from} → {to} · {nights}
+  "booking.wizHeroDays", // {days} · {from} – {to}
+  "booking.wizKindCustom", // Service / Service
+  "booking.wizSizeShort_medium", // M / M
+  "booking.wizCoat_long", // Long / Long
+  "booking.wizCoat_double", // Double / Double
+  "booking.wizSlotsWith", // {date} · {groomer}
+  "booking.wizEarliestAt", // {date} · {time}
+  "booking.wizMinutes", // {count} min
+  "booking.wizClientLabel", // Client / Client
+  "booking.wizDates", // Dates / Dates
+  "booking.wizDate", // Date / Date
   // Two of the six coat types are spelled the same in French. "Long" is the
   // French word too, and a double coat is "double" — changing either to make
   // this list shorter would make the French wrong, which is the same reason

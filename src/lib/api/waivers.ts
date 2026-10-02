@@ -205,6 +205,8 @@ export function useSignWaiver() {
       signatureData?: string;
       witnessName?: string;
       witnessSignatureData?: string;
+      /** The signer ticked "I have read and agree". */
+      consent: boolean;
     }) =>
       (
         await send<SignWaiverResult>(

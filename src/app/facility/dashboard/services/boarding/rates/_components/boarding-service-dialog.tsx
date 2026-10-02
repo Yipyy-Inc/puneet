@@ -86,6 +86,8 @@ export interface BoardingServiceDraft {
   price: string;
   unit: BoardingPriceUnit;
   taxable: boolean;
+  /** Each pet after the first sharing one room; blank = the room, once. */
+  additionalPetPrice: string;
   lodgingTypeIds: string[];
   eligibleSpecies: string[];
   eligibleBreeds: string[];
@@ -116,6 +118,10 @@ export function draftFrom(
     price: service ? String(service.facilityPrice) : "",
     unit: service?.unit ?? "night",
     taxable: service?.taxable ?? true,
+    additionalPetPrice:
+      service?.additionalPetPrice == null
+        ? ""
+        : String(service.additionalPetPrice),
     lodgingTypeIds: service?.lodgingTypeIds ?? [],
     eligibleSpecies: service?.eligibleSpecies ?? [],
     eligibleBreeds: service?.eligibleBreeds ?? [],
@@ -208,7 +214,15 @@ export function BoardingServiceDialog({
   );
 
   const priceValue = Number(draft.price);
-  const valid = draft.name.trim().length > 0 && Number.isFinite(priceValue);
+  // Blank is a real answer — a shared room is the room's price, once.
+  const additionalPetValue =
+    draft.additionalPetPrice.trim() === ""
+      ? null
+      : Number(draft.additionalPetPrice);
+  const valid =
+    draft.name.trim().length > 0 &&
+    Number.isFinite(priceValue) &&
+    (additionalPetValue === null || Number.isFinite(additionalPetValue));
 
   async function handleSave() {
     if (!valid) return;
@@ -237,6 +251,10 @@ export function BoardingServiceDialog({
           price: Math.max(0, priceValue),
           unit: draft.unit,
           taxable: draft.taxable,
+          additionalPetPrice:
+            additionalPetValue === null
+              ? null
+              : Math.max(0, additionalPetValue),
           // Empty is EVERY type, which is why "all" writes `[]` rather than
           // listing them: a service pinned to today's list would silently stop
           // covering a lodging type added tomorrow.
@@ -438,6 +456,35 @@ export function BoardingServiceDialog({
                     })}
                   </div>
                 </div>
+              </div>
+
+              {/* The booking wizard's "share a room": what each pet after
+                  the first costs in one room of this service. */}
+              <div className="space-y-2 sm:max-w-[calc(50%-0.5rem)]">
+                <Label htmlFor="bsv-additional-pet">
+                  {draft.unit === "day"
+                    ? t("additionalPetPerDay")
+                    : t("additionalPetPerNight")}
+                </Label>
+                <div className="relative">
+                  <DollarSign
+                    className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                    aria-hidden
+                  />
+                  <Input
+                    id="bsv-additional-pet"
+                    className="pl-9"
+                    inputMode="decimal"
+                    value={draft.additionalPetPrice}
+                    onChange={(e) =>
+                      patch({ additionalPetPrice: e.target.value })
+                    }
+                    placeholder={t("additionalPetPlaceholder")}
+                  />
+                </div>
+                <p className="text-muted-foreground text-[13.5px]">
+                  {t("additionalPetHint")}
+                </p>
               </div>
 
               <ServiceTaxToggle

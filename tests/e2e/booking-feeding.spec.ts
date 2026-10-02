@@ -3,7 +3,7 @@ import { test, expect, type Locator, type Page } from "@playwright/test";
 import { bookingListSearch } from "@/lib/api/booking-list-params";
 
 import { ACCOUNTS, signIn } from "./_auth";
-import { answerCareSteps } from "./_wizard";
+import { answerCareSteps, pickRoomType } from "./_wizard";
 import { bookingsMarked, cancelBookingsMarked } from "./_sweep";
 
 // ============================================================================
@@ -266,8 +266,7 @@ async function toFeeding(page: Page, ahead: number) {
     .getByRole("button", { name: String(monday + 4), exact: true })
     .click();
   await next(dialog);
-  await dialog.getByText("Condominium", { exact: true }).first().click();
-  await expect(dialog.getByText(/Buddy\s*·\s*Condominium/)).toBeVisible();
+  await pickRoomType(dialog, "Condominium");
 
   const heading = dialog.getByRole("heading", { name: "Feeding", exact: true });
   for (let i = 0; i < 5 && !(await heading.isVisible()); i += 1) {

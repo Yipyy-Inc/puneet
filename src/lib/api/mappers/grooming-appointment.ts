@@ -129,6 +129,8 @@ export interface HistoryRow {
 }
 
 export interface AppointmentRow {
+  /** `details.groomingMatted`: matting was priced into the booking. */
+  matted_at_booking?: boolean | null;
   /** The booking's uuid. Not exposed to the screens — they address appointments
    *  by `ref` — but the route needs it to fetch history, which keys on it. */
   id: string;
@@ -317,6 +319,8 @@ export function rowToGroomingAppointment(
     sizeForWeight(pet?.weight, opts.tiers);
 
   return {
+    // Charged at booking: check-in does not charge it again.
+    ...(row.matted_at_booking === true ? { mattedAtBooking: true } : {}),
     id: String(row.ref),
     date: ymd(row.start_at, opts.timeZone),
     startTime: hhmm(row.start_at, opts.timeZone),
@@ -517,6 +521,7 @@ export const APPOINTMENT_SELECT = `
   amount_due, amount_paid,
   lines:booking_line_items ( name, kind, quantity, duration_min ),
   tip_amount, special_requests, created_at,
+  matted_at_booking:details->groomingMatted,
   assigned_staff_id, assigned_staff_name,
   staff:assigned_staff_id ( legacy_id ),
   client:client_id ( ref, name, email, phone ),

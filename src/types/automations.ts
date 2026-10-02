@@ -112,6 +112,11 @@ export type RealAutomationRule = z.infer<typeof automationRuleSchema>;
 export const DELIVERABLE_TRIGGERS: ReadonlySet<string> = new Set([
   "booking_created",
   "check_out",
+  // 2026-10-02: a customer's request raises it when it arrives (POST
+  // /api/bookings), and the messaging tick raises the day-before reminder
+  // for every confirmed booking (lib/messaging/booking-reminders.ts).
+  "booking_request_submitted",
+  "24h_before",
 ]);
 
 export const SEND_STATUSES = [

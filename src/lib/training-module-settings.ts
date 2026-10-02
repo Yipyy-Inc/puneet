@@ -76,6 +76,9 @@ export interface TrainingModuleSettings {
   /** Message sent to new students when they enroll. Used in the
    *  enrollment-confirmation email + toast. */
   defaultEnrollmentMessage: string;
+  /** The goals a training booking offers the owner (the booking wizard's
+   *  Goals step, 2026-10-01). Absent: the eight the wizard ships. */
+  goalOptions?: string[];
 
   /** Whether the session-completion flow auto-drafts a report card. */
   autoCreateReportCardOnSessionComplete: boolean;

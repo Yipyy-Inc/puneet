@@ -27,9 +27,12 @@ export async function writeEnrolmentCare(input: {
   enrollmentId: string;
   /** The enrolment's bookings, in session order. */
   bookingIds: string[];
-  care: BookingCare;
+  care?: BookingCare;
+  /** More details for every session — the owner's goals for the trainer. */
+  extra?: Record<string, unknown>;
 }): Promise<{ ok: boolean }> {
-  const { bookingIds, care } = input;
+  const { bookingIds } = input;
+  const care = input.care ?? {};
   if (bookingIds.length === 0) return { ok: true };
   if (!hasServiceRoleKey()) return { ok: false };
 
@@ -47,6 +50,7 @@ export async function writeEnrolmentCare(input: {
       const details = {
         ...((row?.details ?? {}) as Record<string, unknown>),
         ...care,
+        ...(input.extra ?? {}),
         ...(of > 1
           ? {
               bookingGroup: {

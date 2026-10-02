@@ -47,6 +47,10 @@ export function rowToClient(row: ClientRow, facilityName: string): Client {
   return {
     ...(details as Partial<Client>),
     id: row.ref,
+    // The row itself, for the reads keyed by it (saved cards), and when the
+    // client joined ("Client since 2024" on the booking form).
+    rowId: row.id,
+    createdAt: row.created_at,
     name: row.name,
     email: row.email,
     phone: row.phone ?? undefined,

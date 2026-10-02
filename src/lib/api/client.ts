@@ -240,17 +240,25 @@ export function useCreateClient() {
       );
 
       const failed: string[] = [];
+      // The pets as the database made them, so a caller can use them at
+      // once — the booking form selects them for the client just created.
+      const made: Pet[] = [];
       for (const pet of pets) {
         try {
-          await writeJson<Pet>("/api/pets", "POST", {
-            ...pet,
-            clientId: created.id,
-          });
+          made.push(
+            await writeJson<Pet>("/api/pets", "POST", {
+              ...pet,
+              clientId: created.id,
+            }),
+          );
         } catch {
           failed.push(pet.name ?? "a pet");
         }
       }
-      return { client: created, failedPets: failed };
+      return {
+        client: { ...created, pets: [...(created.pets ?? []), ...made] },
+        failedPets: failed,
+      };
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["clients"] });

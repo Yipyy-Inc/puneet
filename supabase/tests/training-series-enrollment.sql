@@ -324,6 +324,41 @@ exception when others then
   reset role; perform pg_temp.t('T9 re-enroll', false, sqlerrm);
 end $$;
 
+-- ── T10: a whole series costs its price, to the cent (20261002123000) ─────
+--
+-- $280 over six sessions is $46.67 a session. Booked six times that, the
+-- class cost $280.02; the last session now takes what is left, $46.65.
+do $$
+declare
+  v_series public.training_series; v_result jsonb;
+  v_total numeric; v_first numeric; v_last numeric;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001e9001');
+  set local role authenticated;
+  select * into v_series from public.create_training_series(
+    '00000000-0000-0000-0000-0000001e9020', 'Cents Test',
+    4::smallint, '10:00'::time, 60, current_date + 7, 6, 6, 280, null, null, 'Cents Course'
+  );
+  v_result := public.enroll_in_training_series(
+    v_series.id, '00000000-0000-0000-0000-0000001e9052',
+    '00000000-0000-0000-0000-0000001e9041', false);
+  reset role;
+
+  select sum(b.base_price) into v_total
+    from public.bookings b
+   where b.id in (select (e->>'bookingId')::uuid
+                    from jsonb_array_elements(v_result->'bookings') e);
+  select b.base_price into v_first from public.bookings b
+   where b.id = (v_result->'bookings'->0->>'bookingId')::uuid;
+  select b.base_price into v_last from public.bookings b
+   where b.id = (v_result->'bookings'->5->>'bookingId')::uuid;
+  perform pg_temp.t('T10 six sessions of a $280 class add up to $280.00, the last at $46.65',
+    v_total = 280 and v_first = 46.67 and v_last = 46.65,
+    format('total=%s first=%s last=%s', v_total, v_first, v_last));
+exception when others then
+  reset role; perform pg_temp.t('T10 a class to the cent', false, sqlerrm);
+end $$;
+
 select n, name, case when ok then 'PASS' else 'FAIL' end as result, detail
   from tap order by n;
 

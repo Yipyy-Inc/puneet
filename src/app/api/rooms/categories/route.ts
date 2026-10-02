@@ -4,6 +4,7 @@ import { generateUnits } from "@/lib/api/lodging-units";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { getFacilityContext } from "@/lib/api/facility-context";
 import { writeFailure } from "@/lib/api/write-failure";
+import { cleanDimensions, cleanFeatures } from "@/lib/rooms/room-facts";
 import type { RoomCategory } from "@/types/rooms";
 
 // ============================================================================
@@ -124,6 +125,9 @@ export async function POST(request: NextRequest) {
       active: input.active ?? true,
       visible_to_clients: input.visibleToClients ?? true,
       image_url: input.imageUrl ?? null,
+      // The room card's size words and chips (20261002122808).
+      dimensions_label: cleanDimensions(input.dimensionsLabel),
+      features: cleanFeatures(input.features),
       rules: input.rules ?? [],
     } as never)
     .select("id, legacy_id")

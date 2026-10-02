@@ -78,6 +78,8 @@ export interface CloverCheckoutProps {
   amountCents: number;
   currency: string;
   tipCents?: number;
+  /** A deposit link: the card route charges the deposit's share. */
+  purpose?: "deposit";
   onPaid: (result: {
     paymentId: string;
     /** Clover's id for the charge — what their dashboard is searched by. */
@@ -97,6 +99,7 @@ export function CloverCheckout({
   amountCents,
   currency,
   tipCents = 0,
+  purpose,
   onPaid,
 }: CloverCheckoutProps) {
   const t = useShellText("payments");
@@ -132,7 +135,7 @@ export function CloverCheckout({
       let body: Record<string, unknown>;
 
       if (savedCardId) {
-        body = { bookingId, savedCardId, tipCents };
+        body = { bookingId, savedCardId, tipCents, purpose };
       } else {
         if (!fields.current) return;
         const tokenised = await fields.current.createToken();
@@ -142,7 +145,7 @@ export function CloverCheckout({
         }
 
         // The token and the tip. Never an amount — the server owns that.
-        body = { bookingId, source: tokenised.token, tipCents };
+        body = { bookingId, source: tokenised.token, tipCents, purpose };
 
         // ── SAVING HAPPENS BEFORE THE CHARGE, AND IT HAS TO ───────────────
         //
@@ -180,7 +183,12 @@ export function CloverCheckout({
           if (saved?.ok && savedBody?.card?.id) {
             // The token is now spent on the customer, so the charge must name
             // the stored card rather than the token.
-            body = { bookingId, savedCardId: savedBody.card.id, tipCents };
+            body = {
+              bookingId,
+              savedCardId: savedBody.card.id,
+              tipCents,
+              purpose,
+            };
             void queryClient.invalidateQueries({
               queryKey: savedCardKeys.forClient(clientId),
             });
@@ -228,6 +236,7 @@ export function CloverCheckout({
   }, [
     bookingId,
     tipCents,
+    purpose,
     amountCents,
     onPaid,
     savedCardId,

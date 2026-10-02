@@ -167,6 +167,7 @@ import { BookingHero } from "./_components/booking-hero";
 import { BookingNotices } from "./_components/booking-notices";
 import { BookingPetsCard } from "./_components/booking-pets-card";
 import { BookingTipsCard } from "./_components/booking-tips-card";
+import { TrainingPackCard } from "./_components/training-pack-card";
 import { BookingHistoryCard } from "./_components/booking-history-card";
 
 // ========================================
@@ -1239,6 +1240,16 @@ export default function ClientBookingDetailPage({
 
       <div className="space-y-5 p-5 md:p-7">
         <BookingNotices
+          awaitingAgreements={
+            booking.status === "pending" && booking.awaitingAgreements === true
+              ? {
+                  clientRef: client.id,
+                  service: booking.service,
+                  email: client.email?.trim() || null,
+                  phone: client.phone?.trim() || null,
+                }
+              : null
+          }
           customerCancellation={
             booking.status === "cancelled" &&
             booking.cancellation?.by === "customer"
@@ -1358,6 +1369,25 @@ export default function ClientBookingDetailPage({
                 onSite={booking.presence === "on-site"}
               />
             </div>
+
+            {booking.service.toLowerCase() === "training" && !isCancelled && (
+              <TrainingPackCard
+                clientRef={client.id}
+                onBookNext={(programId) =>
+                  openBookingModal({
+                    clients: [client],
+                    facilityId: booking.facilityId,
+                    facilityName: facilityProfile.businessName,
+                    preSelectedClientId: client.id,
+                    preSelectedPetId: pet?.id,
+                    preSelectedService: "training",
+                    preSelectedProgramId: programId,
+                    lockService: true,
+                    onCreateBooking: createBooking,
+                  })
+                }
+              />
+            )}
 
             {booking.service.toLowerCase() === "boarding" && (
               <BookingKennelsCard

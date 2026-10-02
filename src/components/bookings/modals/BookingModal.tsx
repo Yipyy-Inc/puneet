@@ -10,10 +10,26 @@ import { formatDateLocal } from "@/lib/shift-recurrence";
 import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
 import {
   formatCalendarDayLong,
+  formatDateShort,
   formatList,
   formatMoney,
+  formatPercent,
+  formatTimeOfDay,
   isPluralOne,
 } from "@/lib/i18n/format";
+import { useCustomerFacility as useCustomerFacilityProfile } from "@/lib/api/customer-facility";
+import { wizardProgress } from "@/lib/bookings/wizard/progress";
+import { WizardDialog } from "@/components/bookings/wizard/shell/WizardDialog";
+import { WizardRail } from "@/components/bookings/wizard/shell/WizardRail";
+import { WizardTopBar } from "@/components/bookings/wizard/shell/WizardTopBar";
+import { WizardHeader } from "@/components/bookings/wizard/shell/WizardHeader";
+import { WizardFooter } from "@/components/bookings/wizard/shell/WizardFooter";
+import { DiscardPanel } from "@/components/bookings/wizard/shell/DiscardPanel";
+import { SuccessScreen } from "@/components/bookings/wizard/shell/SuccessScreen";
+import type {
+  WizardStepView,
+  WizardSubStepView,
+} from "@/components/bookings/wizard/shell/types";
 import React, {
   useState,
   useMemo,
@@ -31,80 +47,105 @@ import {
 import { usePricedAddOns } from "@/lib/add-ons/use-offered-add-ons";
 import type { TaxConfig } from "@/lib/settings/tax";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { Badge } from "@/components/ui/badge";
+
+import { Check, AlertTriangle } from "lucide-react";
+import { DetailsStep } from "./steps";
+import { BoardingSchedule } from "@/components/bookings/wizard/steps/details/schedule/BoardingSchedule";
+import { DaycareSchedule } from "@/components/bookings/wizard/steps/details/schedule/DaycareSchedule";
+import { RoomTypeStep } from "@/components/bookings/wizard/steps/details/rooms/RoomTypeStep";
+import { AddOnsStep } from "@/components/bookings/wizard/steps/details/add-ons/AddOnsStep";
+import { PackageStep } from "@/components/bookings/wizard/steps/details/grooming/PackageStep";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  ProgramStep,
+  type ProgramChoice,
+} from "@/components/bookings/wizard/steps/details/training/ProgramStep";
+import { ClassStep } from "@/components/bookings/wizard/steps/details/training/ClassStep";
 import {
-  Plus,
-  Check,
-  Clock,
-  Pill,
-  Utensils,
-  Scissors,
-  ClipboardCheck,
-  AlertTriangle,
-  type LucideIcon,
-} from "lucide-react";
-import { Switch } from "@/components/ui/switch";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { ServiceStep, ClientPetStep, DetailsStep, ConfirmStep } from "./steps";
-import { PackagePromptWizardContent } from "./steps/PackagePromptWizardContent";
+  GoalsStep,
+  type TrainingIntake,
+} from "@/components/bookings/wizard/steps/details/training/GoalsStep";
+import { useOfferedTrainingClasses } from "@/lib/api/training-classes";
+import { useGrantLessonPack } from "@/lib/api/training-lesson-packs";
+import { automationQueries } from "@/lib/api/automations";
+import type { MissingForm } from "@/lib/forms/requirements";
+import {
+  fetchTrainingGoalOptions,
+  fetchTrainingPrograms,
+} from "@/lib/api/training-book";
+import {
+  classesForProgram,
+  classPrice,
+  classSessionDates,
+  classWhen,
+  type OfferedClass,
+} from "@/lib/training/offered-classes";
+import {
+  programFormat,
+  programMinutes,
+  programPrice,
+} from "@/lib/training/program-offer";
+import { useTrainingTrainers } from "@/lib/api/training-trainers";
+import type { TrainingPackage } from "@/types/training";
+import {
+  StaffTimeStep,
+  type StaffTime,
+} from "@/components/bookings/wizard/steps/details/scheduler/StaffTimeStep";
+import { groomPrice } from "@/lib/bookings/wizard/groom-pricing";
+import { useGroomingStations } from "@/hooks/use-grooming-stations";
+import { isStationEligibleForPetSize } from "@/lib/grooming/stations";
+import { backToBack } from "@/lib/bookings/wizard/staff-slots";
+import { hhmmOf, minutesOf } from "@/lib/bookings/wizard/time-windows";
+import type { GroomingSizeTier } from "@/lib/grooming/size-tier";
+import type { CoatType as GroomingCoatType } from "@/types/grooming";
+import { ConfirmStep } from "@/components/bookings/wizard/steps/confirm/ConfirmStep";
+import { useConfirmModel } from "@/components/bookings/wizard/steps/confirm/use-confirm-model";
+import {
+  confirmButtonKey,
+  type PreviewStatus,
+} from "@/lib/bookings/wizard/confirm-view";
+import { StatusChip } from "@/components/bookings/wizard/steps/confirm/ConfirmHero";
+import { describeFeeding } from "@/lib/feeding/describe";
+import { ClientPetStep } from "@/components/bookings/wizard/steps/client-pet/ClientPetStep";
+import { ServiceStep } from "@/components/bookings/wizard/steps/service/ServiceStep";
+import { CreateClientModal } from "@/components/clients/CreateClientModal";
+import { clientQueries, useCreateClient } from "@/lib/api/client";
+import { usePermission } from "@/hooks/use-facility-rbac";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { groomingQueries, resolveEffectivePricing } from "@/lib/api/grooming";
-import { getPetSize } from "@/lib/pet-size";
+import { groomingQueries, resolveAutoAddOns } from "@/lib/api/grooming";
+import { groomingSizeFor } from "@/lib/grooming/size-tier";
 import {
   EVALUATION_OVERRIDE_MIN_REASON,
-  EvaluationOverridePanel,
-  EvaluationOverrideSummary,
   type EvaluationIssue,
-} from "@/components/bookings/modals/steps/EvaluationOverridePanel";
-import { computeBookingTotals } from "@/lib/service-areas";
+} from "@/lib/bookings/wizard/evaluation-issues";
+import { StaffAssignments } from "@/components/bookings/wizard/steps/confirm/StaffAssignments";
+import { bookableLookup } from "@/lib/add-ons/bookable";
+import type { ServiceModule } from "@/types/facility-staff";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
-import { computePackagePassDiscount } from "@/lib/grooming/package-pass";
 import { useRedeemPackagePass } from "@/lib/api/customer-packages";
 import { syncRedeemedPassToQuickBooks } from "@/lib/quickbooks/document-sync";
-import { STEPS, detailSubSteps, getServiceAccent } from "./constants";
+import { STEPS, detailSubSteps } from "./constants";
 import { useCustomServices } from "@/hooks/use-custom-services";
-import { isBuiltinService } from "@/lib/service-registry";
-import { applyDynamicPricingRules } from "@/lib/pricing-rules";
-import { splitBookingMoney } from "@/lib/pricing/booking-write-money";
-import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
 import { useDaycareAreas } from "@/hooks/use-daycare-areas";
 import { useRooms } from "@/hooks/use-rooms";
 import { useLocationContext } from "@/hooks/use-location-context";
-import { boardingNightlyRate, boardingPricing } from "@/lib/boarding-pricing";
-import type { ChosenBoardingService } from "@/components/bookings/modals/service-details/BoardingDetails";
-import { rateGapMessage, type RateGap } from "@/lib/bookings/rate-gap";
-import { useDaycareRates } from "@/hooks/use-daycare-rates";
-import { boardingParts, daycareParts } from "@/lib/bookings/booking-parts";
-import { useDaycareLocationPrices } from "@/lib/api/hq-services";
+import { boardingNightlyRate } from "@/lib/boarding-pricing";
+import type { ChosenBoardingService } from "@/lib/bookings/wizard/boarding-choice";
+import { rateGapMessage } from "@/lib/bookings/rate-gap";
+import { assembleQuote } from "@/lib/bookings/quote/assemble";
+import {
+  boardingParts,
+  daycareParts,
+  groomingParts,
+} from "@/lib/bookings/booking-parts";
 import {
   autoAssignDaycareSection,
-  autoAssignBoardingUnit,
   roomsForAssignments,
 } from "@/lib/capacity-engine";
 import { planKennels, type KennelChange } from "@/lib/boarding/kennel-changes";
-import { lodgingTypesServing } from "@/lib/pricing/boarding-service-choice";
+import { playAreaChoices } from "@/lib/bookings/wizard/play-area-choices";
 import { defaultAddOnLines } from "@/lib/pricing/boarding-default-addons";
 import { estimateAddOnLines } from "@/lib/estimates/add-on-lines";
 import { estimateFeeLines } from "@/lib/estimates/fee-lines";
@@ -116,24 +157,22 @@ import {
   type SentEstimate,
 } from "@/components/bookings/use-estimate-actions";
 import { useStaffText } from "@/lib/staff/use-staff-text";
-import { useGroomingMenu } from "@/lib/api/grooming-catalogue";
+import {
+  useGroomingMenu,
+  useGroomingSizeTiers,
+} from "@/lib/api/grooming-catalogue";
 import { useGroomingAddOnOffer } from "@/lib/add-ons/use-grooming-add-on-offer";
 import { useBookingWaivers } from "./use-booking-waivers";
 import {
   findApplicableDepositRule,
   computeDepositAmount,
 } from "@/lib/settings/deposits";
+import type { DepositMode } from "@/components/bookings/wizard/steps/confirm/ChecklistSections";
 import {
-  BookingDepositPrompt,
-  type DepositPromptValue,
-} from "./BookingDepositPrompt";
-import { CustomerDepositPanel } from "./CustomerDepositPanel";
-import {
-  TrainingEnrollmentCartPanel,
-  type TrainingCartItem,
-} from "./TrainingEnrollmentCartPanel";
-import type { TrainingSelection } from "./service-details/TrainingScheduleStep";
-import { useEnrollInTrainingSeries } from "@/lib/api/training-series";
+  useCancelTrainingSeries,
+  useCreateTrainingSeries,
+  useEnrollInTrainingSeries,
+} from "@/lib/api/training-series";
 
 import type { Client } from "@/types/client";
 import type { AppointmentStage } from "@/types/grooming";
@@ -142,7 +181,6 @@ import type {
   NewBooking,
   Booking,
   DaycareDateTime,
-  Task,
   ExtraService,
   VetContact,
   BookingCare,
@@ -150,12 +188,7 @@ import type {
 import type { Pet, Evaluation } from "@/types/pet";
 import { useCareFees } from "@/lib/api/facility-settings";
 import { useUpdatePet } from "@/lib/api/client";
-import {
-  careChargeLines,
-  type CareChargeLine,
-} from "@/lib/medications/charges";
-import { houseFoodName } from "@/lib/feeding/labels";
-import { providedLineName } from "@/lib/medications/describe";
+
 import { fill as fillWords } from "@/lib/medications/dose";
 import { profileAfterBooking } from "@/lib/medications/draft";
 import {
@@ -163,7 +196,6 @@ import {
   FEEDING_SUB_STEP_ID,
   legacySubStepId,
   MEDICATION_SUB_STEP_ID,
-  mergeCare,
   subStepIndexOf,
 } from "@/lib/bookings/care-steps";
 import { careStepUse } from "@/lib/settings/care-setup";
@@ -270,10 +302,8 @@ export interface NewBookingModalProps {
   preSelectedVetContacts?: Record<string, VetContact>;
   /**
    * The ref of the booking being edited — what its label photos belong to.
-   * Not `booking`, which turns the form into a read-only view.
    */
   editingRef?: number;
-  booking?: Booking;
   /** When true, the wizard is being used by a customer making a booking request (not facility staff). */
   isCustomerMode?: boolean;
   /** Custom message shown to the customer after they submit a booking request. Configured by the facility. */
@@ -365,23 +395,45 @@ function pricingSnapshotChanged(
  * `toISOString()` reads UTC, which names the day BEFORE for anyone east of
  * Greenwich — the calendar hands back local midnight.
  */
+function stayDays(start: Date, end: Date): Date[] {
+  const days: Date[] = [];
+  const day = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  while (day <= end) {
+    days.push(new Date(day));
+    day.setDate(day.getDate() + 1);
+  }
+  return days;
+}
+
 function localDay(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
+/** The size bands' loading default: one array, never a new one per render. */
+const NO_SIZE_TIERS: GroomingSizeTier[] = [];
+const NO_TRAINING_PROGRAMS: TrainingPackage[] = [];
+const NO_GOALS: string[] = [];
+const NO_TRAINERS: Array<{ id: string; staffId: string; name: string }> = [];
+const NO_CLASSES: OfferedClass[] = [];
+// A trainer may teach any program: no package to qualify for.
+const NO_PACKAGE_IDS: string[] = [];
+const NO_MISSING_FORMS: MissingForm[] = [];
+/** Staff's reason to book without a required form: a few words at least. */
+const FORMS_MIN_REASON = 5;
+
 export function BookingModal({
   open,
   onOpenChange,
-  clients,
+  clients: callerClients,
   facilityId,
+  facilityName,
   onCreateBooking,
   preSelectedClientId,
   preSelectedPetId,
   preSelectedPetIds,
   preSelectedService,
-  preSelectedCourseTypeId,
   preSelectedProgramId,
   lockService = false,
   preSelectedStartDate,
@@ -404,7 +456,6 @@ export function BookingModal({
   preSelectedNoMedication,
   preSelectedVetContacts,
   editingRef,
-  booking,
   isCustomerMode = false,
   bookingRequestMessage,
   estimateMode = false,
@@ -425,6 +476,11 @@ export function BookingModal({
   // fixture array of another facility's bookings.
   const { data: staffProfiles } = useQuery(staffQueries.profiles());
   const locale = useShellLocale();
+  // A customer is told whose booking form this is — the facility's own name
+  // (/api/customer/facility), not the fixture the customer pages once read.
+  const customerFacility = useCustomerFacilityProfile({
+    enabled: isCustomerMode,
+  });
   const {
     daycare,
     boarding,
@@ -452,12 +508,6 @@ export function BookingModal({
   const { sections: daycareSections } = useDaycareAreas();
   const { categories: roomCategories, rooms: facilityRooms } = useRooms();
   const { currentLocationId } = useLocationContext();
-  const { data: daycareLocationPrices = [] } = useDaycareLocationPrices();
-  // The facility's own rate card (daycare_rates). Until 2026-09-20 the wizard
-  // read it only to decide which sections a rate may be booked into, and
-  // priced the day from `daycare_config.basePrice` — so a facility could set
-  // "Full day $38" and watch every booking charge the fixture's 35.
-  const { rates: daycareRateCards } = useDaycareRates();
   const queryClient = useQueryClient();
   const enrollInSeries = useEnrollInTrainingSeries();
   const { mutate: redeemPass } = useRedeemPackagePass();
@@ -483,6 +533,10 @@ export function BookingModal({
   // business's "Full Groom" quoted the other business's price on this
   // business's booking (20260924160000).
   const { data: groomingMenu = [] } = useGroomingMenu({
+    asCustomer: isCustomerMode,
+  });
+  // The facility's size bands — the ones `create_booking` prices a groom by.
+  const { data: groomingSizeTiers = NO_SIZE_TIERS } = useGroomingSizeTiers({
     asCustomer: isCustomerMode,
   });
   // Travel-zone surcharge (Step 6). The ZIP-prefix TAX that came with it is
@@ -563,14 +617,6 @@ export function BookingModal({
     });
   }, []);
 
-  // Multi-dog training: `trainingCart` holds dogs already configured in earlier
-  // passes through Steps 1–3; `currentTrainingSelection` is the series chosen
-  // for the dog being configured right now (lifted from TrainingScheduleStep).
-  // Declared before the open/close reset below so it can clear them.
-  const [trainingCart, setTrainingCart] = useState<TrainingCartItem[]>([]);
-  const [currentTrainingSelection, setCurrentTrainingSelection] =
-    useState<TrainingSelection | null>(null);
-
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
     setPrevOpen(open);
@@ -587,76 +633,55 @@ export function BookingModal({
       setGeneratedEstimateId(null);
       setSavedEstimate(null);
       setEstimatePricingSnapshot(null);
-      // Clear the multi-dog training cart.
-      setTrainingCart([]);
-      setCurrentTrainingSelection(null);
     }
   }
 
-  // Staff options for assignment
-  const staffOptions = [
-    // french-ok: a person's name — §5q keeps one out of the locale layer
-    { value: "Mike Chen", label: "Mike Chen" },
-    // french-ok: a person's name — §5q keeps one out of the locale layer
-    { value: "Emily Davis", label: "Emily Davis" },
-    // french-ok: a person's name — §5q keeps one out of the locale layer
-    { value: "David Wilson", label: "David Wilson" },
-    // french-ok: a person's name — §5q keeps one out of the locale layer
-    { value: "Lisa Rodriguez", label: "Lisa Rodriguez" },
-    // french-ok: a person's name — §5q keeps one out of the locale layer
-    { value: "Tom Anderson", label: "Tom Anderson" },
-    // french-ok: a person's name — §5q keeps one out of the locale layer
-    { value: "Manager One", label: "Manager One" },
-    // french-ok: a person's name — §5q keeps one out of the locale layer
-    { value: "Admin User", label: "Admin User" },
-  ];
-
-  // Task assignments state
-  const [taskAssignments, setTaskAssignments] = useState<
-    Record<string, string>
-  >({});
-
-  // Step management
-  // In edit mode, hide both client-pet and service steps — user can only edit
-  // dates, room, add-ons, and feeding/medication details.
-  const displayedSteps = STEPS.filter(
-    (step) =>
-      !(
-        step.id === "client-pet" &&
-        (editMode || (preSelectedClientId && preSelectedPetId))
-      ) &&
-      !(step.id === "service" && editMode) &&
-      // Hide the Service step entirely when the caller deep-linked into a
-      // specific service (e.g. customer tapped Enroll on a training program).
-      !(step.id === "service" && lockService && !!preSelectedService),
-  );
-  // Wizard now runs client-pet → service → details → confirm. When both client
-  // and pet are preselected, client-pet is filtered out and we start at service
-  // (or details, when a service is also preselected).
+  // ── STEPS ──────────────────────────────────────────────────────────────
+  //
+  // Four, always, as the client's mock draws them (2026-10-01). A step the
+  // caller already decided is LOCKED — shown done, never re-opened — rather
+  // than taken out of the list: an edit's client and service, and a service
+  // the caller fixed (a deep link into training, a report card's "Book
+  // again"). Next and Previous step over a locked step.
+  const displayedSteps = STEPS;
+  const lockedStepIds = new Set<string>([
+    ...(editMode ? ["client-pet", "service"] : []),
+    ...(lockService && preSelectedService ? ["service"] : []),
+  ]);
+  const stepIndexOf = (id: string) =>
+    Math.max(
+      0,
+      displayedSteps.findIndex((step) => step.id === id),
+    );
+  const nextOpenStep = (from: number) => {
+    for (let i = from + 1; i < displayedSteps.length; i++) {
+      if (!lockedStepIds.has(displayedSteps[i]!.id)) return i;
+    }
+    return -1;
+  };
+  const previousOpenStep = (from: number) => {
+    for (let i = from - 1; i >= 0; i--) {
+      if (!lockedStepIds.has(displayedSteps[i]!.id)) return i;
+    }
+    return -1;
+  };
+  // Where a fresh booking starts, from what the caller preselected.
+  const freshStepIndex =
+    preSelectedClientId && preSelectedPetId && preSelectedService
+      ? stepIndexOf("details")
+      : preSelectedClientId && preSelectedPetId
+        ? stepIndexOf("service")
+        : 0;
   const initialStepIndex = (() => {
-    // Edit mode always starts at the details step (first step after filtering)
-    if (editMode) return 0;
-    // RESUMING: open on the step the draft was left on. Everything below is a
-    // guess from what happens to be preselected — good enough for a deep link,
-    // wrong for a resume, because a customer who left on Review has all three
-    // preselected and would land on Details and click forward again.
+    // An edit opens on Details: its client and service are not in question.
+    if (editMode) return stepIndexOf("details");
+    // RESUMING: open on the step the draft was left on — the preselection
+    // below is a guess, wrong for a resume.
     if (preSelectedStep) {
       const saved = displayedSteps.findIndex((s) => s.id === preSelectedStep);
       if (saved >= 0) return saved;
     }
-    if (preSelectedClientId && preSelectedPetId && preSelectedService) {
-      return Math.max(
-        0,
-        displayedSteps.findIndex((s) => s.id === "details"),
-      );
-    }
-    if (preSelectedClientId && preSelectedPetId) {
-      return Math.max(
-        0,
-        displayedSteps.findIndex((s) => s.id === "service"),
-      );
-    }
-    return 0;
+    return freshStepIndex;
   })();
   const [currentStep, setCurrentStep] = useState(initialStepIndex);
   // Seeded from the draft when resuming: `step` returns them to the right
@@ -682,15 +707,35 @@ export function BookingModal({
   // service step scrolled past its first row of service cards.
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const viewport = scrollAreaRef.current?.querySelector<HTMLDivElement>(
-      '[data-slot="scroll-area-viewport"]',
-    );
-    if (viewport) viewport.scrollTop = 0;
+    if (scrollAreaRef.current) scrollAreaRef.current.scrollTop = 0;
   }, [currentStep, currentSubStepId]);
-  const [highestStepReached, setHighestStepReached] =
-    useState(initialStepIndex);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const saveUnfinished = useSaveUnfinishedBooking();
+
+  // ── THE CLIENTS STEP 1 SEARCHES ──────────────────────────────────────
+  //
+  // Staff search the facility's clients as they are NOW. The list a caller
+  // passes was read when it opened the form — the header passes
+  // `clientQueries.all()` as it stood, so a form opened before that read
+  // landed searched nobody. The caller's list still counts (a client page
+  // passes its own client), and a client made from inside the form with
+  // "+ New client" is added at once, before any list has re-read.
+  const { data: liveClients } = useQuery({
+    ...clientQueries.all(),
+    enabled: !isCustomerMode,
+  });
+  const [addedClients, setAddedClients] = useState<Client[]>([]);
+  const clients = useMemo(() => {
+    const byId = new Map<number, Client>();
+    for (const list of [callerClients, liveClients ?? [], addedClients]) {
+      for (const client of list) byId.set(client.id, client);
+    }
+    return [...byId.values()];
+  }, [callerClients, liveClients, addedClients]);
+  // The new-client form, shown in this form's place (§5i: never stacked).
+  const [creatingClient, setCreatingClient] = useState(false);
+  const createClient = useCreateClient();
+  const mayCreateClients = usePermission("create_clients");
 
   // Client selection state
   const [searchQuery, setSearchQuery] = useState("");
@@ -722,20 +767,6 @@ export function BookingModal({
   const [selectedService, setSelectedService] = useState<string>(
     preSelectedService ?? "",
   );
-  // Effective training course type — initialized from the deep-link prop, then
-  // updated at runtime when staff/customer pick a course type from the Step 2
-  // Training card's quick-picks. Flows into Step 3 (TrainingScheduleStep) so it
-  // scopes to that course; the Course Catalog is the single source of truth.
-  const [selectedCourseTypeId, setSelectedCourseTypeId] = useState<
-    string | undefined
-  >(preSelectedCourseTypeId);
-  const handleTrainingSelectionChange = useCallback(
-    (selection: TrainingSelection | null) => {
-      setCurrentTrainingSelection(selection);
-    },
-    [],
-  );
-  const accent = getServiceAccent(selectedService);
   const handleServiceChange = (service: string) => {
     setSelectedService(service);
     if (service === "evaluation") {
@@ -745,35 +776,11 @@ export function BookingModal({
     } else {
       setServiceType("");
     }
-    // A fresh service pick clears any previously-chosen training course type.
-    setSelectedCourseTypeId(undefined);
-    // Switching to a non-training service abandons the multi-dog cart.
-    if (service !== "training") {
-      setTrainingCart([]);
-      setCurrentTrainingSelection(null);
-    }
     setCurrentSubStepId(0);
     // Apply per-service notification defaults from settings
     const defaults = getNotifDefaults(service);
     setNotificationEmail(defaults.email);
     setNotificationSMS(defaults.sms);
-  };
-
-  // Step 2 Training quick-pick: lock the service to training, scope Step 3 to
-  // the chosen course type, and jump straight to the Details step.
-  const handlePickTrainingCourse = (courseTypeId: string) => {
-    setSelectedService("training");
-    setServiceType("");
-    setSelectedCourseTypeId(courseTypeId);
-    const defaults = getNotifDefaults("training");
-    setNotificationEmail(defaults.email);
-    setNotificationSMS(defaults.sms);
-    const detailsIndex = displayedSteps.findIndex((s) => s.id === "details");
-    if (detailsIndex >= 0) {
-      setCurrentStep(detailsIndex);
-      setCurrentSubStepId(0);
-      setHighestStepReached((prev) => Math.max(prev, detailsIndex));
-    }
   };
 
   // Service-specific state
@@ -791,6 +798,9 @@ export function BookingModal({
   // the stay, so the menu was decoration and a receipt could not name what
   // was sold. The price rides along so the quote does not re-read the
   // catalogue on every keystroke.
+  // A half-day service's morning or afternoon (the client's mock,
+  // 2026-10-01); the times it picks are what the booking keeps.
+  const [daycarePart, setDaycarePart] = useState<"am" | "pm">("am");
   const [daycareService, setDaycareService] = useState<{
     rowId: string;
     name: string;
@@ -803,11 +813,13 @@ export function BookingModal({
   // is what every boarding booking made before this was sold at.
   const [boardingService, setBoardingService] =
     useState<ChosenBoardingService | null>(null);
-  // How many services the customer's boarding menu offers these pets, null
-  // while it loads. Reported by the picker, which already works it out.
-  const [boardingMenuOffered, setBoardingMenuOffered] = useState<number | null>(
-    null,
-  );
+  // Each pet's room on the Room type step (the client's mock, 2026-10-01):
+  // the card chosen, the service it is, and whether the pets share.
+  const [petRoomCards, setPetRoomCards] = useState<Record<number, string>>({});
+  const [petBoardingServices, setPetBoardingServices] = useState<
+    Record<number, ChosenBoardingService>
+  >({});
+  const [boardingShare, setBoardingShare] = useState(false);
   const [startDate, setStartDate] = useState(preSelectedStartDate ?? "");
   const [endDate, setEndDate] = useState(preSelectedEndDate ?? "");
   const [checkInTime, setCheckInTime] = useState(
@@ -902,9 +914,6 @@ export function BookingModal({
   const [vetContacts, setVetContacts] = useState<Record<string, VetContact>>(
     preSelectedVetContacts ?? {},
   );
-  const [feedingMedicationTab, setFeedingMedicationTab] = useState<
-    "feeding" | "medication"
-  >("feeding");
   const [extraServices, setExtraServices] = useState<ExtraService[]>(
     preSelectedExtraServices ?? [],
   );
@@ -967,11 +976,8 @@ export function BookingModal({
   // Grooming-only: split-service stages — when set, the booking renders as
   // sequential blocks on the calendar instead of one continuous block.
   const [groomingStages, setGroomingStages] = useState<AppointmentStage[]>([]);
-  // Grooming-only: manual price/duration override. Wins over the resolver-
-  // computed value. Cleared whenever the pet or package changes.
-  const [groomingManualPrice, setGroomingManualPrice] = useState<
-    number | undefined
-  >(undefined);
+  // Grooming-only: manual duration override. Cleared whenever the pet or
+  // package changes.
   const [groomingManualDuration, setGroomingManualDuration] = useState<
     number | undefined
   >(undefined);
@@ -981,11 +987,100 @@ export function BookingModal({
   const [groomingSelectedAddOnIds, setGroomingSelectedAddOnIds] = useState<
     string[]
   >(preSelectedGroomingAddOnIds ?? []);
-  // Grooming-only: subset of `groomingSelectedAddOnIds` that came from the
-  // package's default-rules (vs explicitly chosen by staff). Tracked so the
-  // rule engine can swap out only the auto picks when the package or pet changes.
-  const [groomingAutoAttachedAddOnIds, setGroomingAutoAttachedAddOnIds] =
-    useState<string[]>([]);
+  // Grooming: each pet's package (the Package step, 2026-10-01). A pet not
+  // in it takes `serviceType`, which stays the FIRST pet's package for every
+  // path that still reads one.
+  const [groomingPetPackages, setGroomingPetPackages] = useState<
+    Record<number, string>
+  >({});
+  // A pet's package: its own pick; before anyone has picked, the package
+  // the booking opened with (a rebook, a link) — never the first pet's
+  // choice, which silently gave every other pet the same groom.
+  const packageIdFor = useCallback(
+    (petId: number) =>
+      groomingPetPackages[petId] ||
+      (Object.keys(groomingPetPackages).length === 0 ? serviceType : ""),
+    [groomingPetPackages, serviceType],
+  );
+  // Grooming: the slot picked on Groomer & time, with the appointment's
+  // length when it was picked — a different length is a different slot.
+  const [groomingTime, setGroomingTime] = useState<
+    StaffTime & { minutes: number; groomerName: string | null }
+  >({
+    date: null,
+    start: null,
+    groomerId: null,
+    minutes: 0,
+    groomerName: null,
+  });
+  // Training (the client's mock, 2026-10-01): the program and its pack,
+  // the class (a group program) or the trainer's slot (a lesson or a
+  // consult), and what the owner wants worked on.
+  const [trainingChoice, setTrainingChoice] = useState<ProgramChoice>({
+    programId: preSelectedProgramId ?? null,
+    pack: 1,
+  });
+  const [trainingClassId, setTrainingClassId] = useState<string | null>(null);
+  const [trainingTime, setTrainingTime] = useState<
+    StaffTime & { minutes: number; groomerName: string | null }
+  >({
+    date: null,
+    start: null,
+    groomerId: null,
+    minutes: 0,
+    groomerName: null,
+  });
+  const [trainingIntake, setTrainingIntake] = useState<TrainingIntake>({
+    goals: [],
+    experience: null,
+    notes: "",
+  });
+  // Grooming: pets staff marked matted — the surcharge and its minutes.
+  const [groomingMatted, setGroomingMatted] = useState<Record<number, boolean>>(
+    {},
+  );
+  const trainingAudience = isCustomerMode ? "customer" : "staff";
+  const { data: trainingPrograms = NO_TRAINING_PROGRAMS } = useQuery({
+    queryKey: ["training", "packages", trainingAudience] as const,
+    queryFn: () => fetchTrainingPrograms(trainingAudience),
+    enabled: selectedService === "training",
+  });
+  const { data: trainingGoalOptions = NO_GOALS } = useQuery({
+    queryKey: ["training", "goal-options", trainingAudience] as const,
+    queryFn: () => fetchTrainingGoalOptions(trainingAudience),
+    enabled: selectedService === "training",
+  });
+  const offeredClasses = useOfferedTrainingClasses({
+    asCustomer: isCustomerMode,
+    enabled: selectedService === "training",
+  });
+  const createTrainingSeries = useCreateTrainingSeries();
+  const cancelTrainingSeries = useCancelTrainingSeries();
+  const grantLessonPack = useGrantLessonPack();
+  // Staff's: which staff row a trainer's slot belongs to, for the series.
+  const { data: trainingTrainers = NO_TRAINERS } = useTrainingTrainers({
+    enabled: selectedService === "training" && !isCustomerMode,
+  });
+  const trainingProgram =
+    trainingPrograms.find((p) => p.id === trainingChoice.programId) ?? null;
+  const trainingFormat = trainingProgram
+    ? programFormat(trainingProgram)
+    : null;
+  const trainingClasses = trainingProgram
+    ? classesForProgram(
+        offeredClasses.data ?? NO_CLASSES,
+        trainingProgram,
+        trainingPrograms.filter((p) => programFormat(p) === "group").length,
+      )
+    : NO_CLASSES;
+  const trainingClass =
+    trainingClasses.find((c) => c.id === trainingClassId) ?? null;
+  // The first session the dog attends — the class's start, or its next
+  // session when it is already running.
+  const trainingFirstSession = trainingClass
+    ? (classSessionDates(trainingClass)[0] ?? trainingClass.startDate)
+    : null;
+  const trainingMinutes = trainingProgram ? programMinutes(trainingProgram) : 0;
 
   // Clear redemption whenever the client or service changes — otherwise a
   // stale "$0 - covered by package" carries over to a service the package
@@ -999,7 +1094,6 @@ export function BookingModal({
   // "Bath Only on Bella".
   useEffect(() => {
     if (selectedService !== "grooming") return;
-    setGroomingManualPrice(undefined);
     setGroomingManualDuration(undefined);
   }, [selectedService, serviceType, selectedPetIds]);
 
@@ -1019,15 +1113,35 @@ export function BookingModal({
       setGroomingAdditionalStylistIds([]);
       setGroomingStationId("");
       setGroomingStages([]);
-      setGroomingManualPrice(undefined);
       setGroomingManualDuration(undefined);
       setGroomingSelectedAddOnIds([]);
-      setGroomingAutoAttachedAddOnIds([]);
+      setGroomingPetPackages({});
+      setGroomingMatted({});
+      setGroomingTime({
+        date: null,
+        start: null,
+        groomerId: null,
+        minutes: 0,
+        groomerName: null,
+      });
     }
   }, [selectedService]);
-  const [showingPackagePromptStep, setShowingPackagePromptStep] =
-    useState(false);
-  const [includesEvaluation, setIncludesEvaluation] = useState(false);
+  useEffect(() => {
+    if (selectedService === "training") return;
+    setTrainingClassId(null);
+    setTrainingTime({
+      date: null,
+      start: null,
+      groomerId: null,
+      minutes: 0,
+      groomerName: null,
+    });
+  }, [selectedService]);
+  // Staff's answer to the first-day evaluation on Confirm; null until they
+  // give one, which reads as ON wherever a pet needs evaluating (below).
+  const [evaluationChoice, setEvaluationChoice] = useState<boolean | null>(
+    null,
+  );
   // Staff may book past a missing, failed or expired evaluation — the
   // facility's own call — with a reason kept on the booking. `key` ties the
   // decision to the pets and service it was made for: change either and it
@@ -1036,16 +1150,13 @@ export function BookingModal({
     key: string;
     reason: string;
   } | null>(null);
-  // OFF until staff say the money is in their hand. It used to default ON as
-  // "card on file", which recorded nothing; it records a real payment now, so
-  // defaulting it on would book cash nobody took.
-  const [depositPrompt, setDepositPrompt] = useState<DepositPromptValue>({
-    collectNow: false,
-    amount: 0,
-    method: "cash",
-    ruleLabel: "",
-    required: 0,
-  });
+  // How staff take a deposit (the client's mock, 2026-10-01): the card on
+  // file, a payment link, cash or e-transfer now, or later. "Later" until
+  // they choose — nothing is recorded as taken that was not.
+  const [depositMode, setDepositMode] = useState<DepositMode>("later");
+  const [depositCashMethod, setDepositCashMethod] = useState<
+    "cash" | "e_transfer"
+  >("cash");
 
   // ── WHICH CARE STEPS THIS SERVICE HAS (2026-10-01) ────────────────────
   //
@@ -1105,18 +1216,8 @@ export function BookingModal({
       if (selectedService === "boarding") {
         switch (stepId) {
           case 0:
-            return (
-              boardingRangeStart !== null &&
-              boardingRangeEnd !== null &&
-              // A customer buys from the menu when there is one to buy from.
-              // The class-rate path is for bookings made before the menu,
-              // and a request priced by it is one the server can never
-              // confirm. Staff keep their choice: they meet the menu on the
-              // room step, where "none" is still a valid answer.
-              (!isCustomerMode ||
-                boardingMenuOffered === 0 ||
-                boardingService !== null)
-            );
+            // The service is chosen on Room type now, by everyone.
+            return boardingRangeStart !== null && boardingRangeEnd !== null;
           case 1:
             return (
               effectivePetCount > 0 &&
@@ -1144,17 +1245,32 @@ export function BookingModal({
       }
       if (selectedService === "grooming") {
         switch (stepId) {
-          case 0: // Package picked
-            return !!serviceType;
+          case 0: // A package for every pet
+            return (
+              selectedPetIds.length > 0 &&
+              selectedPetIds.every((petId) => !!packageIdFor(petId))
+            );
           case 1: // Add-ons — always optional
             return true;
-          case 2: // Schedule
-            return !!startDate && !!checkInTime && !!checkOutTime;
+          case 2: // Groomer & time: a slot picked for this length
+            return groomingTime.start !== null && !!groomingTime.date;
           default:
             return false;
         }
       }
-      // Training, custom services — schedule sub-step only
+      if (selectedService === "training") {
+        switch (stepId) {
+          case 0: // A program
+            return !!trainingProgram;
+          case 1: // A class, or the trainer's slot
+            return trainingFormat === "group"
+              ? !!trainingClassId
+              : trainingTime.start !== null && !!trainingTime.date;
+          default: // Goals, and the care steps — all optional
+            return true;
+        }
+      }
+      // Custom services — schedule sub-step only
       if (stepId === 0) {
         return !!startDate && !!checkInTime && !!checkOutTime;
       }
@@ -1170,27 +1286,17 @@ export function BookingModal({
       guestPetNames,
       boardingRangeStart,
       boardingRangeEnd,
-      isCustomerMode,
-      boardingMenuOffered,
-      boardingService,
       startDate,
       checkInTime,
       checkOutTime,
-      serviceType,
+      packageIdFor,
+      groomingTime,
+      trainingProgram,
+      trainingFormat,
+      trainingClassId,
+      trainingTime,
     ],
   );
-
-  // Filtered clients based on search
-  const filteredClients = useMemo(() => {
-    if (!searchQuery.trim()) return clients;
-    const query = searchQuery.toLowerCase();
-    return clients.filter(
-      (client) =>
-        client.name.toLowerCase().includes(query) ||
-        client.email.toLowerCase().includes(query) ||
-        client.phone?.includes(query),
-    );
-  }, [clients, searchQuery]);
 
   const selectedClient = useMemo(() => {
     return clients.find((c) => c.id === selectedClientId);
@@ -1220,37 +1326,6 @@ export function BookingModal({
       selectedClient?.pets.filter((p) => selectedPetIds.includes(p.id)) || []
     );
   }, [selectedClient, selectedPetIds]);
-
-  /**
-   * The species of the pets chosen, when they are all the same one.
-   *
-   * A daycare rate can be offered to some animals rather than all, and the
-   * pet's own record is the only thing that says which it is. `pet.type` is
-   * the species column — "Dog", "Cat" — and it is free text, so nothing here
-   * compares it with === (see lib/settings/species).
-   */
-  const soleSelectedSpecies = useMemo(() => {
-    const kinds = new Set(
-      selectedPets
-        .map((p) => (p.type ?? "").trim().toLowerCase())
-        .filter(Boolean),
-    );
-    if (kinds.size !== 1) return undefined;
-    return selectedPets.find((p) => (p.type ?? "").trim())?.type;
-  }, [selectedPets]);
-
-  // One enrollment line item per selected dog for the in-progress training
-  // selection. Multiple pets picked in Step 1 all share the same series; a
-  // different series per dog comes from the "Enroll another dog" loop, which
-  // commits these into `trainingCart`.
-  const currentTrainingLineItems = useMemo<TrainingCartItem[]>(() => {
-    if (selectedService !== "training" || !currentTrainingSelection) return [];
-    return selectedPets.map((pet) => ({
-      ...currentTrainingSelection,
-      petId: pet.id,
-      petName: pet.name,
-    }));
-  }, [selectedService, currentTrainingSelection, selectedPets]);
 
   const guestPetSummary = useMemo(
     () => guestPetNames.map((name) => name.trim()).filter(Boolean),
@@ -1361,11 +1436,17 @@ export function BookingModal({
         boardingEnd: boardingRangeEnd ? localDay(boardingRangeEnd) : undefined,
         daycareDates: daycareSelectedDates.map(localDay),
         startDate,
-        trainingDates: currentTrainingSelection
-          ? (currentTrainingSelection.sessionDates ?? [
-              currentTrainingSelection.startDate,
-            ])
-          : [],
+        // A class: every session the dog is booked into; a lesson, its day.
+        trainingDates:
+          selectedService !== "training"
+            ? []
+            : trainingFormat === "group"
+              ? trainingClass
+                ? classSessionDates(trainingClass)
+                : []
+              : trainingTime.date
+                ? [trainingTime.date]
+                : [],
       }),
     [
       selectedService,
@@ -1373,7 +1454,9 @@ export function BookingModal({
       boardingRangeEnd,
       daycareSelectedDates,
       startDate,
-      currentTrainingSelection,
+      trainingFormat,
+      trainingClass,
+      trainingTime.date,
     ],
   );
   const medicationPets = useMemo(
@@ -1530,37 +1613,6 @@ export function BookingModal({
     return Object.keys(care).length > 0 ? care : undefined;
   };
 
-  // "Enroll another dog" (training Confirm screen): commit the current dog(s)
-  // to the cart, then loop back to Step 1 — same client, fresh pet/course/series
-  // — so the next dog walks Steps 1–3 independently and bills as one payment.
-  // Each dog's feeding and medications go into the cart with it, and the
-  // care steps start again for the next one.
-  const handleEnrollAnotherDog = () => {
-    if (currentTrainingLineItems.length === 0) return;
-    setTrainingCart((prev) => [
-      ...prev,
-      ...currentTrainingLineItems.map((li) => ({
-        ...li,
-        care: careForPet(li.petId),
-      })),
-    ]);
-    setSelectedPetIds([]);
-    setSelectedCourseTypeId(undefined);
-    setCurrentTrainingSelection(null);
-    setStartDate("");
-    setCheckInTime("");
-    setCheckOutTime("");
-    setFeedingSchedule([]);
-    setMedications([]);
-    setNoMedication([]);
-    setVetContacts({});
-    feedingStep.reset();
-    medicationStep.reset();
-    const petStepIndex = displayedSteps.findIndex((s) => s.id === "client-pet");
-    setCurrentStep(petStepIndex >= 0 ? petStepIndex : 0);
-    setCurrentSubStepId(0);
-  };
-
   /**
    * The label photos chosen on this form, sent to the booking now that it is
    * saved. One that does not save is said, by medication; the booking stands
@@ -1607,26 +1659,6 @@ export function BookingModal({
     .map((d) => d.toISOString().split("T")[0])
     .sort();
 
-  /**
-   * The longest daycare day chosen, in hours, or undefined before any times
-   * are set.
-   *
-   * A rate is chosen by what it COVERS, so the stay that has to be covered is
-   * the longest one. Undefined while the wizard has no times yet, which means
-   * "any rate" rather than "no rate" — a price appears as soon as a day is
-   * picked and narrows when its hours are set.
-   */
-  const longestDaycareDayHours = daycareDateTimes.reduce<number | undefined>(
-    (longest, slot) => {
-      const [inH, inM] = slot.checkInTime.split(":").map(Number);
-      const [outH, outM] = slot.checkOutTime.split(":").map(Number);
-      if (![inH, inM, outH, outM].every(Number.isFinite)) return longest;
-      const hours = (outH * 60 + outM - (inH * 60 + inM)) / 60;
-      if (!(hours > 0)) return longest;
-      return longest === undefined || hours > longest ? hours : longest;
-    },
-    undefined,
-  );
   const assignFrom =
     selectedService === "boarding"
       ? boardingRangeStart?.toISOString().split("T")[0]
@@ -1645,12 +1677,13 @@ export function BookingModal({
   // configured rules (pet type, weight) and available capacity. The facility
   // can override from the facility side after the booking request arrives.
   useEffect(() => {
-    if (!isCustomerMode) return;
     if (effectiveSelectedPets.length === 0) return;
 
     if (selectedService === "daycare") {
       if (daycareSelectedDates.length === 0) return;
-      const firstDate = daycareSelectedDates[0].toISOString().split("T")[0];
+      // Staff keep a play area they chose on Confirm.
+      if (!isCustomerMode && roomAssignments.length > 0) return;
+      const firstDate = localDay(daycareSelectedDates[0]);
       const next: Array<{ petId: number; roomId: string }> = [];
       for (const pet of effectiveSelectedPets) {
         const section = autoAssignDaycareSection(
@@ -1665,47 +1698,14 @@ export function BookingModal({
       return;
     }
 
-    if (selectedService === "boarding") {
-      if (!boardingRangeStart || !boardingRangeEnd) return;
-      const startStr = boardingRangeStart.toISOString().split("T")[0];
-      const endStr = boardingRangeEnd.toISOString().split("T")[0];
-      // Only the kennels the chosen service may be booked into — the same
-      // narrowing staff see on the room step — and never a second dog in a
-      // room that holds one: `placed` is what this household has been given
-      // so far. These rooms are never held (the request drops them); they
-      // decide how many lodgings the quote is for.
-      const classes = lodgingTypesServing(roomCategories, boardingService);
-      const placed = new Map<string, number>();
-      const next: Array<{ petId: number; roomId: string }> = [];
-      for (const pet of effectiveSelectedPets) {
-        const unit = autoAssignBoardingUnit(
-          pet,
-          startStr,
-          endStr,
-          null,
-          classes,
-          facilityRooms,
-          knownBookings,
-          placed,
-        );
-        if (!unit) continue;
-        next.push({ petId: pet.id, roomId: unit.id });
-        placed.set(unit.id, (placed.get(unit.id) ?? 0) + 1);
-      }
-      setRoomAssignments(next);
-    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- a staff choice is read, never re-run on
   }, [
     isCustomerMode,
     selectedService,
     effectiveSelectedPets,
     daycareSelectedDates,
-    boardingRangeStart,
-    boardingRangeEnd,
     daycareSections,
-    roomCategories,
-    facilityRooms,
     knownBookings,
-    boardingService,
   ]);
 
   // The selected client's own bookings, asked for by client: whether they are
@@ -1841,591 +1841,128 @@ export function BookingModal({
       selectedService === "boarding" &&
       boardingService &&
       boardingNights > 0
-        ? defaultAddOnLines({
-            defaults: boardingService.defaultAddOns,
-            nights: boardingNights,
-            petIds: pricingSelectedPetIds,
-            catalogue: storedAddOns,
-          })
+        ? Object.keys(petBoardingServices).length > 0
+          ? // Each pet's own service attaches its own defaults.
+            pricingSelectedPetIds.flatMap((petId) =>
+              defaultAddOnLines({
+                defaults: (petBoardingServices[petId] ?? boardingService)
+                  .defaultAddOns,
+                nights: boardingNights,
+                petIds: [petId],
+                catalogue: storedAddOns,
+              }),
+            )
+          : defaultAddOnLines({
+              defaults: boardingService.defaultAddOns,
+              nights: boardingNights,
+              petIds: pricingSelectedPetIds,
+              catalogue: storedAddOns,
+            })
         : NO_EXTRA_SERVICES,
     [
       editMode,
       selectedService,
       boardingService,
+      petBoardingServices,
       boardingNights,
       pricingSelectedPetIds,
       storedAddOns,
     ],
   );
 
-  // Calculate total price with dynamic pricing rules
-  const calculatePrice = useMemo(() => {
-    let basePrice = 0;
-    // Why this booking cannot be priced from what the facility has set up.
-    // Null is the normal case; anything else stops the booking being taken
-    // and tells staff where to set the rate (§5s — a state the component owns
-    // rather than a silent $0).
-    let rateGap: RateGap = null;
-    // Per-pet pricing breakdown — only populated for grooming. Drives the
-    // small explainer subline under the service row in ConfirmStep so
-    // customers (and staff) understand where the number came from. Does
-    // NOT affect basePrice itself, which is already the fully-resolved sum.
-    const groomingPriceBreakdown: Array<{ petName: string; lines: string[] }> =
-      [];
-
-    if (selectedService === "daycare") {
-      // THE SERVICE THE FACILITY PICKED, at this branch's price — the picker
-      // already resolved the branch, so this is the number on the card the
-      // user clicked. Nothing stands in for a facility that has authored no
-      // daycare service, and nothing is guessed from the length of the day.
-      //
-      // No choice is a rate GAP, which the wizard renders as a refusal and
-      // which disables Create. Never a zero: a zero is a free day nobody
-      // agreed to.
-      if (!daycareService) {
-        rateGap = { kind: "daycare" };
-      } else {
-        basePrice = daycareService.price * daycareSelectedDates.length;
-      }
-    } else if (selectedService === "boarding") {
-      // Priced by the KENNEL CLASS the pet is assigned to, not one flat rate.
-      // The arithmetic and the reasoning live in `@/lib/boarding-pricing`,
-      // because a calculation that decides a charge should be readable without
-      // opening this file.
-      const stay = boardingPricing({
-        categories: roomCategories,
-        rooms: facilityRooms,
-        roomAssignments,
-        nights: boardingNights,
-        locationId: currentLocationId,
-        // The chosen menu item, when there is one. It replaces the RATE and
-        // the UNIT and nothing else — two kennels are still two kennels — so
-        // a facility that has authored no menu is quoted exactly what it was
-        // quoted yesterday. `boarding-service-pricing.test.ts` measures that
-        // rather than asserting somebody believed it.
-        service: boardingService
-          ? {
-              price: boardingService.price,
-              unit: boardingService.unit,
-              name: boardingService.name,
-            }
-          : null,
-      });
-      basePrice = stay.total;
-      if (stay.unpricedClasses.length > 0) {
-        rateGap = { kind: "boarding", classes: stay.unpricedClasses };
-      }
-    } else if (selectedService === "grooming") {
-      // Run each selected pet through the shared rate engine so Confirm
-      // matches the service-card "Price $X" and the at-pickup PaymentDialog
-      // total. The resolver handles Steps 1-4 (size base / coat / breed
-      // override / groomer tier — tier only when stylistId is supplied,
-      // which it isn't at this wizard stage). Falls back to the category
-      // base when no package is picked yet.
-      const pkg = serviceType
-        ? groomingMenu.find((p) => p.id === serviceType)
-        : undefined;
-      if (pkg && selectedPets.length > 0) {
-        basePrice = selectedPets.reduce((sum, pet) => {
-          const pricing = resolveEffectivePricing({
-            petId: pet.id,
-            petSize: getPetSize(pet),
-            petBreed: pet.breed,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            petCoatType: pet.coatType as any,
-            petAgeMonths:
-              typeof pet.age === "number"
-                ? Math.max(0, Math.round(pet.age * 12))
-                : undefined,
-            stylistTier: undefined,
-            package: pkg,
-            petPricingOverrides: groomingPetPricingOverrides,
-          });
-          // Capture which steps fired for this pet so ConfirmStep can render
-          // a 1-line explainer ("Standard Poodle breed pricing", "Coat: long
-          // +$10", etc.) without recomputing.
-          const lines: string[] = [];
-          // The sign is ours (it says "on top of the base"), the money is
-          // Intl's — so a French reader gets `+10,00 $` rather than `+$10.00`.
-          const fmtDelta = (d: number) =>
-            `${d > 0 ? "+" : "-"}${formatMoney(Math.abs(d), locale)}`;
-          if (pricing.source === "pet-custom") {
-            lines.push(t("savedPricingFor").replace("{pet}", pet.name));
-          } else if (pricing.source === "breed-override") {
-            lines.push(t("breedPricing").replace("{breed}", pet.breed ?? ""));
-          } else if (pricing.source === "stylist-specific") {
-            lines.push(t("stylistPricing"));
-          } else {
-            // service-default path: surface any deltas layered on top of size.
-            const size = getPetSize(pet);
-            if (size) lines.push(t("sizePricing").replace("{size}", size));
-            if (pricing.coatAdjustment?.delta) {
-              lines.push(
-                t("coatAdjustment")
-                  .replace("{coat}", pricing.coatAdjustment.coatType)
-                  .replace("{delta}", fmtDelta(pricing.coatAdjustment.delta)),
-              );
-            }
-            if (pricing.ageAdjustment?.delta) {
-              lines.push(
-                `${pricing.ageAdjustment.label} ${fmtDelta(pricing.ageAdjustment.delta)}`,
-              );
-            }
-          }
-          // Tier delta runs regardless of source (it sits on top of the
-          // resolved service price) — surface it whenever it fired.
-          if (pricing.tierAdjustment?.delta) {
-            lines.push(
-              t("groomerTier")
-                .replace("{tier}", pricing.tierAdjustment.tier)
-                .replace("{delta}", fmtDelta(pricing.tierAdjustment.delta)),
-            );
-          }
-          if (lines.length > 0) {
-            groomingPriceBreakdown.push({ petName: pet.name, lines });
-          }
-          return sum + pricing.price;
-        }, 0);
-      } else {
-        // No package picked yet: nothing to price. The step cannot be
-        // completed without one, so this is a transient zero, not a charge.
-        const perPet = pkg ? pkg.sizePricing.small : 0;
-        basePrice = perPet * Math.max(pricingSelectedPetIds.length, 1);
-      }
-    } else if (selectedService === "training") {
-      // Multi-dog: sum each enrolled dog's series price (cart + current dog).
-      // Falls back to the static base price before any series is selected.
-      const trainingItems = [...trainingCart, ...currentTrainingLineItems];
-      if (trainingItems.length > 0) {
-        basePrice = trainingItems.reduce((sum, li) => sum + li.price, 0);
-      } else {
-        // It charged `training.basePrice` × pets here — 60 from a fixture, for
-        // a booking with no class in it.
-        rateGap = { kind: "training" };
-      }
-    } else if (selectedService === "evaluation") {
-      basePrice = evaluationConfig.price;
-    } else if (selectedService && !isBuiltinService(selectedService)) {
-      const customModule = getModuleBySlug(selectedService);
-      if (customModule) {
-        basePrice = customModule.pricing.basePrice;
-      }
-    }
-
-    // The SERVICE's length, which the facility's duration rules were written
-    // against. The appointment's end now includes its add-ons' minutes (the
-    // schedule step adds them), so they come back off here — a 15-minute
-    // add-on must not tip a groom into a "long appointment" surcharge.
-    const groomingDurationMinutes =
-      selectedService === "grooming"
-        ? (() => {
-            const checkIn = new Date(`2000-01-01T${checkInTime}`);
-            const checkOut = new Date(`2000-01-01T${checkOutTime}`);
-            const addOnMinutes = groomingAddOnCatalog
-              .filter((ao) => groomingSelectedAddOnIds.includes(ao.id))
-              .reduce((sum, ao) => sum + ao.duration, 0);
-            const diff =
-              Math.round(
-                (checkOut.getTime() - checkIn.getTime()) / (1000 * 60),
-              ) - addOnMinutes;
-            return Number.isFinite(diff) && diff > 0 ? diff : undefined;
-          })()
-        : undefined;
-
-    const formatDateOnly = (date: Date): string => {
-      const year = date.getFullYear();
-      const month = `${date.getMonth() + 1}`.padStart(2, "0");
-      const day = `${date.getDate()}`.padStart(2, "0");
-      return `${year}-${month}-${day}`;
-    };
-
-    const daycareServiceDates =
-      daycareDateTimes.length > 0
-        ? daycareDateTimes.map((entry) => entry.date)
-        : daycareSelectedDates.map((date) => formatDateOnly(date));
-
-    const pricingComputation = applyDynamicPricingRules({
-      rules: pricingRules,
-      serviceId: selectedService,
-      basePrice,
-      existingExtraServices:
-        boardingDefaultLines.length > 0
-          ? [...extraServices, ...boardingDefaultLines]
-          : extraServices,
-      selectedPetIds: pricingSelectedPetIds,
-      // A custom fee narrowed to some branches is not charged at the others.
-      locationId: currentLocationId,
-      isNewCustomer: effectiveIsNewCustomer,
-      newPetIds: effectiveNewPetIds,
-      customer:
-        selectedClient && !(isEstimateMode && isGuestEstimate)
-          ? {
-              status: selectedClient.status,
-              membershipPlan: selectedClient.membership?.plan,
-              membershipStatus: selectedClient.membership?.status,
-              storeCreditBalance: selectedClient.storeCredit?.balance,
-              hasPackageCredits: (selectedClient.packages ?? []).some(
-                (pkg) => pkg.remainingCredits > 0,
-              ),
-            }
-          : undefined,
-      pets: pricingPets,
-      addOnsCatalog: storedAddOns,
-      roomAssignments,
-      // A room-type rule names kennel CLASSES and an assignment may name a
-      // room; a room answers with its class, a class id falls through as is.
-      roomCategoryOf: (roomId) =>
-        facilityRooms.find((room) => room.id === roomId)?.categoryId,
-      boardingNights,
-      sessionUnits:
-        selectedService === "daycare"
-          ? daycareSelectedDates.length
-          : selectedService === "boarding"
-            ? boardingNights
-            : 1,
-      serviceStartDate:
-        selectedService === "daycare"
-          ? daycareServiceDates[0]
-          : selectedService === "boarding" && boardingRangeStart
-            ? formatDateOnly(boardingRangeStart)
-            : startDate || undefined,
-      serviceEndDate:
-        selectedService === "daycare"
-          ? daycareServiceDates[daycareServiceDates.length - 1]
-          : selectedService === "boarding" && boardingRangeEnd
-            ? formatDateOnly(boardingRangeEnd)
-            : endDate || startDate || undefined,
-      serviceDates:
-        selectedService === "daycare" && daycareServiceDates.length > 0
-          ? daycareServiceDates
-          : undefined,
-      groomingDurationMinutes,
-      appointmentTime: selectedService === "grooming" ? checkInTime : undefined,
-      scheduledCheckInTime: checkInTime,
-      scheduledCheckOutTime: checkOutTime,
-      actualCheckInTime: checkInTime,
-      actualCheckOutTime: checkOutTime,
-    });
-
-    // ── Medications and meals: lines on the bill (2026-10-01) ──────────
-    // The medication fee and the daycare meals fee (Settings → Booking rules)
-    // and what the facility supplies to give a medication with (Settings →
-    // Care tasks), worked out by the function the server writes the lines
-    // with — so the quote and the bill cannot disagree. They were folded into
-    // `total_cost` until now; `splitBookingMoney` takes them out below, and
-    // the server writes them as `fee` lines once the booking exists.
-    const careLines: CareChargeLine[] = careChargeLines({
-      fees: careFees,
-      settings: medicationStep.settings,
-      feedingSettings: feedingStep.settings,
-      service: selectedService,
-      parts: [
-        {
-          stay: careStay,
-          medications: effectiveMedications,
-          feeding: effectiveFeeding,
-        },
-      ],
-    }).flat();
-    const serviceFeeItems: Array<{ label: string; amount: number }> = [];
-    let medicationFeeTotal = 0;
-    let feedingFeeTotal = 0;
-    for (const line of careLines) {
-      if (line.kind === "meals" || line.kind === "house_food") {
-        feedingFeeTotal += line.amount;
-      } else {
-        medicationFeeTotal += line.amount;
-      }
-      serviceFeeItems.push({
-        label:
-          line.kind === "medication_fee"
-            ? t("feeMedicationAdmin")
-            : line.kind === "injection_fee"
-              ? t("feeInjection")
-              : line.kind === "meals"
-                ? t("feeDaycareFeeding")
-                : fillWords(t("medsLineDetail"), {
-                    name:
-                      line.kind === "house_food"
-                        ? houseFoodName(t, {
-                            id: line.houseFoodId,
-                            name: line.label,
-                          })
-                        : providedLineName(t, line.method ?? "", line.label),
-                    quantity: line.quantity,
-                    price: formatMoney(line.unitPrice, locale),
-                  }),
-        amount: line.amount,
-      });
-    }
-
-    // Evaluation fee — charged per pet that still needs an evaluation
-    let evaluationFeeTotal = 0;
-    if (includesEvaluation && evaluationConfig.price > 0) {
-      const petsNeedingEval = pricingPets.filter((pet) => {
-        const p = pet as {
-          evaluations?: Array<{ status: string; isExpired?: boolean }>;
-        };
-        return !p.evaluations?.some(
-          (e) => e.status === "passed" && e.isExpired !== true,
-        );
-      });
-      const evalCount = Math.max(petsNeedingEval.length, 1);
-      evaluationFeeTotal = evaluationConfig.price * evalCount;
-      serviceFeeItems.push({
-        label: t("evaluationFee")
-          .replace("{name}", evaluationConfig.internalName ?? t("evaluation"))
-          .replace("{count}", String(evalCount)),
-        amount: evaluationFeeTotal,
-      });
-    }
-
-    // The groom's add-ons, at the facility's prices, one line each. They were
-    // chosen on the details step and priced nowhere: the confirm total left
-    // them out while the appointment the database wrote charged for them.
-    let groomingAddOnsTotal = 0;
-    if (selectedService === "grooming") {
-      for (const id of groomingSelectedAddOnIds) {
-        const addOn = groomingAddOnCatalog.find((a) => a.id === id);
-        if (!addOn) continue;
-        groomingAddOnsTotal += addOn.price;
-        serviceFeeItems.push({ label: addOn.name, amount: addOn.price });
-      }
-    }
-
-    let subtotal =
-      groomingAddOnsTotal +
-      pricingComputation.total +
-      medicationFeeTotal +
-      feedingFeeTotal +
-      evaluationFeeTotal;
-
-    const adjustments = [...(pricingComputation.adjustments || [])];
-
-    // ── A DISCOUNT THAT IS ALREADY A LINE IS NOT ALSO `discount` ─────────
-    //
-    // A custom fee authored with `adjustmentKind: "discount"` is written by
-    // the server as a negative `booking_line_items` row, so it is already off
-    // `amount_due` through `extras_total`. `discountTotal` filters on SIGN,
-    // not source, so it counts that fee as well — and a $10 loyalty credit
-    // came off the bill twice.
-    //
-    // The package pass is deliberately NOT excluded here: it travels as
-    // `discount` and nothing else at booking time.
-    // Travels as `discount` and nothing else at booking time, so it is kept
-    // apart from the evaluator's own total until `splitBookingMoney` adds it.
-    let packagePassDiscount = 0;
-
-    // Step 6 — Travel zone surcharge. Looks up the matching zone from the
-    // van's home base to the client's postal code and adds the surcharge as
-    // a priceAdjustment so it (a) renders on ConfirmStep through the
-    // existing adjustments.map and (b) survives onto the appointment
-    // record for PaymentDialog to read at pickup.
-    const clientZip = selectedClient?.address?.zip;
-    if (
-      selectedService === "grooming" &&
-      groomingIsMobile &&
-      clientZip &&
-      groomingTravelZones.length > 0
-    ) {
-      const zoneBreakdown = computeBookingTotals({
-        serviceSubtotal: basePrice,
-        addOnTotal: pricingComputation.addOnsTotal,
-        isMobile: true,
-        basePostalCode: facilityBasePostal,
-        clientPostalCode: clientZip,
-        zones: groomingTravelZones,
-        // Tax stays out of this lookup — it's handled separately by the
-        // existing flat-rate path (Fix #4 will swap that for ZIP tax).
-        zipTaxRates: [],
-      });
-      if (zoneBreakdown.zoneSurcharge > 0 && zoneBreakdown.zone) {
-        subtotal += zoneBreakdown.zoneSurcharge;
-        adjustments.push({
-          id: "travel_zone",
-          label: t("travelSurcharge").replace(
-            "{zone}",
-            zoneBreakdown.zone.label,
-          ),
-          amount: zoneBreakdown.zoneSurcharge,
-          source: "travel_zone",
-        });
-      }
-    }
-
-    if (redeemedPackageId) {
-      // Single helper shared with PaymentDialog so the discount math stays
-      // identical across the booking-time application and the at-pickup
-      // application. Helper currently returns the base-service dollar value
-      // — add-ons stay billable per the spec.
-      const passDiscount = computePackagePassDiscount({
-        baseService: basePrice,
-      });
-      subtotal -= passDiscount;
-      packagePassDiscount = passDiscount;
-      adjustments.push({
-        id: "package_redemption",
-        label: t("packagePassApplied"),
-        amount: -passDiscount,
-        source: "package_redemption",
-      });
-      subtotal = Math.max(0, subtotal);
-    }
-
-    // ── NO TAX IN A BOOKING'S PRICE ──────────────────────────────────────
-    //
-    // This added a tax taken from the mobile-grooming settings — localStorage,
-    // defaulting to Québec's 14.975% when no postal code matched — to EVERY
-    // booking's total, every service and every facility: a $77 daycare day was
-    // saved at $88.53, and checkout then added the facility's own tax on top.
-    // Tax is charged at payment, from the facility's tax settings. Only an
-    // estimate, which quotes what the client will pay, shows it here.
-    const taxRate = isEstimateMode ? estimateTaxRate : 0;
-    const taxAmount = subtotal * taxRate;
-    const total = subtotal + taxAmount;
-
-    // ── A SERVICE CHARGE IS NOT THE BOOKING'S PRICE ────────────────────────
-    //
-    // The customer still pays `total` — nothing on screen moves. But a custom
-    // fee is an ADDITION, not part of what the service costs, so it is
-    // written as a `booking_line_items` row by the server and must not also
-    // be inside `total_cost` or it would be charged twice.
-    //
-    // 20260806820000, Decision 3: "`total_cost` is the BOOKING's price and
-    // stays that. What a customer owes is `total_cost + extras_total`."
-    //
-    // So `serviceTotal` is what the booking is created with, and every
-    // displayed figure keeps using `total`.
-    //
-    // The booking's own add-ons are the same kind of addition since
-    // 2026-09-30: the server writes them as `add_on` lines at the catalogue's
-    // price — the chosen ones, the service's defaults and a groom's — so they
-    // come out of `total_cost` too.
-    const { discount, serviceChargeTotal, serviceTotal } = splitBookingMoney({
-      adjustments,
-      discountTotal: pricingComputation.discountTotal,
-      packagePassDiscount,
-      addOnsTotal: pricingComputation.addOnsTotal + groomingAddOnsTotal,
-      careChargesTotal: medicationFeeTotal + feedingFeeTotal,
-      total,
-    });
-
-    // ── `total_cost` IS GROSS OF THE DISCOUNT ───────────────────────────
-    //
-    // `amount_due` is GENERATED as
-    // `greatest(0, total_cost + extras_total - discount)`, so the database
-    // subtracts the discount itself. `total` above already has it off, so
-    // sending that as `total_cost` alongside `discount` took it TWICE:
-    // measured 2026-09-23, a booking posted as
-    // `basePrice 100, discount 20, totalCost 80` came back owing $60.
-    //
-    // Adding it back is what makes the arithmetic close:
-    //   amount_due = (total − fees + discount) + fees − discount = total
-    // which is the figure the customer was quoted, exactly.
-    //
-    // Gross is the database's own convention — `amount_due`'s comment, the
-    // commission basis (`total_cost − discount`) and `booking-commission.sql`
-    // all assume it. It was the WRITER that disagreed, and
-    // `booking-form-saves.spec.ts` pinned the writer.
-
-    return {
-      basePrice,
-      rateGap,
-      addOnsTotal: pricingComputation.addOnsTotal,
-      adjustments,
-      discount,
-      subtotal,
-      taxRate,
-      taxAmount,
-      total,
-      serviceChargeTotal,
-      serviceTotal,
-      effectiveExtraServices: pricingComputation.extraServices,
-      medicationFeeTotal,
-      feedingFeeTotal,
-      evaluationFeeTotal,
-      groomingAddOnsTotal,
-      serviceFeeItems,
-      groomingPriceBreakdown,
-    };
-  }, [
-    facilityBasePostal,
-    selectedService,
-    serviceType,
-    boardingNights,
-    boardingRangeStart,
-    boardingRangeEnd,
-    startDate,
-    endDate,
-    daycareSelectedDates,
-    daycareDateTimes,
-    pricingSelectedPetIds,
-    effectiveIsNewCustomer,
-    effectiveNewPetIds,
-    selectedClient,
-    pricingPets,
-    extraServices,
-    boardingDefaultLines,
-    roomAssignments,
-    checkInTime,
-    checkOutTime,
-    // The kennel class is part of the price, so the categories and rooms it
-    // is read from have to be able to move it.
-    roomCategories,
-    facilityRooms,
-    // Both branch-price resolutions (boarding's kennel class, daycare's rate)
-    // key off the caller's active branch, so a switch has to reprice.
-    currentLocationId,
-    daycareLocationPrices,
-    daycareRateCards,
-    getModuleBySlug,
-    storedAddOns,
-    isEstimateMode,
-    isGuestEstimate,
-    estimateTaxRate,
-    effectiveMedications,
-    careStay,
-    medicationStep.settings,
-    effectiveFeeding,
-    feedingStep.settings,
-    careFees,
-    t,
-    locale,
-    includesEvaluation,
-    redeemedPackageId,
-    selectedPets,
-    groomingPetPricingOverrides,
-    groomingIsMobile,
-    groomingTravelZones,
-    trainingCart,
-    currentTrainingLineItems,
-    // The grooming menu is fetched, so the quote has to recompute when it
-    // arrives. Without it here the first paint prices the groom off an empty
-    // list and never corrects itself — and the React Compiler rejects a memo
-    // that reaches into fetched state without depending on it.
-    groomingMenu,
-    groomingSelectedAddOnIds,
-    groomingAddOnCatalog,
-  ]);
-
-  // The add-on lines as the booking is sent and the confirm step shows them:
-  // the priced lines, each with whoever the confirm step assigned it to.
-  const billedAddOnLines = useMemo(
+  // A groom's package attaches add-ons by its own rules, PER PET (the
+  // client's mock, 2026-10-01): each pet's package, against that pet's
+  // size, weight, coat and breed. They were the FIRST pet's rules, applied
+  // once, inside a screen that is no longer drawn. Not when editing — the
+  // saved booking's lines already hold them.
+  const groomingDefaultLines = useMemo(
     () =>
-      calculatePrice.effectiveExtraServices.map((line) => {
-        const key = `${line.serviceId}::${line.petId}`;
-        if (!(key in addOnStaff)) return line;
-        const chosen = addOnStaff[key];
-        return {
-          serviceId: line.serviceId,
-          quantity: line.quantity,
-          petId: line.petId,
-          ...(chosen ? { staffId: chosen } : {}),
-        };
-      }),
-    [calculatePrice.effectiveExtraServices, addOnStaff],
+      !editMode && selectedService === "grooming"
+        ? effectiveSelectedPets.flatMap((pet) => {
+            const id = packageIdFor(pet.id);
+            const pkg = id ? groomingMenu.find((p) => p.id === id) : undefined;
+            if (!pkg) return [];
+            return resolveAutoAddOns(pkg, {
+              petSize:
+                groomingSizeFor(pet.weight, groomingSizeTiers) ?? undefined,
+              petWeight: pet.weight,
+              coatType: pet.coatType as GroomingCoatType | undefined,
+              breed: pet.breed || undefined,
+            }).map((serviceId) => ({ serviceId, petId: pet.id, quantity: 1 }));
+          })
+        : NO_EXTRA_SERVICES,
+    [
+      editMode,
+      selectedService,
+      effectiveSelectedPets,
+      packageIdFor,
+      groomingMenu,
+      groomingSizeTiers,
+    ],
   );
 
+  // Each pet's groom on the table, in order: its package, priced and timed
+  // for that pet (`groomPrice`), plus its own add-ons' minutes — and the
+  // whole appointment, every pet back to back (the client's mock).
+  const addOnByRef = bookableLookup(storedAddOns);
+  const groomPets =
+    selectedService === "grooming"
+      ? effectiveSelectedPets.flatMap((pet) => {
+          const id = packageIdFor(pet.id);
+          const pkg = id ? groomingMenu.find((p) => p.id === id) : undefined;
+          if (!pkg) return [];
+          const groom = groomPrice({
+            pet,
+            pkg,
+            tiers: groomingSizeTiers,
+            matted: groomingMatted[pet.id] === true,
+            overrides: groomingPetPricingOverrides,
+          });
+          const addOnMinutes = [...extraServices, ...groomingDefaultLines]
+            .filter((line) => line.petId === pet.id)
+            .reduce(
+              (sum, line) =>
+                sum +
+                (addOnByRef.get(line.serviceId)?.durationMin ?? 0) *
+                  Math.max(0, line.quantity),
+              0,
+            );
+          return [{ pet, pkg, groom, minutes: groom.minutes + addOnMinutes }];
+        })
+      : [];
+  const groomTotalMinutes = backToBack(groomPets.map((g) => g.minutes));
+  // The tables that fit the largest pet on the appointment, by the
+  // facility's own sizes — a staff row on Confirm, as the old picker was.
+  const { stations: groomingStations } = useGroomingStations();
+  const largestGroomSize = (() => {
+    const order = ["small", "medium", "large", "giant"] as const;
+    let largest: (typeof order)[number] | null = null;
+    for (const { groom } of groomPets) {
+      const size = groom.size ?? "small";
+      if (!largest || order.indexOf(size) > order.indexOf(largest))
+        largest = size;
+    }
+    return largest;
+  })();
+  const stationOptions = largestGroomSize
+    ? groomingStations
+        .filter(
+          (station) =>
+            station.active &&
+            station.status !== "out-of-service" &&
+            isStationEligibleForPetSize(station, largestGroomSize),
+        )
+        .map((station) => ({ id: station.id, name: station.name }))
+    : [];
+  // A slot picked for another length no longer fits: it is picked again.
+  if (
+    groomingTime.start !== null &&
+    groomingTime.minutes !== groomTotalMinutes
+  ) {
+    setGroomingTime({ ...groomingTime, start: null });
+  }
+
+  // The quote: one pure function of what was chosen (lib/bookings/quote).
   // Check if service requires evaluation
   const serviceRequiresEvaluation = useMemo(() => {
     return requiresEvaluationForService(selectedService);
@@ -2475,6 +2012,219 @@ export function BookingModal({
     evaluationOverride?.key === evaluationIssueKey &&
     evaluationOverride.reason.trim().length >= EVALUATION_OVERRIDE_MIN_REASON;
 
+  // ── EVALUATED ON THE FIRST DAY (the client's mock, 2026-10-01) ────────
+  // Staff booking a pet the service's evaluation rule stops are asked on
+  // Confirm whether it is evaluated on its first day — ON until they say
+  // otherwise, as the mock has it. Off asks for the reason kept today.
+  const includesEvaluation =
+    !isCustomerMode &&
+    selectedService !== "evaluation" &&
+    evaluationIssues.length > 0 &&
+    (evaluationChoice ?? true);
+
+  const calculatePrice = useMemo(
+    () =>
+      assembleQuote({
+        t,
+        locale,
+        selectedService,
+        serviceType,
+        startDate,
+        endDate,
+        checkInTime,
+        checkOutTime,
+        boardingRangeStart,
+        boardingRangeEnd,
+        boardingNights,
+        daycareSelectedDates,
+        daycareDateTimes,
+        selectedClient,
+        selectedPets,
+        pricingPets,
+        pricingSelectedPetIds,
+        isNewCustomer: effectiveIsNewCustomer,
+        newPetIds: effectiveNewPetIds,
+        isEstimateMode,
+        isGuestEstimate,
+        daycareService,
+        boardingService,
+        boardingPetServices: petBoardingServices,
+        boardingShare,
+        roomCategories,
+        facilityRooms,
+        roomAssignments,
+        locationId: currentLocationId,
+        groomingMenu,
+        groomingPetPackages: Object.fromEntries(
+          selectedPets.flatMap((pet) => {
+            const id =
+              groomingPetPackages[pet.id] ||
+              (Object.keys(groomingPetPackages).length === 0
+                ? serviceType
+                : "");
+            return id ? [[pet.id, id]] : [];
+          }),
+        ),
+        groomingMatted,
+        groomingSizeTiers,
+        groomingPetPricingOverrides,
+        groomingAddOnCatalog,
+        groomingSelectedAddOnIds,
+        groomingIsMobile,
+        groomingTravelZones,
+        facilityBasePostal,
+        // "Private lesson · Bubu — 3-session pack — $270.00" (the client's
+        // mock): the program, the dog, and what it buys.
+        trainingLines: trainingProgram
+          ? selectedPets.map((pet) => {
+              if (trainingFormat === "group") {
+                const weeks = trainingClass
+                  ? trainingClass.sessionsLeft
+                  : trainingProgram.sessions;
+                return {
+                  price: trainingClass
+                    ? classPrice(trainingClass)
+                    : trainingProgram.price,
+                  label: trainingProgram.name,
+                  detail: fillWords(
+                    t(
+                      isPluralOne(weeks, locale)
+                        ? "wizWeeksOne"
+                        : "wizWeeksOther",
+                    ),
+                    { count: weeks },
+                  ),
+                  petName: pet.name,
+                };
+              }
+              if (trainingFormat === "lesson") {
+                return {
+                  price: programPrice(trainingProgram, trainingChoice.pack),
+                  label: trainingProgram.name,
+                  detail:
+                    trainingChoice.pack > 1
+                      ? fillWords(t("wizSessionPack"), {
+                          count: trainingChoice.pack,
+                        })
+                      : t("wizOneSession"),
+                  petName: pet.name,
+                };
+              }
+              return {
+                price: programPrice(trainingProgram),
+                label: trainingProgram.name,
+                detail: fillWords(t("wizMinutes"), {
+                  count: programMinutes(trainingProgram),
+                }),
+                petName: pet.name,
+              };
+            })
+          : [],
+        evaluation: evaluationConfig,
+        includesEvaluation,
+        customBasePrice: (slug) => getModuleBySlug(slug)?.pricing.basePrice,
+        customName: (slug) => getModuleBySlug(slug)?.name,
+        pricingRules,
+        extraServices,
+        defaultLines:
+          selectedService === "grooming"
+            ? groomingDefaultLines
+            : boardingDefaultLines,
+        addOnsCatalog: storedAddOns,
+        // A room-type rule names kennel CLASSES and an assignment may name a
+        // room; a room answers with its class, a class id falls through as is.
+        roomCategoryOf: (roomId) =>
+          facilityRooms.find((room) => room.id === roomId)?.categoryId,
+        careFees,
+        medicationSettings: medicationStep.settings,
+        feedingSettings: feedingStep.settings,
+        careStay,
+        medications: effectiveMedications,
+        feeding: effectiveFeeding,
+        redeemedPackageId,
+        estimateTaxRate,
+      }),
+    [
+      t,
+      locale,
+      selectedService,
+      serviceType,
+      startDate,
+      endDate,
+      checkInTime,
+      checkOutTime,
+      boardingRangeStart,
+      boardingRangeEnd,
+      boardingNights,
+      daycareSelectedDates,
+      daycareDateTimes,
+      selectedClient,
+      selectedPets,
+      pricingPets,
+      pricingSelectedPetIds,
+      effectiveIsNewCustomer,
+      effectiveNewPetIds,
+      isEstimateMode,
+      isGuestEstimate,
+      daycareService,
+      boardingService,
+      petBoardingServices,
+      boardingShare,
+      roomCategories,
+      facilityRooms,
+      roomAssignments,
+      currentLocationId,
+      groomingMenu,
+      groomingPetPackages,
+      groomingMatted,
+      groomingSizeTiers,
+      groomingPetPricingOverrides,
+      groomingAddOnCatalog,
+      groomingSelectedAddOnIds,
+      groomingIsMobile,
+      groomingTravelZones,
+      facilityBasePostal,
+      trainingProgram,
+      trainingFormat,
+      trainingClass,
+      trainingChoice,
+      evaluationConfig,
+      includesEvaluation,
+      getModuleBySlug,
+      pricingRules,
+      extraServices,
+      boardingDefaultLines,
+      groomingDefaultLines,
+      storedAddOns,
+      careFees,
+      medicationStep.settings,
+      feedingStep.settings,
+      careStay,
+      effectiveMedications,
+      effectiveFeeding,
+      redeemedPackageId,
+      estimateTaxRate,
+    ],
+  );
+
+  // The add-on lines as the booking is sent and the confirm step shows them:
+  // the priced lines, each with whoever the confirm step assigned it to.
+  const billedAddOnLines = useMemo(
+    () =>
+      calculatePrice.effectiveExtraServices.map((line) => {
+        const key = `${line.serviceId}::${line.petId}`;
+        if (!(key in addOnStaff)) return line;
+        const chosen = addOnStaff[key];
+        return {
+          serviceId: line.serviceId,
+          quantity: line.quantity,
+          petId: line.petId,
+          ...(chosen ? { staffId: chosen } : {}),
+        };
+      }),
+    [calculatePrice.effectiveExtraServices, addOnStaff],
+  );
+
   // Resolve any deposit rule that applies to this booking. Customer-mode
   // now participates so the deposit + card picker can render on Confirm.
   // The facility's rules, and NOT while they are still arriving. This called
@@ -2498,25 +2248,6 @@ export function BookingModal({
     depositRulesPending,
   ]);
 
-  // Sync prompt defaults when the rule or total changes
-  useEffect(() => {
-    if (!applicableDepositRule) return;
-    const required = computeDepositAmount(
-      applicableDepositRule,
-      calculatePrice.total,
-    );
-    setDepositPrompt((prev) => ({
-      collectNow:
-        prev.ruleLabel === applicableDepositRule.label
-          ? prev.collectNow
-          : false,
-      amount: required,
-      method: prev.method ?? "cash",
-      ruleLabel: applicableDepositRule.label,
-      required,
-    }));
-  }, [applicableDepositRule, calculatePrice.total]);
-
   // The facility's waivers this client still has to sign for the service.
   const waivers = useBookingWaivers({
     service: selectedService,
@@ -2526,6 +2257,93 @@ export function BookingModal({
         : undefined,
     asCustomer: isCustomerMode,
   });
+  // The facility's required forms this booking would still be missing,
+  // asked before it is made (the client's mock, 2026-10-02) — listed on
+  // Confirm; a customer completes them, staff say why it goes ahead without.
+  const onConfirmStep = displayedSteps[currentStep]?.id === "confirm";
+  const missingForms = useQuery({
+    queryKey: [
+      "forms",
+      "missing-for-booking",
+      isCustomerMode ? "mine" : selectedClientId,
+      selectedPetIds,
+      selectedService,
+    ] as const,
+    queryFn: async (): Promise<MissingForm[]> => {
+      const response = await fetch("/api/forms/missing-for-booking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientRef:
+            !isCustomerMode && selectedClientId && selectedClientId > 0
+              ? selectedClientId
+              : undefined,
+          petRefs: selectedPetIds.filter((id) => id > 0),
+          service: selectedService,
+        }),
+      });
+      if (!response.ok) return [];
+      const body = (await response.json()) as { missing?: MissingForm[] };
+      return Array.isArray(body.missing) ? body.missing : [];
+    },
+    enabled:
+      open &&
+      onConfirmStep &&
+      !isEstimateMode &&
+      !!selectedService &&
+      selectedPetIds.length > 0,
+    refetchOnWindowFocus: true,
+  });
+  const formsMissing = missingForms.data ?? NO_MISSING_FORMS;
+  const formsBlocking = formsMissing.some(
+    (form) => form.enforcement === "block",
+  );
+  const [formsReason, setFormsReason] = useState("");
+  // Staff: the signing link sent from Confirm, by channel, to whom (the
+  // client's mock, 2026-10-02). Another client is another link.
+  const [signingLinks, setSigningLinks] = useState<{
+    email?: string;
+    sms?: string;
+  }>({});
+  const [signingLinkSending, setSigningLinkSending] = useState<
+    "email" | "sms" | null
+  >(null);
+  const [signingLinksClient, setSigningLinksClient] =
+    useState(selectedClientId);
+  if (signingLinksClient !== selectedClientId) {
+    setSigningLinksClient(selectedClientId);
+    setSigningLinks({});
+  }
+  const sendSigningLink = async (via: "email" | "sms") => {
+    if (!selectedClient || signingLinkSending) return;
+    setSigningLinkSending(via);
+    try {
+      const response = await fetch("/api/waivers/send-signing-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientRef: selectedClient.id,
+          service: selectedService || undefined,
+          channel: via,
+        }),
+      });
+      const body = (await response.json().catch(() => null)) as {
+        sent?: boolean;
+        detail?: string;
+        to?: string;
+        error?: string;
+      } | null;
+      if (!response.ok || !body?.sent) {
+        toast.error(t("wizLinkNotSent"), {
+          description: body?.error ?? body?.detail,
+        });
+        return;
+      }
+      setSigningLinks((prev) => ({ ...prev, [via]: body.to ?? "" }));
+    } finally {
+      setSigningLinkSending(null);
+    }
+  };
 
   // Validation for each step
   const canProceed = useMemo(() => {
@@ -2540,26 +2358,12 @@ export function BookingModal({
         return true;
       case "service":
         if (selectedService === "") return false;
-        // Evaluation-eligibility guards — now enforced at the service step
-        // because the user picks pets first. This blocks moving forward when
-        // the chosen service requires an evaluation the selected pets don't have.
-        if (evaluationIssues.length > 0 && !evaluationOverridden) {
-          return false;
-        }
+        // A customer's pets must pass the service's evaluation rule here;
+        // staff decide on Confirm (evaluated on the first day, or why not).
+        if (isCustomerMode && evaluationIssues.length > 0) return false;
         return true;
       case "details": {
-        if (
-          selectedService !== "evaluation" &&
-          (selectedService === "daycare" || selectedService === "boarding")
-        ) {
-          const hasExpired = selectedPets.some((pet) =>
-            petHasExpiredEvaluation(pet),
-          );
-          const hasFailed = selectedPets.some((pet) =>
-            petHasFailedEvaluation(pet),
-          );
-          if ((hasExpired || hasFailed) && !evaluationOverridden) return false;
-        }
+        if (isCustomerMode && evaluationIssues.length > 0) return false;
         const subStepId = currentSubSteps[currentSubStep]?.id ?? 0;
         // The Medications step: a medication with a name is booked, so Next
         // waits while one is incomplete — no day, no time, no amount — or
@@ -2580,14 +2384,14 @@ export function BookingModal({
         return subStepDone(subStepId);
       }
       case "confirm": {
-        if (selectedService !== "evaluation") {
-          const hasExpired = selectedPets.some((pet) =>
-            petHasExpiredEvaluation(pet),
-          );
-          const hasFailed = selectedPets.some((pet) =>
-            petHasFailedEvaluation(pet),
-          );
-          if ((hasExpired || hasFailed) && !evaluationOverridden) return false;
+        // A pet the evaluation rule stops is evaluated on its first day, or
+        // staff say why not; a customer cannot get this far with one.
+        if (
+          evaluationIssues.length > 0 &&
+          !includesEvaluation &&
+          !evaluationOverridden
+        ) {
+          return false;
         }
         // Waivers: a CUSTOMER signs what applies before asking — they are the
         // signer, and they are here. Staff are not refused: a phone booking
@@ -2595,43 +2399,45 @@ export function BookingModal({
         // what is outstanding for the counter or check-in.
         if (isCustomerMode && (waivers.loading || waivers.pending.length > 0))
           return false;
+        // A form the facility requires: a customer completes it first; staff
+        // go ahead only with a reason, kept on the booking (2026-10-02).
+        if (formsBlocking) {
+          if (isCustomerMode) return false;
+          if (formsReason.trim().length < FORMS_MIN_REASON) return false;
+        }
         return true;
       }
       default:
         return false;
     }
   }, [
+    includesEvaluation,
     currentStep,
     displayedSteps,
     currentSubStep,
     selectedClientId,
     selectedPetIds,
     selectedService,
-    startDate,
     evaluationIssues,
     evaluationOverridden,
     isEstimateMode,
     isGuestEstimate,
     isGuestInquiryComplete,
-    selectedPets,
-    petHasExpiredEvaluation,
-    petHasFailedEvaluation,
     waivers.loading,
     waivers.pending.length,
-    applicableDepositRule,
-    calculatePrice.total,
     isCustomerMode,
-    passRedemption,
     currentSubSteps,
     medicationStep.canContinue,
     feedingStep.canContinue,
     subStepDone,
+    formsBlocking,
+    formsReason,
   ]);
 
   const applicablePackages = useMemo(() => {
     if (!selectedClient || !selectedService) return [];
 
-    // Using an explicit type to match UnifiedApplicablePackage from PackagePromptWizardContent
+    // What Confirm offers to apply: a pass this client holds for this service.
     const packages: {
       id: string;
       name: string;
@@ -2690,16 +2496,10 @@ export function BookingModal({
   }, [selectedClient, selectedService, serviceType, customerPackagesData]);
 
   const handleNext = () => {
-    // If package prompt is showing, dismiss it and proceed to confirm.
-    //
     // There was a tip step here, for customers. Its tip never reached the
     // booking — the database zeroes a customer's tip on insert
     // (enforce_booking_integrity) — and it showed three invented staff to
     // split it between. A tip is given on /pay, where it is charged.
-    if (showingPackagePromptStep) {
-      setShowingPackagePromptStep(false);
-      return;
-    }
 
     const currentStepId = displayedSteps[currentStep]?.id;
     // A Details screen split into sub-steps — any with more than one, which
@@ -2710,56 +2510,18 @@ export function BookingModal({
         return;
       }
     }
-    if (currentStep < displayedSteps.length - 1) {
-      const nextStep = currentStep + 1;
-      const nextStepId = displayedSteps[nextStep]?.id;
+    const nextStep = nextOpenStep(currentStep);
+    if (nextStep >= 0) {
       setCurrentStep(nextStep);
       setCurrentSubStepId(0);
-      setHighestStepReached((prev) => Math.max(prev, nextStep));
       rememberUnfinished(nextStep);
-
-      // Intercept before confirm step to show the package prompt
-      if (nextStepId === "confirm" && !isEstimateMode) {
-        if (
-          applicablePackages.length > 0 &&
-          !redeemedPackageId &&
-          !isCustomerMode
-        ) {
-          setShowingPackagePromptStep(true);
-        }
-      }
     }
   };
 
   const handlePrevious = () => {
-    // If package prompt is showing, go back to the previous step (details)
-    if (showingPackagePromptStep) {
-      setShowingPackagePromptStep(false);
-      const prevStep = currentStep - 1;
-      const prevStepId = displayedSteps[prevStep]?.id;
-      setCurrentStep(prevStep);
-      if (prevStepId === "details" && currentSubSteps.length > 1) {
-        goToSubStep(currentSubSteps.length - 1);
-      } else {
-        setCurrentSubStepId(0);
-      }
-      return;
-    }
-
     const currentStepId = displayedSteps[currentStep]?.id;
-    const prevStepId = displayedSteps[currentStep - 1]?.id;
-
-    // From confirm, go back to the package prompt instead of jumping straight to details
-    if (currentStepId === "confirm" && !isEstimateMode) {
-      if (
-        applicablePackages.length > 0 &&
-        !redeemedPackageId &&
-        !isCustomerMode
-      ) {
-        setShowingPackagePromptStep(true);
-        return;
-      }
-    }
+    const prevIndex = previousOpenStep(currentStep);
+    const prevStepId = displayedSteps[prevIndex]?.id;
 
     // A Details screen split into sub-steps steps back through them.
     if (currentStepId === "details" && currentSubSteps.length > 1) {
@@ -2768,8 +2530,8 @@ export function BookingModal({
         return;
       }
     }
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
+    if (prevIndex >= 0) {
+      setCurrentStep(prevIndex);
       // Back into a split Details screen lands on its last sub-step.
       if (prevStepId === "details" && currentSubSteps.length > 1) {
         goToSubStep(currentSubSteps.length - 1);
@@ -2893,6 +2655,33 @@ export function BookingModal({
   };
 
   const [submitting, setSubmitting] = useState(false);
+  // The booking just made, for the screen that follows it (staff). A
+  // customer's request has its own flag, `bookingRequested`.
+  const [createdBooking, setCreatedBooking] = useState<{
+    ref?: number;
+    status: PreviewStatus;
+    /** Agreements still unsigned when it was made. */
+    missing: number;
+    linkSent: boolean;
+    /** A confirmation email is on its way: the facility's rule is on, the
+     *  switch was left on and the client has an address (2026-10-02). */
+    emailed: boolean;
+  } | null>(null);
+  // Staff: whether the facility's booking confirmation sends an email at all
+  // — the done screen says one is on its way only when it does.
+  const { data: automationRules } = useQuery({
+    ...automationQueries.rules(),
+    enabled: open && !isCustomerMode,
+  });
+  const confirmationEmailOn = (automationRules ?? []).some(
+    (rule) =>
+      rule.trigger === "booking_created" &&
+      rule.enabled &&
+      !!rule.emailTemplateId &&
+      (rule.serviceTypes.length === 0 ||
+        rule.serviceTypes.includes(selectedService)),
+  );
+  const lastSavedRef = useRef<number | undefined>(undefined);
 
   // The caller saves the booking. It answers `false` — or throws — when it did
   // not, having said why; anything else means it is saved.
@@ -2908,9 +2697,12 @@ export function BookingModal({
     try {
       const outcome = await onCreateBooking(booking);
       if (outcome === false) return { ok: false };
-      return typeof outcome === "object" && outcome !== null
-        ? { ok: true, ref: outcome.ref }
-        : { ok: true };
+      const ref =
+        typeof outcome === "object" && outcome !== null
+          ? outcome.ref
+          : undefined;
+      lastSavedRef.current = ref;
+      return ref === undefined ? { ok: true } : { ok: true, ref };
     } catch (error) {
       toast.error(t("bookingNotSaved"), {
         description: error instanceof Error ? error.message : undefined,
@@ -2931,10 +2723,29 @@ export function BookingModal({
     setSubmitting(true);
     // No draft is saved while the booking is being sent, or after it was.
     draftSubmittedRef.current = true;
+    // The ref the done screen names is this save's, never a previous one's.
+    lastSavedRef.current = undefined;
     try {
       if (await completeBooking()) {
-        resetForm();
-        onOpenChange(false);
+        if (editMode) {
+          // An edit goes back to the booking it came from.
+          resetForm();
+          onOpenChange(false);
+        } else {
+          setCreatedBooking({
+            ref: lastSavedRef.current,
+            status: confirmModel.status,
+            missing: waivers.pending.length,
+            linkSent: Boolean(signingLinks.email || signingLinks.sms),
+            // A training enrolment raises no confirmation: it is no booking
+            // the confirmation rule hears about.
+            emailed:
+              selectedService !== "training" &&
+              confirmationEmailOn &&
+              notificationEmail &&
+              !!selectedClient?.email,
+          });
+        }
       } else {
         draftSubmittedRef.current = false;
       }
@@ -2963,19 +2774,7 @@ export function BookingModal({
 
     const clientId = selectedClientId;
 
-    // Multi-dog training: the booking spans every dog in the cart + the dog
-    // configured this pass. Other services keep the Step-1 pet selection.
-    const trainingItems =
-      selectedService === "training"
-        ? [...trainingCart, ...currentTrainingLineItems]
-        : [];
-    const trainingPetIds = Array.from(
-      new Set(trainingItems.map((li) => li.petId)),
-    );
-    const petIdList =
-      selectedService === "training" && trainingPetIds.length > 0
-        ? trainingPetIds
-        : selectedPetIds;
+    const petIdList = selectedPetIds;
     const petId: number | number[] =
       petIdList.length === 1 ? petIdList[0] : petIdList;
 
@@ -3071,6 +2870,7 @@ export function BookingModal({
         kennelMoves = plan.kennelMoves;
       } else {
         bookedRooms = roomsForAssignments({
+          separate: !boardingShare,
           assignments: roomAssignments,
           startDate: nights.from,
           endDate: nights.to,
@@ -3095,7 +2895,9 @@ export function BookingModal({
             // the server re-price and the tax stamp resolve.
             selectedService === "daycare" && daycareService
             ? daycareService.name
-            : serviceType,
+            : selectedService === "training" && trainingProgram
+              ? trainingProgram.name
+              : serviceType,
       startDate:
         daycareDay ??
         (selectedService === "boarding" && boardingRangeStart
@@ -3120,7 +2922,25 @@ export function BookingModal({
       // booking a customer inserts `request_submitted` with no price
       // (private.enforce_booking_integrity), whatever a setting said. Staff
       // are the facility, so theirs is confirmed.
-      status: isCustomerMode ? "request_submitted" : "confirmed",
+      // Staff booking for a client with agreements still to sign: Pending,
+      // until the database sees the last one signed (20261002123123).
+      status: isCustomerMode
+        ? "request_submitted"
+        : !isEstimateMode && waivers.pending.length > 0
+          ? "pending"
+          : "confirmed",
+      awaitingAgreements:
+        !isCustomerMode && !isEstimateMode && waivers.pending.length > 0
+          ? true
+          : undefined,
+      // A customer's card, charged the deposit when the facility confirms
+      // the request — the sentence on Confirm says so (2026-10-02).
+      depositCardId:
+        isCustomerMode &&
+        confirmModel.depositAmount > 0 &&
+        confirmModel.depositCardId
+          ? confirmModel.depositCardId
+          : undefined,
       basePrice: calculatePrice.basePrice,
       discount: calculatePrice.discount,
       // The SERVICE's price. Any custom fee is excluded here and written as a
@@ -3144,6 +2964,18 @@ export function BookingModal({
         selectedService === "boarding"
           ? (boardingService?.rowId ?? null)
           : undefined,
+      boardingPetServices:
+        selectedService === "boarding" &&
+        Object.keys(petBoardingServices).length > 1
+          ? Object.fromEntries(
+              Object.entries(petBoardingServices).map(([petId, s]) => [
+                petId,
+                s.rowId,
+              ]),
+            )
+          : undefined,
+      boardingShare:
+        selectedService === "boarding" && boardingShare ? true : undefined,
       specialRequests: specialRequests.trim() || undefined,
       daycareSelectedDates:
         daycareSelectedDates.length > 0
@@ -3207,6 +3039,12 @@ export function BookingModal({
       // Primary groomer assignment — mirror it onto both `stylistPreference`
       // (the dedicated field) and `assignedStaff` (the calendar column key)
       // so the grooming calendar bridge can route the booking correctly.
+      groomingMatted:
+        selectedService === "grooming" &&
+        groomPets.length === 1 &&
+        groomingMatted[groomPets[0]!.pet.id] === true
+          ? true
+          : undefined,
       stylistPreference:
         selectedService === "grooming" && groomingStylistId
           ? groomingStylistId
@@ -3229,8 +3067,11 @@ export function BookingModal({
           ? groomingManualDuration
           : undefined,
       // Grooming station assignment (filtered by pet size on the wizard side).
+      // Only a table that still fits the pets on it.
       stationAssignment:
-        selectedService === "grooming" && groomingStationId
+        selectedService === "grooming" &&
+        groomingStationId &&
+        stationOptions.some((station) => station.id === groomingStationId)
           ? groomingStationId
           : undefined,
       // Grooming-specific add-ons (separate catalog from facility-wide
@@ -3244,6 +3085,39 @@ export function BookingModal({
         );
         return known.length > 0 ? known : undefined;
       })(),
+      // Training (the client's mock, 2026-10-01): what was asked for — a
+      // customer's request carries it to staff, who enrol from it; staff's
+      // own enrolment writes the goals onto every session itself.
+      ...(selectedService === "training" && trainingProgram
+        ? {
+            trainingProgramId: trainingProgram.id,
+            trainingFormat: trainingFormat ?? undefined,
+            trainingPack:
+              trainingFormat === "lesson" && trainingChoice.pack > 1
+                ? trainingChoice.pack
+                : undefined,
+            trainingSeriesId:
+              trainingFormat === "group"
+                ? (trainingClassId ?? undefined)
+                : undefined,
+            trainerId:
+              trainingFormat !== "group"
+                ? (trainingTime.groomerId ?? undefined)
+                : undefined,
+            trainingGoals:
+              trainingIntake.goals.length > 0
+                ? trainingIntake.goals
+                : undefined,
+            trainingExperience: trainingIntake.experience ?? undefined,
+            trainerNotes: trainingIntake.notes.trim() || undefined,
+          }
+        : {}),
+      // Staff's reason to go ahead without a required form, typed on
+      // Confirm; the server saves it with who gave it.
+      formOverrideReason:
+        !isCustomerMode && formsBlocking && formsReason.trim()
+          ? formsReason.trim()
+          : undefined,
       includesEvaluation: includesEvaluation || undefined,
       evaluationStatus: includesEvaluation ? "pending" : undefined,
       // Booked past the evaluation rule: which pets were short of it, and why.
@@ -3264,12 +3138,16 @@ export function BookingModal({
         // so there is no deposit to take yet: the facility asks for it when it
         // confirms. The card this used to send was charged by nothing.
         if (isCustomerMode) return undefined;
-        // Staff flow: recorded as a payment by the server, in the tender
-        // BookingDepositPrompt took it in.
-        if (depositPrompt.collectNow && depositPrompt.amount > 0) {
+        // Staff flow: cash or e-transfer taken now is recorded as a payment
+        // by the server, in that tender.
+        const amount = computeDepositAmount(
+          applicableDepositRule,
+          calculatePrice.total,
+        );
+        if (depositMode === "cash" && amount > 0) {
           return {
-            amount: depositPrompt.amount,
-            method: depositPrompt.method,
+            amount,
+            method: depositCashMethod,
             ruleLabel: applicableDepositRule.label,
           };
         }
@@ -3283,6 +3161,60 @@ export function BookingModal({
         clientRef: clientId,
         petRefs: petIdList.filter((id) => id > 0),
       });
+      return false;
+    }
+
+    // ── A CUSTOMER'S CLASS IS AN ENROLMENT, AS A REQUEST (2026-10-02) ─────
+    //
+    // The place is held and every session is booked as a request, grouped
+    // as one: the facility approves or declines the class whole, or its own
+    // rule confirms it now. A lesson or a consult stays a request below — a
+    // customer makes no series; staff do, when they decide it.
+    if (
+      isCustomerMode &&
+      selectedService === "training" &&
+      trainingFormat === "group" &&
+      trainingClassId &&
+      selectedClient
+    ) {
+      const intake = {
+        goals: trainingIntake.goals,
+        experience: trainingIntake.experience,
+        notes: trainingIntake.notes.trim() || undefined,
+      };
+      const results = await Promise.allSettled(
+        selectedPets.map((pet) =>
+          enrollInSeries.mutateAsync({
+            seriesId: trainingClassId,
+            clientId: selectedClient.id,
+            petId: pet.id,
+            care: careForPet(pet.id),
+            intake,
+            depositCardId:
+              confirmModel.depositAmount > 0 && confirmModel.depositCardId
+                ? confirmModel.depositCardId
+                : undefined,
+          }),
+        ),
+      );
+      const enrolled = results.flatMap((r) =>
+        r.status === "fulfilled" ? [r.value] : [],
+      );
+      const refused = results.find(
+        (r): r is PromiseRejectedResult => r.status === "rejected",
+      );
+      if (refused) {
+        toast.error(t("trainingEnrolFailed"), {
+          description:
+            refused.reason instanceof Error
+              ? refused.reason.message
+              : undefined,
+        });
+      }
+      if (enrolled.length === 0) return false;
+      lastSavedRef.current = enrolled[0]?.bookingRefs?.[0];
+      await saveCareProfiles();
+      setBookingRequested(true);
       return false;
     }
 
@@ -3322,91 +3254,143 @@ export function BookingModal({
       return false;
     }
 
-    // ── A TRAINING ENROLMENT IS AN ENROLMENT ──────────────────────────────
+    // ── TRAINING IS AN ENROLMENT (the client's mock, 2026-10-01) ─────────
     //
-    // Each dog is enrolled through enroll_in_training_series, which books it
-    // into every remaining session itself — so enrolments make no booking of
-    // their own here. Drop-ins do, one per seat, linked to its session.
-    //
-    // A mixed cart used to price its drop-in booking at the WHOLE cart, the
-    // enrolments included, which the enrolment bookings then charged again.
-    // A drop-in costs its own seat now.
+    // A group program enrols each dog in the class picked, which books it
+    // into every session still ahead (enroll_in_training_series). A lesson or
+    // a consult is a series of its own — one session, the trainer and the
+    // slot taken, a place for each dog — and then the same enrolment, so the
+    // session is one booking per dog on the trainer's calendar. The goals
+    // reach every booking the enrolment makes.
     if (selectedService === "training" && selectedClient && !editMode) {
-      const enrollItems = trainingItems.filter((li) => li.kind === "enroll");
-      const dropIns = trainingItems.filter((li) => li.kind === "drop-in");
-      if (enrollItems.length > 0) {
-        const results = await Promise.allSettled(
-          enrollItems.map((li) =>
-            enrollInSeries.mutateAsync({
-              seriesId: li.seriesId,
-              clientId: selectedClient.id,
-              petId: li.petId,
-              // The dog's feeding and medications, for every session.
-              care: li.care ?? careForPet(li.petId),
-            }),
-          ),
+      if (!trainingProgram) return false;
+      let seriesId = trainingFormat === "group" ? trainingClassId : null;
+      let madeSeries: string | null = null;
+      if (trainingFormat !== "group") {
+        if (!trainingTime.date || trainingTime.start === null) return false;
+        const trainer = trainingTrainers.find(
+          (person) => person.id === trainingTime.groomerId,
         );
-        void queryClient.invalidateQueries({ queryKey: ["training"] });
-        void queryClient.invalidateQueries({ queryKey: ["bookings"] });
-        const refused = results.filter(
-          (r): r is PromiseRejectedResult => r.status === "rejected",
-        );
-        const made = results.length - refused.length;
-        if (made > 0) {
-          toast.success(t("trainingEnrolled").replace("{count}", String(made)));
-        }
-        if (refused.length > 0) {
-          toast.error(t("trainingEnrolFailed"), {
-            description:
-              refused[0].reason instanceof Error
-                ? refused[0].reason.message
-                : undefined,
+        try {
+          const created = await createTrainingSeries.mutateAsync({
+            name: `${trainingProgram.name} · ${formatList(
+              selectedPets.map((pet) => pet.name),
+              locale,
+            )}`,
+            courseTypeName: trainingProgram.name,
+            dayOfWeek: new Date(`${trainingTime.date}T12:00:00`).getDay(),
+            startTime: hhmmOf(trainingTime.start),
+            durationMinutes: trainingMinutes,
+            startDate: trainingTime.date,
+            numberOfSessions: 1,
+            capacity: selectedPets.length,
+            // A pass from a pack pays for this session: nothing to charge.
+            totalPrice: redeemedPackageId
+              ? 0
+              : programPrice(
+                  trainingProgram,
+                  trainingFormat === "lesson" ? trainingChoice.pack : 1,
+                ),
+            staffId: trainer?.staffId ?? null,
+            programId: trainingProgram.id,
+            kind: "private",
+            taxable: trainingProgram.taxable,
           });
+          seriesId = created.id;
+          madeSeries = created.id;
+        } catch (error) {
+          toast.error(t("bookingNotSaved"), {
+            description: error instanceof Error ? error.message : undefined,
+          });
+          return false;
         }
-        // Enrolled, but the dog's care did not reach its sessions: said, so
-        // staff can add it from the sessions' bookings.
-        if (
-          results.some(
-            (r) => r.status === "fulfilled" && r.value.careNotSaved === true,
-          )
-        ) {
-          toast.warning(t("trainingCareNotSaved"));
-        }
-        // Nothing enrolled and nothing else to book: keep the form, so the
-        // reason can be acted on without entering it all again.
-        if (made === 0 && dropIns.length === 0) return false;
-        if (made > 0) await saveCareProfiles();
       }
-      if (dropIns.length === 0) return true;
-      // The drop-in dogs' own care, and nobody else's: a pet on none of the
-      // drop-ins would be charged on the first of them.
-      const dropInCare = mergeCare(
-        dropIns.map((li) => li.care ?? careForPet(li.petId)),
+      if (!seriesId) return false;
+      const series = seriesId;
+      const intake = {
+        goals: trainingIntake.goals,
+        experience: trainingIntake.experience,
+        notes: trainingIntake.notes.trim() || undefined,
+      };
+      const results = await Promise.allSettled(
+        selectedPets.map((pet) =>
+          enrollInSeries.mutateAsync({
+            seriesId: series,
+            clientId: selectedClient.id,
+            petId: pet.id,
+            // The dog's feeding and medications, for every session.
+            care: careForPet(pet.id),
+            intake,
+          }),
+        ),
       );
-      const savedDropIns = await saveThrough({
-        ...booking,
-        feedingSchedule: dropInCare.feedingSchedule,
-        medications: dropInCare.medications,
-        noMedication: dropInCare.noMedication,
-        vetContacts: dropInCare.vetContacts,
-        petId: dropIns.length === 1 ? dropIns[0].petId : petId,
-        parts: dropIns.map((li) => ({
-          petIds: [li.petId],
-          startDate: li.startDate,
-          endDate: li.startDate,
-          checkInTime: li.startTime,
-          checkOutTime: li.endTime,
-          basePrice: li.price,
-          discount: 0,
-          totalCost: li.price,
-          trainingSessionId: li.sessionId,
-        })),
-      });
-      if (savedDropIns.ok) {
-        await saveCareProfiles();
-        await flushLabelPhotos(savedDropIns.ref, dropInCare.medications ?? []);
+      void queryClient.invalidateQueries({ queryKey: ["training"] });
+      void queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      const refused = results.filter(
+        (r): r is PromiseRejectedResult => r.status === "rejected",
+      );
+      const enrolled = results.flatMap((r) =>
+        r.status === "fulfilled" ? [r.value] : [],
+      );
+      if (refused.length > 0) {
+        toast.error(t("trainingEnrolFailed"), {
+          description:
+            refused[0].reason instanceof Error
+              ? refused[0].reason.message
+              : undefined,
+        });
       }
-      return savedDropIns.ok;
+      if (enrolled.length === 0) {
+        // Nobody is booked into the session made for them: it goes, rather
+        // than sit empty on the trainer's calendar.
+        if (madeSeries) {
+          await cancelTrainingSeries
+            .mutateAsync(madeSeries)
+            .catch(() => undefined);
+        }
+        return false;
+      }
+      if (trainingFormat === "group") {
+        toast.success(
+          t("trainingEnrolled").replace("{count}", String(enrolled.length)),
+        );
+      }
+      // Enrolled, but a dog's care did not reach its sessions: said, so
+      // staff can add it from the sessions' bookings.
+      if (enrolled.some((r) => r.careNotSaved === true)) {
+        toast.warning(t("trainingCareNotSaved"));
+      }
+      // The done screen names the first session's booking.
+      lastSavedRef.current =
+        enrolled[0]?.bookingRefs?.[0] ?? enrolled[0]?.bookings[0]?.bookingRef;
+      // A session a pass paid for spends it, on that booking.
+      if (redeemedPackageId && selectedPets[0]) {
+        redeemSelectedPackage(
+          redeemedPackageId,
+          selectedPets[0].id,
+          lastSavedRef.current,
+        );
+      }
+      // A pack: the first session is booked at its price; the rest are the
+      // client's to book, as passes.
+      if (trainingFormat === "lesson" && trainingChoice.pack > 1) {
+        await grantLessonPack
+          .mutateAsync({
+            clientId: selectedClient.id,
+            programId: trainingProgram.id,
+            sessions: trainingChoice.pack,
+            pets: enrolled.length,
+            packageName: `${trainingProgram.name} · ${fillWords(
+              t("wizSessionPack"),
+              { count: trainingChoice.pack },
+            )}`,
+          })
+          .catch(() => toast.warning(t("wizPackNotSaved")));
+      }
+      await saveCareProfiles();
+      // A class is often prepaid: the deposit on the first session.
+      await collectDeposit(lastSavedRef.current);
+      return true;
     }
 
     const saved = await saveThrough(
@@ -3431,7 +3415,68 @@ export function BookingModal({
       redeemSelectedPackage(redeemedPackageId, primaryPetId, saved.ref);
     }
 
+    await collectDeposit(saved.ref);
     return true;
+  };
+
+  /**
+   * Staff's deposit, once the booking exists (the client's mock, 2026-10-02):
+   * the client's saved card charged, or a link sent — the server works the
+   * amount out again (POST /api/bookings/{ref}/deposit). Cash was recorded
+   * with the booking itself. The booking stands either way; what happened
+   * to the money is said.
+   */
+  const collectDeposit = async (ref: number | undefined) => {
+    if (
+      isCustomerMode ||
+      isEstimateMode ||
+      ref === undefined ||
+      confirmModel.depositAmount <= 0 ||
+      (depositMode !== "card" && depositMode !== "link")
+    ) {
+      return;
+    }
+    const channel = selectedClient?.email?.trim() ? "email" : "sms";
+    const response = await fetch(`/api/bookings/${ref}/deposit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(
+        depositMode === "card"
+          ? { action: "charge", savedCardId: confirmModel.depositCardId }
+          : { action: "link", channel },
+      ),
+    }).catch(() => null);
+    const body = (await response?.json().catch(() => null)) as {
+      charged?: boolean;
+      chargedCents?: number;
+      cardLabel?: string | null;
+      sent?: boolean;
+      to?: string;
+      detail?: string;
+      error?: string;
+    } | null;
+    if (depositMode === "card") {
+      if (response?.ok && body?.charged) {
+        toast.success(
+          fillWords(t("wizDepositCharged"), {
+            amount: formatMoney((body.chargedCents ?? 0) / 100, locale),
+            card: body.cardLabel ?? t("wizCard"),
+          }),
+        );
+      } else {
+        toast.error(t("wizDepositNotCharged"), {
+          description: body?.error ?? body?.detail,
+        });
+      }
+      return;
+    }
+    if (response?.ok && body?.sent) {
+      toast.success(fillWords(t("wizDepositLinkSent"), { to: body.to ?? "" }));
+    } else {
+      toast.error(t("wizDepositLinkNotSent"), {
+        description: body?.error ?? body?.detail,
+      });
+    }
   };
 
   // ── ONE BOOKING PER DAY, ONE PER ROOM ─────────────────────────────────────
@@ -3452,7 +3497,12 @@ export function BookingModal({
     booking: NewBooking,
     rooms: Array<{ petId: number; roomId: string }> = roomAssignments,
   ): NewBooking => {
-    if (isCustomerMode && selectedService !== "daycare") return booking;
+    if (
+      isCustomerMode &&
+      selectedService !== "daycare" &&
+      selectedService !== "grooming"
+    )
+      return booking;
     const money = {
       basePrice: booking.basePrice,
       discount: booking.discount,
@@ -3476,6 +3526,29 @@ export function BookingModal({
       };
     }
 
+    if (
+      selectedService === "grooming" &&
+      groomPets.length > 1 &&
+      groomingTime.date &&
+      groomingTime.start !== null
+    ) {
+      return {
+        ...booking,
+        parts: groomingParts({
+          date: groomingTime.date,
+          start: hhmmOf(groomingTime.start),
+          pets: groomPets.map((g) => ({
+            petId: g.pet.id,
+            serviceType: g.pkg.id,
+            minutes: g.minutes,
+            price: g.groom.price,
+            matted: groomingMatted[g.pet.id] === true,
+          })),
+          money,
+        }),
+      };
+    }
+
     if (selectedService === "boarding" && petIds.length > 1) {
       const parts = boardingParts({
         petIds,
@@ -3485,15 +3558,18 @@ export function BookingModal({
         checkInTime: booking.checkInTime ?? checkInTime,
         checkOutTime: booking.checkOutTime ?? checkOutTime,
         money,
-        weightOf: (roomId) =>
-          roomId
-            ? boardingNightlyRate({
-                categories: roomCategories,
-                rooms: facilityRooms,
-                roomAssignments: [{ petId: petIds[0], roomId }],
-                locationId: currentLocationId,
-              })
-            : 0,
+        serviceOf: (ids) => petBoardingServices[ids[0] ?? -1]?.rowId,
+        weightOf: (roomId, ids) =>
+          petBoardingServices[ids[0] ?? -1]
+            ? petBoardingServices[ids[0]!]!.price
+            : roomId
+              ? boardingNightlyRate({
+                  categories: roomCategories,
+                  rooms: facilityRooms,
+                  roomAssignments: [{ petId: petIds[0], roomId }],
+                  locationId: currentLocationId,
+                })
+              : 0,
       });
       return parts.length > 1 ? { ...booking, parts } : booking;
     }
@@ -3668,10 +3744,27 @@ export function BookingModal({
     };
   }, [isCustomerMode]);
 
+  // "Start another booking": a clean form, with what the caller decided —
+  // the customer, a pet, a service it locked — put back.
+  const startAnother = () => {
+    resetForm();
+    setCreatedBooking(null);
+    if (preSelectedClientId) setSelectedClientId(preSelectedClientId);
+    if (preSelectedPetIds?.length) setSelectedPetIds(preSelectedPetIds);
+    else if (preSelectedPetId) setSelectedPetIds([preSelectedPetId]);
+    if (lockService && preSelectedService) {
+      setSelectedService(preSelectedService);
+    }
+    setCurrentStep(freshStepIndex);
+  };
+
   const resetForm = () => {
     setCurrentStep(0);
+    setCreatedBooking(null);
+    setPetRoomCards({});
+    setPetBoardingServices({});
+    setBoardingShare(false);
     setCurrentSubStepId(0);
-    setHighestStepReached(0);
     setSearchQuery("");
     setSelectedClientId(null);
     setSelectedPetIds([]);
@@ -3710,7 +3803,7 @@ export function BookingModal({
     setAddOnStaff({});
     setNotificationEmail(true);
     setNotificationSMS(false);
-    setIncludesEvaluation(false);
+    setEvaluationChoice(null);
     setEvaluationOverride(null);
     setBookingRequested(false);
     setSelectedStaffId(null);
@@ -3721,10 +3814,8 @@ export function BookingModal({
     setGroomingAdditionalStylistIds([]);
     setGroomingStationId("");
     setGroomingStages([]);
-    setGroomingManualPrice(undefined);
     setGroomingManualDuration(undefined);
     setGroomingSelectedAddOnIds([]);
-    setGroomingAutoAttachedAddOnIds([]);
   };
 
   const handleSendEstimate = () => {
@@ -3772,1192 +3863,1181 @@ export function BookingModal({
       .finally(() => setEstimateBusy(false));
   };
 
-  const isViewMode = !!booking;
+  // ── The wizard's shell (the client's mock, 2026-10-01) ────────────────────
+  // Four steps always: a step the caller decided (an edit's client and
+  // service, a service it locked) is shown done rather than hidden, so the
+  // rail and the pills read the same in every mode.
+  const detailsIndex = displayedSteps.findIndex(
+    (step) => step.id === "details",
+  );
+  const currentStepId = displayedSteps[currentStep]?.id;
+  const isDone =
+    createdBooking !== null || (isCustomerMode && bookingRequested);
+  const serviceName = selectedService
+    ? (configs[selectedService as keyof typeof configs]?.clientFacingName ??
+      getModuleBySlug(selectedService)?.name ??
+      selectedService)
+    : "";
+  const serviceKind =
+    selectedService === "boarding"
+      ? t("wizKindBoarding")
+      : selectedService === "daycare"
+        ? t("wizKindDaycare")
+        : selectedService === "grooming"
+          ? t("wizKindGrooming")
+          : selectedService === "training"
+            ? t("wizKindTraining")
+            : selectedService === "evaluation"
+              ? t("wizKindEvaluation")
+              : t("wizKindCustom");
+  const shortDay = (value: Date | string) => formatDateShort(value, locale);
 
-  const getTaskIcon = (type: string): LucideIcon => {
-    switch (type) {
-      case "feeding":
-        return Utensils;
-      case "medication":
-        return Pill;
-      case "service":
-        return Scissors;
-      case "walking":
-        return Clock;
-      default:
-        return Clock;
-    }
-  };
-
-  const tasks = useMemo((): Task[] => {
-    if (!booking) return [];
-
-    const taskList: Task[] = [];
-    const now = new Date();
-    const bookingStart = new Date(booking.startDate);
-    const isFutureBooking = bookingStart > now;
-
-    // Feeding tasks
-    if (booking.feedingSchedule) {
-      booking.feedingSchedule.forEach((feed) => {
-        const petId = Array.isArray(booking.petId)
-          ? booking.petId[0]
-          : booking.petId;
-        taskList.push({
-          id: `feed-${feed.id}`,
-          bookingId: booking.id,
-          petId,
-          type: "feeding",
-          title: t("taskFeed").replace(
-            "{occasion}",
-            feed.occasions?.[0]?.label || t("taskFeeding"),
+  // ── CONFIRM'S FACTS (the client's mock, 2026-10-01) ────────────────────
+  const confirmDaycareDays = [...daycareSelectedDates].sort(
+    (a, b) => a.getTime() - b.getTime(),
+  );
+  const firstDaycareTimes = confirmDaycareDays[0]
+    ? daycareDateTimes.find((d) => d.date === localDay(confirmDaycareDays[0]!))
+    : undefined;
+  const stayIn = boardingDateTimes[0]?.checkInTime || checkInTime;
+  const stayOut =
+    boardingDateTimes[boardingDateTimes.length - 1]?.checkOutTime ||
+    checkOutTime;
+  const [confirmFirstDay, confirmLastDay] =
+    selectedService === "boarding"
+      ? [
+          boardingRangeStart ? localDay(boardingRangeStart) : null,
+          boardingRangeEnd ? localDay(boardingRangeEnd) : null,
+        ]
+      : selectedService === "daycare"
+        ? [
+            confirmDaycareDays[0] ? localDay(confirmDaycareDays[0]) : null,
+            confirmDaycareDays.length > 0
+              ? localDay(confirmDaycareDays[confirmDaycareDays.length - 1]!)
+              : null,
+          ]
+        : [startDate || null, endDate || startDate || null];
+  const staffName = (() => {
+    const id =
+      selectedService === "grooming" && groomingStylistId
+        ? groomingStylistId
+        : selectedStaffId;
+    const member = (staffProfiles ?? []).find((s) => s.id === id);
+    return member ? `${member.firstName} ${member.lastName}`.trim() : null;
+  })();
+  const roomNameOf = (roomId: string | undefined) =>
+    roomId
+      ? (facilityRooms.find((room) => room.id === roomId)?.name ??
+        roomCategories.find((category) => category.id === roomId)?.name ??
+        null)
+      : null;
+  const feedingSummary =
+    feedingUse === "disabled" && effectiveFeeding.length === 0
+      ? null
+      : effectiveFeeding
+          .map((item) => {
+            const meals = describeFeeding(item, {
+              t,
+              locale,
+              stay: careStay,
+              settings: feedingStep.settings,
+              service: selectedService,
+            }).meals;
+            const pet = selectedPets.find((p) => p.id === item.petId);
+            return selectedPets.length > 1 && pet
+              ? `${pet.name}: ${meals}`
+              : meals;
+          })
+          .join(" · ");
+  const medicationSummary =
+    medicationUse === "disabled" && effectiveMedications.length === 0
+      ? null
+      : [
+          ...effectiveMedications.map((med) => med.name).filter(Boolean),
+          ...medicationStep.effectiveNoMedication.map((petId) =>
+            fillWords(t("medsTakesNone"), {
+              pet: selectedPets.find((p) => p.id === petId)?.name ?? "",
+            }),
           ),
-          time: feed.occasions?.[0]?.time || "",
-          details: feed.prepInstructions?.join(", ") || "",
-          assignedStaff: taskAssignments[`feed-${feed.id}`] || undefined,
-          completionStatus: "pending",
-          assignable: isFutureBooking && !taskAssignments[`feed-${feed.id}`],
-        });
-      });
+          // The vet, as the booking keeps it — "Vet: Plateau Vet · 514-555-
+          // 0100", with the pet's name when there are several.
+          ...Object.entries(medicationStep.effectiveVetContacts ?? {}).flatMap(
+            ([petId, vet]) => {
+              const contact = [vet.clinic, vet.phone]
+                .filter(Boolean)
+                .join(" · ");
+              if (!contact) return [];
+              const name =
+                selectedPets.find((p) => String(p.id) === petId)?.name ?? "";
+              return [
+                fillWords(t("medsVetLine"), {
+                  vet:
+                    selectedPets.length > 1 && name
+                      ? `${contact} (${name})`
+                      : contact,
+                }),
+              ];
+            },
+          ),
+        ].join(" · ");
+  const groomingMinutes = (() => {
+    const a = /^(\d{1,2}):(\d{2})/.exec(checkInTime);
+    const b = /^(\d{1,2}):(\d{2})/.exec(checkOutTime);
+    if (!a || !b) return undefined;
+    const diff =
+      Number(b[1]) * 60 + Number(b[2]) - (Number(a[1]) * 60 + Number(a[2]));
+    return diff > 0 ? diff : undefined;
+  })();
+  const groomName =
+    groomingMenu.find((pkg) => pkg.id === serviceType)?.name ?? null;
+  const confirmModel = useConfirmModel({
+    t,
+    locale,
+    isCustomer: isCustomerMode,
+    isEstimate: isEstimateMode,
+    onConfirm: displayedSteps[currentStep]?.id === "confirm",
+    service: selectedService,
+    kindLabel: serviceKind,
+    pets: selectedPets,
+    client: selectedClient,
+    facilityName,
+    hero:
+      selectedService === "boarding" && boardingRangeStart && boardingRangeEnd
+        ? {
+            stay: {
+              start: boardingRangeStart,
+              end: boardingRangeEnd,
+              checkIn: stayIn,
+              checkOut: stayOut,
+              nights: boardingNights,
+            },
+          }
+        : selectedService === "daycare"
+          ? {
+              days: {
+                count: confirmDaycareDays.length,
+                checkIn: firstDaycareTimes?.checkInTime || checkInTime,
+                checkOut: firstDaycareTimes?.checkOutTime || checkOutTime,
+              },
+            }
+          : selectedService === "training" &&
+              trainingFormat === "group" &&
+              trainingClass &&
+              trainingFirstSession
+            ? {
+                // "Puppy Foundations · starts Sat, Oct 17 · Saturdays · 10:00 AM"
+                course: {
+                  name: trainingClass.name,
+                  start: trainingFirstSession,
+                  when: classWhen(trainingClass, t, locale),
+                },
+              }
+            : startDate
+              ? {
+                  slot: {
+                    date: startDate,
+                    start: checkInTime,
+                    end: checkOutTime || undefined,
+                    // "· with Maya R." — the groomer or the trainer the slot
+                    // was taken with.
+                    staffName:
+                      (selectedService === "grooming"
+                        ? groomingTime.groomerName
+                        : selectedService === "training"
+                          ? trainingTime.groomerName
+                          : staffName) ?? undefined,
+                  },
+                }
+              : {},
+    details: {
+      start:
+        selectedService === "boarding" ? boardingRangeStart : startDate || null,
+      end: selectedService === "boarding" ? boardingRangeEnd : endDate || null,
+      checkIn:
+        selectedService === "boarding"
+          ? stayIn
+          : selectedService === "daycare"
+            ? firstDaycareTimes?.checkInTime || checkInTime
+            : checkInTime,
+      checkOut:
+        selectedService === "boarding"
+          ? stayOut
+          : selectedService === "daycare"
+            ? firstDaycareTimes?.checkOutTime || checkOutTime
+            : checkOutTime,
+      nights: boardingNights,
+      rooms: selectedPets.map((pet) => ({
+        pet: pet.name,
+        room:
+          petBoardingServices[pet.id]?.name ??
+          roomNameOf(
+            roomAssignments.find((assignment) => assignment.petId === pet.id)
+              ?.roomId,
+          ),
+      })),
+      sharing: boardingShare,
+      days: confirmDaycareDays,
+      dayType: daycareService?.name ?? null,
+      grooms: selectedPets.map((pet) => ({
+        pet: pet.name,
+        groom:
+          groomPets.find((g) => g.pet.id === pet.id)?.pkg.name ?? groomName,
+      })),
+      minutes:
+        selectedService === "grooming" && groomTotalMinutes > 0
+          ? groomTotalMinutes
+          : groomingMinutes,
+      staffName:
+        selectedService === "grooming"
+          ? (groomingTime.groomerName ?? staffName)
+          : staffName,
+      program: trainingProgram?.name ?? null,
+      pack: trainingFormat === "lesson" ? trainingChoice.pack : 1,
+      trainingClass:
+        trainingFormat === "group"
+          ? trainingClass && trainingFirstSession
+            ? {
+                name: trainingClass.name,
+                when: classWhen(trainingClass, t, locale),
+                start: trainingFirstSession,
+              }
+            : null
+          : undefined,
+      trainingSlot:
+        trainingTime.date && trainingTime.start !== null
+          ? {
+              date: trainingTime.date,
+              start: hhmmOf(trainingTime.start),
+              staffName: trainingTime.groomerName,
+            }
+          : null,
+      goals: selectedService === "training" ? trainingIntake.goals : undefined,
+      experience:
+        selectedService !== "training"
+          ? undefined
+          : trainingIntake.experience === "none"
+            ? t("wizExperienceNone")
+            : trainingIntake.experience === "some"
+              ? t("wizExperienceSome")
+              : trainingIntake.experience === "lots"
+                ? t("wizExperienceLots")
+                : null,
+      addOnCount:
+        billedAddOnLines.length +
+        (selectedService === "grooming" ? groomingSelectedAddOnIds.length : 0),
+      feeding: feedingSummary,
+      medication: medicationSummary,
+    },
+    firstDay: confirmFirstDay,
+    lastDay: confirmLastDay,
+    onEdit: (edit) => {
+      setCurrentStep(stepIndexOf(edit.step));
+      setCurrentSubStepId(edit.subStepId ?? 0);
+    },
+    waivers: { applicable: waivers.applicable, pending: waivers.pending },
+    forms:
+      formsMissing.length > 0
+        ? {
+            isCustomer: isCustomerMode,
+            missing: formsMissing,
+            clientFirstName: (selectedClient?.name ?? "").split(/\s+/)[0] ?? "",
+            petRefOf: (name) =>
+              selectedPets.find((pet) => pet.name === name)?.id,
+            service: selectedService,
+            reason: formsReason,
+            onReason: setFormsReason,
+            minReason: FORMS_MIN_REASON,
+            onRecheck: () => void missingForms.refetch(),
+            rechecking: missingForms.isFetching,
+          }
+        : undefined,
+    links: isCustomerMode
+      ? undefined
+      : {
+          sent: signingLinks,
+          email: selectedClient?.email?.trim() || null,
+          phone: selectedClient?.phone?.trim() || null,
+          send: (via) => void sendSigningLink(via),
+          sending: signingLinkSending,
+        },
+    evaluation:
+      !isCustomerMode && evaluationIssues.length > 0
+        ? {
+            petNames: evaluationIssues.map((issue) => issue.pet.name),
+            price: evaluationConfig.price,
+            minutes: evaluationConfig.schedule.defaultDurationMinutes ?? 0,
+            on: includesEvaluation,
+            onChange: (on) => setEvaluationChoice(on),
+            reason:
+              evaluationOverride?.key === evaluationIssueKey
+                ? evaluationOverride.reason
+                : "",
+            onReason: (reason) =>
+              setEvaluationOverride({ key: evaluationIssueKey, reason }),
+            minReason: EVALUATION_OVERRIDE_MIN_REASON,
+            onBookEvaluation: () => {
+              handleServiceChange("evaluation");
+              setServiceType("");
+              setCurrentStep(stepIndexOf("details"));
+              setCurrentSubStepId(0);
+            },
+          }
+        : undefined,
+    // A training pass pays for one session: not a class, not a new pack.
+    passes:
+      !isCustomerMode &&
+      !isEstimateMode &&
+      applicablePackages.length > 0 &&
+      !(
+        selectedService === "training" &&
+        (trainingFormat === "group" || trainingChoice.pack > 1)
+      )
+        ? {
+            packages: applicablePackages,
+            applied: redeemedPackageId,
+            onApply: setRedeemedPackageId,
+          }
+        : undefined,
+    depositRule: applicableDepositRule,
+    depositMode,
+    setDepositMode,
+    cashMethod: depositCashMethod,
+    setCashMethod: setDepositCashMethod,
+    quote: calculatePrice,
+    notify: {
+      email: notificationEmail,
+      onEmail: setNotificationEmail,
+      sms: notificationSMS,
+      onSms: setNotificationSMS,
+    },
+    specialRequests,
+    setSpecialRequests,
+    onEditClient: () => {
+      setCurrentStep(0);
+      setCurrentSubStepId(0);
+    },
+    passRedemption: !!passRedemption,
+  });
+  const confirmProps = confirmModel.props;
+  // Staff: who the stay or day is assigned to, and each add-on that needs
+  // somebody — kept from the old Confirm, under the details.
+  const staffOption = (s: NonNullable<typeof staffProfiles>[number]) => ({
+    id: s.id,
+    name: `${s.firstName} ${s.lastName}`.trim(),
+  });
+  const attendantModule =
+    selectedService === "daycare" || selectedService === "boarding"
+      ? (selectedService as ServiceModule)
+      : null;
+  const addOnsByRef = bookableLookup(storedAddOns);
+  // Daycare's play area (the client's mock has no screen for it): assigned
+  // as a customer's is, and changed here — for every pet at once, so an area
+  // one of them does not fit, or a full one, is listed but not choosable.
+  const playAreaOptions =
+    selectedService === "daycare"
+      ? playAreaChoices({
+          pets: effectiveSelectedPets,
+          days: daycareSelectedDates.map(localDay),
+          sections: daycareSections,
+          bookings: knownBookings,
+          text: {
+            spotsLeft: (left, capacity) =>
+              fillWords(t("wizSpotsLeft"), { left, capacity }),
+            full: t("wizFull"),
+            notFor: (pet) => fillWords(t("wizRoomNotFor"), { pet }),
+          },
+        })
+      : [];
+  const confirmStaffRows = isCustomerMode ? null : (
+    <StaffAssignments
+      station={
+        selectedService === "grooming" && stationOptions.length > 0
+          ? {
+              staff: stationOptions,
+              value: stationOptions.some((o) => o.id === groomingStationId)
+                ? groomingStationId
+                : null,
+              onChange: (id) => setGroomingStationId(id ?? ""),
+            }
+          : undefined
+      }
+      playArea={
+        playAreaOptions.length > 0
+          ? {
+              staff: playAreaOptions,
+              value: roomAssignments[0]?.roomId ?? null,
+              onChange: (sectionId: string | null) =>
+                setRoomAssignments(
+                  sectionId
+                    ? effectiveSelectedPets.map((pet) => ({
+                        petId: pet.id,
+                        roomId: sectionId,
+                      }))
+                    : [],
+                ),
+            }
+          : undefined
+      }
+      booking={
+        attendantModule
+          ? {
+              role: t("roleAttendant"),
+              staff: (staffProfiles ?? [])
+                .filter(
+                  (s) =>
+                    (s.status === "active" &&
+                      s.serviceAssignments.includes(attendantModule)) ||
+                    s.id === selectedStaffId,
+                )
+                .map(staffOption),
+              value: selectedStaffId,
+              onChange: setSelectedStaffId,
+            }
+          : undefined
+      }
+      addOns={billedAddOnLines
+        .filter((line) => addOnsByRef.get(line.serviceId)?.requiresStaff)
+        .map((line) => {
+          const pet = selectedPets.find((p) => p.id === line.petId);
+          const name = addOnsByRef.get(line.serviceId)?.name ?? line.serviceId;
+          return {
+            key: `${line.serviceId}::${line.petId}`,
+            name: pet ? `${name} · ${pet.name}` : name,
+            staff: (staffProfiles ?? [])
+              .filter((s) => s.status === "active" || s.id === line.staffId)
+              .map(staffOption),
+            value: line.staffId ?? null,
+            onChange: (staffId: string | null) =>
+              setAddOnStaff((chosen) => ({
+                ...chosen,
+                [`${line.serviceId}::${line.petId}`]: staffId,
+              })),
+          };
+        })}
+    />
+  );
+  const requiresApproval = confirmModel.requiresApproval;
+  const depositAmount = confirmModel.depositAmount;
+  const estimate = confirmModel.estimate;
+  const detailsSummary = (() => {
+    if (selectedService === "boarding" && boardingRangeStart) {
+      return [
+        shortDay(boardingRangeStart),
+        boardingRangeEnd ? shortDay(boardingRangeEnd) : "…",
+      ].join(" → ");
     }
-
-    // Medication tasks
-    if (booking.medications) {
-      booking.medications.forEach((med) => {
-        med.times.forEach((time: string) => {
-          const petId = Array.isArray(booking.petId)
-            ? booking.petId[0]
-            : booking.petId;
-          taskList.push({
-            id: `med-${med.id}-${time}`,
-            bookingId: booking.id,
-            petId,
-            type: "medication",
-            title: t("taskGive").replace("{medication}", med.name),
-            time,
-            details: med.adminInstructions?.join(", ") || "",
-            assignedStaff:
-              taskAssignments[`med-${med.id}-${time}`] || undefined,
-            completionStatus: "pending",
-            assignable:
-              isFutureBooking && !taskAssignments[`med-${med.id}-${time}`],
-          });
-        });
-      });
+    if (selectedService === "daycare" && daycareSelectedDates.length > 0) {
+      const first = [...daycareSelectedDates].sort(
+        (a, b) => a.getTime() - b.getTime(),
+      )[0];
+      return fillWords(
+        t(
+          isPluralOne(daycareSelectedDates.length, locale)
+            ? "wizSumDaysFromOne"
+            : "wizSumDaysFromOther",
+        ),
+        { count: daycareSelectedDates.length, date: shortDay(first) },
+      );
     }
-
-    // Extra services
-    if (booking.extraServices) {
-      booking.extraServices.forEach((service, index) => {
-        // Handle both string[] (grooming) and ExtraService[] (daycare/boarding) types
-        if (typeof service === "string") {
-          // For string type (grooming), use the string as service name
-          const petId = Array.isArray(booking.petId)
-            ? booking.petId[0]
-            : booking.petId;
-          taskList.push({
-            id: `service-${service}-${petId}-${index}`,
-            bookingId: booking.id,
-            petId: petId,
-            type: "service",
-            title: t("taskPerform").replace("{service}", service),
-            time: null,
-            details: t("extraService"),
-            assignedStaff:
-              taskAssignments[`service-${service}-${petId}-${index}`] ||
-              undefined,
-            completionStatus: "pending",
-            assignable:
-              isFutureBooking &&
-              !taskAssignments[`service-${service}-${petId}-${index}`],
-          });
-        } else {
-          // For ExtraService object type (daycare/boarding)
-          taskList.push({
-            id: `service-${service.serviceId}-${service.petId}`,
-            bookingId: booking.id,
-            petId: service.petId,
-            type: "service",
-            title: t("taskPerformService").replace(
-              "{service}",
-              service.serviceId,
-            ),
-            time: null,
-            details: t("taskQuantity").replace(
-              "{count}",
-              String(service.quantity),
-            ),
-            assignedStaff:
-              taskAssignments[
-                `service-${service.serviceId}-${service.petId}`
-              ] || undefined,
-            completionStatus: "pending",
-            assignable:
-              isFutureBooking &&
-              !taskAssignments[`service-${service.serviceId}-${service.petId}`],
-          });
+    // A class: "Starts Oct 17" (the client's mock).
+    if (selectedService === "training" && trainingFormat === "group") {
+      return trainingFirstSession
+        ? fillWords(t("wizSumStarts"), { date: shortDay(trainingFirstSession) })
+        : t("wizSumServiceInfo");
+    }
+    if (startDate) {
+      return [
+        shortDay(`${startDate}T12:00:00`),
+        formatTimeOfDay(checkInTime, locale),
+      ].join(" · ");
+    }
+    return t("wizSumServiceInfo");
+  })();
+  // The rail's compact list, as the mock writes it: "Bubu, Mango".
+  const petNames = selectedPets.map((pet) => pet.name).join(", ");
+  const stepSummary: Record<string, string> = {
+    "client-pet": isCustomerMode
+      ? selectedPets.length > 0
+        ? petNames
+        : t("wizSumChoosePets")
+      : selectedClient
+        ? selectedPets.length > 0
+          ? t("clientAndPets")
+              .replace("{client}", selectedClient.name)
+              .replace("{pets}", petNames)
+          : selectedClient.name
+        : isEstimateMode && isGuestEstimate
+          ? guestName.trim() || t("newInquiry")
+          : t("wizSumSearchClient"),
+    service: selectedService ? serviceName : t("wizSumSelectService"),
+    details: detailsSummary,
+    confirm: isEstimateMode
+      ? t("reviewAndSend")
+      : isCustomerMode
+        ? t("wizSumReviewRequest")
+        : t("reviewAndCreate"),
+  };
+  const stepTitle = (id: string) =>
+    id === "client-pet"
+      ? isCustomerMode
+        ? t("wizStepPets")
+        : t("stepClientPet")
+      : id === "service"
+        ? t("service")
+        : id === "details"
+          ? t("details")
+          : t("stepConfirm");
+  const stepViews: WizardStepView[] = displayedSteps.map((step, index) => {
+    const state =
+      isDone || index < currentStep
+        ? "done"
+        : index === currentStep
+          ? "current"
+          : "todo";
+    const reachable =
+      state === "done" && !isDone && !submitting && !lockedStepIds.has(step.id);
+    return {
+      id: step.id as WizardStepView["id"],
+      title: stepTitle(step.id),
+      summary: stepSummary[step.id] ?? "",
+      state,
+      onSelect: reachable
+        ? () => {
+            setCurrentStep(index);
+            setCurrentSubStepId(0);
+          }
+        : undefined,
+    };
+  });
+  const subStepViews: WizardSubStepView[] = currentSubSteps.map(
+    (sub, subIndex) => {
+      const state =
+        isDone ||
+        currentStep > detailsIndex ||
+        (currentStep === detailsIndex && subIndex < currentSubStep)
+          ? "done"
+          : currentStep === detailsIndex && subIndex === currentSubStep
+            ? "current"
+            : "todo";
+      return {
+        id: sub.id,
+        title: t(sub.titleKey),
+        state,
+        onSelect:
+          state === "done" && !isDone && !submitting
+            ? () => {
+                setCurrentStep(detailsIndex);
+                setCurrentSubStepId(sub.id);
+              }
+            : undefined,
+      };
+    },
+  );
+  const railSubSteps =
+    selectedService && currentStep >= detailsIndex && !isDone
+      ? subStepViews
+      : [];
+  const chipSubSteps =
+    selectedService && currentStep === detailsIndex && !isDone
+      ? subStepViews
+      : [];
+  const percent = wizardProgress({
+    stepIndex: currentStep,
+    subIndex: currentSubStep,
+    subCount: currentSubSteps.length,
+    done: isDone,
+  });
+  const percentLabel = formatPercent(percent, locale);
+  const stepLabel = t("stepOf")
+    .replace("{step}", String(Math.min(currentStep + 1, displayedSteps.length)))
+    .replace("{total}", String(displayedSteps.length));
+  const wizardTitle = editMode
+    ? t("editBooking")
+    : isCustomerMode
+      ? t("wizBookAVisit")
+      : selectedService && currentStep >= detailsIndex
+        ? serviceName
+        : isEstimateMode
+          ? t("newEstimate")
+          : t("newBooking");
+  const wizardSubtitle = editMode
+    ? t("updateDatesHelp")
+    : isCustomerMode
+      ? (customerFacility?.name ?? "")
+      : t("wizCreateForClient");
+  const header = isDone
+    ? {
+        title: isCustomerMode ? t("wizRequestSent") : t("wizBookingCreated"),
+        subtitle: null,
+      }
+    : currentStepId === "client-pet"
+      ? {
+          title: stepTitle("client-pet"),
+          subtitle: isCustomerMode ? t("wizHeadPets") : t("wizHeadClient"),
         }
-      });
+      : currentStepId === "service"
+        ? { title: t("service"), subtitle: t("wizHeadService") }
+        : currentStepId === "details"
+          ? {
+              title: t("details"),
+              subtitle:
+                currentSubSteps.length > 0
+                  ? t(currentSubSteps[currentSubStep]?.titleKey ?? "")
+                  : null,
+            }
+          : {
+              title: t("stepConfirm"),
+              subtitle: isCustomerMode
+                ? t("wizHeadConfirmCustomer")
+                : t("wizHeadConfirm"),
+            };
+  const headerChip =
+    selectedService && currentStep >= detailsIndex && !isDone
+      ? fillWords(t("wizKindService"), {
+          kind: serviceKind,
+          service: serviceName,
+        })
+      : null;
+  const atLastStep = currentStep === displayedSteps.length - 1;
+  const canGoBack =
+    (currentStepId === "details" && currentSubStep > 0) ||
+    previousOpenStep(currentStep) >= 0;
+  const nextLabel = isDone
+    ? t("wizStartAnother")
+    : !atLastStep
+      ? t("next")
+      : t(
+          confirmButtonKey({
+            isCustomer: isCustomerMode,
+            editMode,
+            estimateMode: isEstimateMode,
+            missingAgreements: waivers.pending.length,
+            requiresApproval: requiresApproval && !passRedemption,
+            hasDeposit: depositAmount > 0,
+          }),
+        );
+  const nextDisabled = isDone
+    ? false
+    : !atLastStep
+      ? !canProceed
+      : !canProceed || submitting || estimateBusy || !!calculatePrice.rateGap;
+  const onFooterNext = () => {
+    if (isDone) {
+      startAnother();
+      return;
     }
-
-    // Walk schedule for boarding
-    if (booking.service === "boarding" && booking.walkSchedule) {
-      const petId = Array.isArray(booking.petId)
-        ? booking.petId[0]
-        : booking.petId;
-      taskList.push({
-        id: "walk-schedule",
-        bookingId: booking.id,
-        petId,
-        type: "walking",
-        title: t("walkScheduleTask"),
-        time: null,
-        details: booking.walkSchedule,
-        assignedStaff: taskAssignments["walk-schedule"] || undefined,
-        completionStatus: "pending",
-        assignable: isFutureBooking && !taskAssignments["walk-schedule"],
-      });
+    if (!atLastStep) {
+      handleNext();
+      return;
     }
-
-    return taskList;
-    // `t` is in the deps because the memo BUILDS the task titles. Left out,
-    // it holds the pre-hydration English forever — which is what
-    // `check:frozen-translator` caught here, on the change that introduced it.
-  }, [booking, taskAssignments, t]);
-
-  if (isViewMode && booking) {
-    const client = clients.find((c) => c.id === booking.clientId);
-    const pet = client?.pets.find(
-      (p) =>
-        p.id ===
-        (Array.isArray(booking.petId) ? booking.petId[0] : booking.petId),
-    );
-
-    const latestEvaluation = (() => {
-      const evals = pet?.evaluations ?? [];
-      if (evals.length === 0) return null;
-      return [...evals].sort((a, b) => {
-        const da = a?.evaluatedAt ? new Date(a.evaluatedAt).getTime() : 0;
-        const db = b?.evaluatedAt ? new Date(b.evaluatedAt).getTime() : 0;
-        return db - da;
-      })[0];
-    })();
-
-    const evalExpired =
-      latestEvaluation?.isExpired === true ||
-      latestEvaluation?.status === "outdated";
-    const evalOutcome =
-      latestEvaluation?.status === "passed"
-        ? "PASS"
-        : latestEvaluation?.status === "failed"
-          ? "FAIL"
-          : latestEvaluation?.status
-            ? String(latestEvaluation.status).toUpperCase()
-            : "MISSING";
-
-    const requiresEvalForBooking =
-      requiresEvaluationForService(booking.service) &&
-      !isEvaluationOptionalForService(booking.service);
-
-    const evalCompleted =
-      latestEvaluation?.status === "passed" ||
-      latestEvaluation?.status === "failed";
-
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="flex h-[85vh] w-[90vw] flex-col overflow-hidden p-0 sm:max-w-4xl">
-          <DialogTitle className="sr-only">{t("bookingDetails")}</DialogTitle>
-          <div className="border-b p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold">Booking #{booking.id}</h2>
-                <p className="text-muted-foreground">
-                  {client?.name} - {pet?.name} - {booking.service}
-                </p>
-              </div>
-              <Badge variant="outline" className="capitalize">
-                {booking.status}
-              </Badge>
-            </div>
-          </div>
-
-          <Tabs defaultValue="details" className="flex min-h-0 flex-1 flex-col">
-            <TabsList className="mx-6 mt-4 grid w-full grid-cols-2">
-              <TabsTrigger value="details">{t("details")}</TabsTrigger>
-              <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="details" className="flex-1 overflow-y-auto p-6">
-              <div className="space-y-6">
-                {/* Basic Information */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>{t("basicInformation")}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium">
-                          {t("service")}
-                        </label>
-                        <p className="capitalize">{booking.service}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium">
-                          {t("serviceType")}
-                        </label>
-                        <p>{booking.serviceType || "N/A"}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium">
-                          {t("status")}
-                        </label>
-                        <Badge variant="outline" className="capitalize">
-                          {booking.status}
-                        </Badge>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium">
-                          {t("paymentStatus")}
-                        </label>
-                        <Badge variant="outline" className="capitalize">
-                          {booking.paymentStatus}
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Dates & Times */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>{t("datesAndTimes")}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium">
-                          {t("startDate")}
-                        </label>
-                        <p>{booking.startDate}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium">
-                          {t("endDate")}
-                        </label>
-                        <p>{booking.endDate}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium">
-                          {t("checkIn")}
-                        </label>
-                        <p>{booking.checkInTime || "N/A"}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium">
-                          {t("checkOut")}
-                        </label>
-                        <p>{booking.checkOutTime || "N/A"}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Pricing */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>{t("pricing")}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <label className="text-sm font-medium">
-                          {t("basePrice")}
-                        </label>
-                        <p>{formatMoney(booking.basePrice, locale)}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium">
-                          {t("discount")}
-                        </label>
-                        <p>{formatMoney(booking.discount, locale)}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium">
-                          {t("totalCost")}
-                        </label>
-                        <p className="font-semibold">
-                          {formatMoney(booking.totalCost, locale)}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Evaluation (staff) */}
-                {(requiresEvalForBooking ||
-                  booking.service === "evaluation") && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>{t("evaluation")}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {!latestEvaluation ? (
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground text-sm">
-                            {t("noEvaluationResult")}
-                          </span>
-                          <Badge variant="destructive">{t("missing")}</Badge>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="flex items-center justify-between">
-                            <div className="text-muted-foreground text-sm">
-                              {t("latestOutcome")}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge
-                                variant={
-                                  evalOutcome === "PASS"
-                                    ? "secondary"
-                                    : evalOutcome === "FAIL"
-                                      ? "destructive"
-                                      : "outline"
-                                }
-                              >
-                                {evalOutcome}
-                              </Badge>
-                              {(latestEvaluation.status === "passed" ||
-                                latestEvaluation.status === "outdated") && (
-                                <Badge
-                                  variant={
-                                    evalExpired ? "destructive" : "secondary"
-                                  }
-                                >
-                                  {evalExpired ? t("expired") : t("valid")}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-
-                          {(latestEvaluation.evaluatedAt ||
-                            latestEvaluation.evaluatedBy) && (
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                              <div>
-                                <div className="text-muted-foreground">
-                                  {t("evaluatedAt")}
-                                </div>
-                                <div>{latestEvaluation.evaluatedAt || "—"}</div>
-                              </div>
-                              <div>
-                                <div className="text-muted-foreground">
-                                  {t("evaluator")}
-                                </div>
-                                <div>{latestEvaluation.evaluatedBy || "—"}</div>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Staff-only notes / failure reason */}
-                          {latestEvaluation.notes && (
-                            <div className="text-sm">
-                              <div className="text-muted-foreground">
-                                Notes (staff)
-                              </div>
-                              <div>{latestEvaluation.notes}</div>
-                            </div>
-                          )}
-                        </>
-                      )}
-
-                      {/* Staff reminders */}
-                      {requiresEvalForBooking &&
-                        booking.status === "completed" &&
-                        !evalCompleted && (
-                          <Alert variant="destructive">
-                            <AlertTitle>{t("evaluationMissing")}</AlertTitle>
-                            <AlertDescription>
-                              {t("evaluationMissingHelp")}
-                            </AlertDescription>
-                          </Alert>
-                        )}
-                      {requiresEvalForBooking &&
-                        (evalOutcome === "FAIL" ||
-                          evalExpired ||
-                          evalOutcome === "MISSING") && (
-                          <Alert variant="destructive">
-                            <AlertTitle>{t("servicesLocked")}</AlertTitle>
-                            <AlertDescription>
-                              {t("servicesLockedHelp")}
-                            </AlertDescription>
-                          </Alert>
-                        )}
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Service-specific details */}
-                {booking.service === "boarding" && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>{t("boardingDetails")}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {booking.kennel && (
-                        <div>
-                          <label className="text-sm font-medium">
-                            {t("kennel")}
-                          </label>
-                          <p>{booking.kennel}</p>
-                        </div>
-                      )}
-                      {booking.walkSchedule && (
-                        <div>
-                          <label className="text-sm font-medium">
-                            {t("walkSchedule")}
-                          </label>
-                          <p>{booking.walkSchedule}</p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-
-                {booking.service === "daycare" &&
-                  booking.daycareSelectedDates && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>{t("daycareDetails")}</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div>
-                          <label className="text-sm font-medium">
-                            {t("selectedDates")}
-                          </label>
-                          <div className="mt-1 flex flex-wrap gap-2">
-                            {booking.daycareSelectedDates.map((date) => (
-                              <Badge key={date} variant="secondary">
-                                {date}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                {booking.specialRequests && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>{t("specialRequests")}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p>{booking.specialRequests}</p>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="tasks" className="flex-1 overflow-y-auto p-6">
-              <div className="space-y-4">
-                {tasks.length === 0 ? (
-                  <Card>
-                    <CardContent className="flex flex-col items-center justify-center py-16">
-                      <Check className="text-muted-foreground/50 mb-4 size-16" />
-                      <h3 className="mb-2 text-lg font-semibold">
-                        {t("noTasks")}
-                      </h3>
-                      <p className="text-muted-foreground text-center">
-                        {t("noTasksHelp")}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="space-y-3">
-                    {tasks.map((task) => (
-                      <Card key={task.id}>
-                        <CardContent className="p-4">
-                          <div className="flex items-start gap-3">
-                            <div className="bg-muted rounded-lg p-2">
-                              {React.createElement(getTaskIcon(task.type), {
-                                className: "size-4",
-                              })}
-                            </div>
-                            <div className="flex-1">
-                              <div className="mb-2 flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <h4 className="font-medium">{task.title}</h4>
-                                  <Badge
-                                    variant="outline"
-                                    className="text-xs capitalize"
-                                  >
-                                    {task.type}
-                                  </Badge>
-                                  <Badge
-                                    variant={
-                                      task.completionStatus === "completed"
-                                        ? "default"
-                                        : task.completionStatus ===
-                                            "in_progress"
-                                          ? "secondary"
-                                          : "outline"
-                                    }
-                                    className="text-xs"
-                                  >
-                                    {task.completionStatus.replace("_", " ")}
-                                  </Badge>
-                                </div>
-                                {task.assignedStaff && (
-                                  <Badge variant="outline" className="text-xs">
-                                    {t("assigned")} {task.assignedStaff}
-                                  </Badge>
-                                )}
-                              </div>
-                              {task.time && (
-                                <p className="text-muted-foreground mb-1 text-sm">
-                                  {t("time")} {task.time}
-                                </p>
-                              )}
-                              <p className="mb-2 text-sm">{task.details}</p>
-                              {task.assignable && (
-                                <div className="flex items-center gap-2">
-                                  <label className="text-sm font-medium">
-                                    {t("assignTo")}
-                                  </label>
-                                  <Select
-                                    value={task.assignedStaff || ""}
-                                    onValueChange={(value) =>
-                                      setTaskAssignments((prev) => ({
-                                        ...prev,
-                                        [task.id]: value,
-                                      }))
-                                    }
-                                  >
-                                    <SelectTrigger className="w-48">
-                                      <SelectValue
-                                        placeholder={t("selectStaff")}
-                                      />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {staffOptions.map((staff) => (
-                                        <SelectItem
-                                          key={staff.value}
-                                          value={staff.value}
-                                        >
-                                          {staff.label}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
-        </DialogContent>
-      </Dialog>
-    );
-  }
+    void handleComplete();
+  };
+  // The same Total Confirm shows: the subtotal and the facility's taxes.
+  const footerEstimate =
+    !isDone && currentStepId !== "confirm" && calculatePrice.subtotal > 0
+      ? formatMoney(estimate.total, locale)
+      : null;
+  const hasProgress = currentStep > 0 || !!selectedService;
+  const requestClose = () => {
+    if (isDone) {
+      resetForm();
+      setCreatedBooking(null);
+      onOpenChange(false);
+      return;
+    }
+    if (hasProgress) setShowCancelConfirm(true);
+    else onOpenChange(false);
+  };
+  const doneTitle = isCustomerMode
+    ? passRedemption
+      ? t("wizYoureBooked")
+      : t("wizRequestSentTitle")
+    : createdBooking?.ref
+      ? fillWords(t("wizBookingNumberCreated"), { ref: createdBooking.ref })
+      : t("wizBookingCreated");
+  // What was created, as it was when Create was pressed.
+  const doneStatusValue = createdBooking?.status ?? confirmModel.status;
+  const doneStatus = <StatusChip status={doneStatusValue} />;
+  const doneMissing = createdBooking?.missing ?? 0;
+  const doneText = isCustomerMode
+    ? passRedemption
+      ? t("confirmedWithPass").replace("{service}", passRedemption.serviceLabel)
+      : requiresApproval
+        ? bookingRequestMessage ||
+          bookingFlow.bookingRequestConfirmationMessage ||
+          fillWords(t("wizDoneReview"), { hours: confirmModel.approvalHours })
+        : t("wizDoneBooked")
+    : doneMissing > 0
+      ? `${fillWords(
+          t(
+            isPluralOne(doneMissing, locale)
+              ? "wizDoneMissingOne"
+              : "wizDoneMissingOther",
+          ),
+          {
+            name: (selectedClient?.name ?? "").split(/\s+/)[0] ?? "",
+            count: doneMissing,
+          },
+        )}${t(createdBooking?.linkSent ? "wizDoneLinkSent" : "wizDoneSendFromPage")}`
+      : `${t("wizAllInOrder")} ${
+          createdBooking?.emailed && selectedClient?.email
+            ? fillWords(t("wizDoneEmailTo"), { email: selectedClient.email })
+            : t("wizDoneNoConfirmation")
+        }`;
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(nextOpen) => {
-        // Prevent closing via overlay/escape if user has progress — show confirm instead
-        if (!nextOpen && (currentStep > 0 || selectedService)) {
-          setShowCancelConfirm(true);
-        } else {
-          onOpenChange(nextOpen);
-        }
-      }}
-    >
-      <DialogContent className="flex h-dvh w-full max-w-none flex-col overflow-hidden rounded-none border-0 p-0 sm:h-[90vh] sm:w-[95vw] sm:rounded-lg sm:border lg:min-w-[1024px] xl:min-w-[1200px] [&>button]:hidden">
-        <DialogTitle className="sr-only">
-          {editMode
-            ? t("editBooking")
-            : isEstimateMode
-              ? t("newEstimate")
-              : t("newBooking")}
-        </DialogTitle>
-        <div className="flex min-h-0 flex-1">
-          {/* Side Navigation Tabs */}
-          <div className="bg-muted/30 hidden w-80 flex-col border-r lg:flex">
-            {/* Title in Sidebar */}
-            <div className="bg-background shrink-0 border-b p-4">
-              <h2 className="flex items-center gap-2 text-lg font-semibold">
-                <Plus className="size-5" />
-                {editMode
-                  ? t("editBooking")
-                  : (() => {
-                      const preSelectedClient = clients.find(
-                        (c) => c.id === preSelectedClientId,
-                      );
-                      const preSelectedPet = preSelectedClient?.pets.find(
-                        (p) => p.id === preSelectedPetId,
-                      );
-                      if (preSelectedPet) {
-                        return t("bookPet").replace(
-                          "{pet}",
-                          preSelectedPet.name,
-                        );
-                      } else if (preSelectedClient) {
-                        return t("bookFor").replace(
-                          "{name}",
-                          preSelectedClient.name,
-                        );
-                      } else if (selectedService === "daycare") {
-                        return daycare.clientFacingName;
-                      } else if (selectedService === "boarding") {
-                        return boarding.clientFacingName;
-                      } else {
-                        return isEstimateMode
-                          ? t("newEstimate")
-                          : t("newBooking");
-                      }
-                    })()}
-              </h2>
-              <p className="text-muted-foreground mt-1 text-sm">
-                {editMode
-                  ? t("updateDatesHelp")
-                  : (() => {
-                      const preSelectedClient = clients.find(
-                        (c) => c.id === preSelectedClientId,
-                      );
-                      const preSelectedPet = preSelectedClient?.pets.find(
-                        (p) => p.id === preSelectedPetId,
-                      );
-                      if (preSelectedPet) {
-                        return t("createBookingFor").replace(
-                          "{name}",
-                          preSelectedPet.name,
-                        );
-                      } else if (preSelectedClient) {
-                        return t("createBookingFor").replace(
-                          "{name}",
-                          preSelectedClient.name,
-                        );
-                      } else if (selectedService === "daycare") {
-                        return daycare.slogan;
-                      } else if (selectedService === "boarding") {
-                        return boarding.slogan;
-                      } else {
-                        return t("createForFacility");
-                      }
-                    })()}
-              </p>
-            </div>
-            {/* #2 — Progress indicator */}
-            <div className="shrink-0 border-b px-4 py-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
-                  {t("stepOf")
-                    .replace("{step}", String(currentStep + 1))
-                    .replace("{total}", String(displayedSteps.length))}
-                </span>
-                <span className="text-muted-foreground text-[10px]">
-                  {Math.round(
-                    ((currentStep + (canProceed ? 1 : 0)) /
-                      displayedSteps.length) *
-                      100,
-                  )}
-                  %
-                </span>
-              </div>
-              <div className="bg-muted mt-1.5 h-1 w-full overflow-hidden rounded-full">
-                <div
-                  className={cn(
-                    "h-full rounded-full transition-all duration-300",
-                    selectedService ? accent.progressBar : "bg-primary",
-                  )}
-                  style={{
-                    width: `${((currentStep + (canProceed ? 1 : 0)) / displayedSteps.length) * 100}%`,
-                  }}
-                />
-              </div>
-            </div>
+    <>
+      <WizardDialog
+        open={open && !creatingClient}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) requestClose();
+        }}
+        title={wizardTitle}
+      >
+        <WizardRail
+          title={wizardTitle}
+          subtitle={wizardSubtitle}
+          stepLabel={stepLabel}
+          percent={percent}
+          percentLabel={percentLabel}
+          steps={stepViews}
+          subSteps={railSubSteps}
+          navLabel={t("wizSteps")}
+        >
+          {/* The client's design shows the stay and its doses BESIDE the
+            Medications step; here it sits in the rail, under the steps,
+            while that step is open (2026-10-01). Below 1024px, where the
+            rail is hidden, the step shows it itself. */}
+          {!isDone &&
+          currentStepId === "details" &&
+          currentSubSteps[currentSubStep]?.id === MEDICATION_SUB_STEP_ID ? (
+            <MedicationSchedulePreview step={medicationStep} className="mt-4" />
+          ) : null}
+          {!isDone &&
+          currentStepId === "details" &&
+          currentSubSteps[currentSubStep]?.id === FEEDING_SUB_STEP_ID ? (
+            <FeedingSchedulePreview step={feedingStep} className="mt-4" />
+          ) : null}
+        </WizardRail>
 
-            <ScrollArea className="flex-1">
-              <div className="space-y-2 p-4">
-                {displayedSteps.map((step, idx) => {
-                  const isActive = currentStep === idx;
-                  let isCompleted = currentStep > idx;
-                  if (
-                    step.id === "details" &&
-                    currentStep === idx &&
-                    canProceed
-                  ) {
-                    isCompleted = true;
-                  }
-                  const showSubSteps =
-                    step.id === "details" &&
-                    isActive &&
-                    currentSubSteps.length > 0;
-
-                  // #1 — clickable any visited step (not just completed)
-                  const canClickStep = !isActive && idx <= highestStepReached;
-
-                  // #6 — simplified Details description (just date, sub-steps handle rest)
-                  const detailsDesc = (() => {
-                    if (step.id !== "details" || !isCompleted) return null;
-                    if (
-                      selectedService === "daycare" &&
-                      daycareSelectedDates.length > 0
-                    )
-                      return t("daysScheduled").replace(
-                        "{count}",
-                        String(daycareSelectedDates.length),
-                      );
-                    if (
-                      selectedService === "boarding" &&
-                      boardingRangeStart &&
-                      boardingRangeEnd
-                    )
-                      return `${boardingRangeStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })} → ${boardingRangeEnd.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
-                    if (startDate)
-                      return new Date(
-                        startDate + "T12:00:00",
-                      ).toLocaleDateString("en-US", {
-                        weekday: "short",
-                        month: "short",
-                        day: "numeric",
-                      });
-                    return null;
-                  })();
-
-                  // #5 — pet names with truncation
-                  const petSummary = (() => {
-                    if (selectedPets.length === 0) return "";
-                    if (selectedPets.length <= 2)
-                      return selectedPets.map((p) => p.name).join(", ");
-                    return `${selectedPets[0].name}, ${selectedPets[1].name} +${selectedPets.length - 2} more`;
-                  })();
-
-                  const stepDesc = (() => {
-                    if (step.id === "service" && selectedService)
-                      return (
-                        configs[selectedService as keyof typeof configs]
-                          ?.clientFacingName ??
-                        getModuleBySlug(selectedService)?.name ??
-                        selectedService.charAt(0).toUpperCase() +
-                          selectedService.slice(1)
-                      );
-                    if (step.id === "client-pet" && selectedClient)
-                      return petSummary
-                        ? t("clientAndPets")
-                            .replace("{client}", selectedClient.name)
-                            .replace("{pets}", petSummary)
-                        : selectedClient.name;
-                    if (step.id === "details" && detailsDesc)
-                      return detailsDesc;
-                    // #3 — Confirm shows action text, not price (price is in footer)
-                    if (step.id === "confirm")
-                      return isEstimateMode
-                        ? t("reviewAndSend")
-                        : t("reviewAndCreate");
-                    return t(step.descriptionKey);
-                  })();
-
-                  return (
-                    <div key={step.id}>
-                      {/* #1 — clickable step card */}
-                      <div
-                        role={canClickStep ? "button" : undefined}
-                        tabIndex={canClickStep ? 0 : undefined}
-                        onClick={() => {
-                          if (canClickStep) {
-                            setCurrentStep(idx);
-                            setCurrentSubStepId(0);
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (
-                            canClickStep &&
-                            (e.key === "Enter" || e.key === " ")
-                          ) {
-                            e.preventDefault();
-                            setCurrentStep(idx);
-                            setCurrentSubStepId(0);
-                          }
-                        }}
-                        className={cn(
-                          "w-full rounded-lg border p-3 text-left transition-all",
-                          isActive
-                            ? selectedService
-                              ? `${accent.border} ${accent.stepBg} text-white shadow-sm`
-                              : "border-primary bg-primary text-primary-foreground shadow-sm"
-                            : isCompleted
-                              ? "border-border bg-background"
-                              : "border-muted-foreground/30 bg-muted/50 border-dashed opacity-60",
-                          canClickStep &&
-                            (selectedService
-                              ? `cursor-pointer ${accent.btnHover}`
-                              : "hover:border-primary/50 hover:bg-primary/5 cursor-pointer"),
-                        )}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div
-                            className={cn(
-                              "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-                              isActive
-                                ? "bg-white/90 text-slate-800"
-                                : isCompleted
-                                  ? selectedService
-                                    ? `${accent.stepBg} text-white`
-                                    : "bg-primary text-primary-foreground"
-                                  : "bg-muted-foreground/20 text-muted-foreground",
-                            )}
-                          >
-                            {isCompleted ? (
-                              <Check className="size-3" />
-                            ) : (
-                              idx + 1
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p
-                              className={cn(
-                                "mb-0.5 text-sm font-medium",
-                                !isActive &&
-                                  !isCompleted &&
-                                  "text-muted-foreground",
-                              )}
-                            >
-                              {t(step.titleKey)}
-                            </p>
-                            <p
-                              className={cn(
-                                "truncate text-xs",
-                                isActive
-                                  ? "text-primary-foreground/80"
-                                  : "text-muted-foreground",
-                              )}
-                            >
-                              {stepDesc}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Sub-steps */}
-                      {showSubSteps && (
-                        <div className="mt-1.5 ml-8 space-y-0.5">
-                          {currentSubSteps.map((subStep, subIdx) => {
-                            const isSubActive = currentSubStep === subIdx;
-                            const isSubCompleted = subStepDone(subStep.id);
-                            const isVisitedAndCompleted =
-                              subIdx < currentSubStep && isSubCompleted;
-
-                            // #4 — only show summary when there's actual data
-                            const subSummary = (() => {
-                              if (!isVisitedAndCompleted) return null;
-                              if (subStep.id === 0) {
-                                if (
-                                  selectedService === "daycare" &&
-                                  daycareSelectedDates.length > 0
-                                )
-                                  return `${daycareSelectedDates.length} day${daycareSelectedDates.length !== 1 ? "s" : ""}`;
-                                if (
-                                  selectedService === "boarding" &&
-                                  boardingRangeStart &&
-                                  boardingRangeEnd
-                                )
-                                  return `${boardingRangeStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })} → ${boardingRangeEnd.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
-                                if (startDate)
-                                  return new Date(
-                                    startDate + "T12:00:00",
-                                  ).toLocaleDateString("en-US", {
-                                    month: "short",
-                                    day: "numeric",
-                                  });
-                              }
-                              if (
-                                subStep.id === 1 &&
-                                roomAssignments.length > 0
-                              )
-                                return t("petsAssigned").replace(
-                                  "{count}",
-                                  String(roomAssignments.length),
-                                );
-                              if (subStep.id === 2 && extraServices.length > 0)
-                                return t("addOns").replace(
-                                  "{count}",
-                                  String(
-                                    extraServices.reduce(
-                                      (n, e) => n + e.quantity,
-                                      0,
-                                    ),
-                                  ),
-                                );
-                              // Feeding says its meals and Medication its
-                              // medications — the meds count sat under
-                              // Feeding, in English, until 2026-10-01.
-                              if (subStep.id === 3) {
-                                const meals = effectiveFeeding.reduce(
-                                  (s, f) =>
-                                    s +
-                                    (Array.isArray(f.occasions)
-                                      ? f.occasions.length
-                                      : 0),
-                                  0,
-                                );
-                                return meals > 0
-                                  ? fillWords(
-                                      t(
-                                        isPluralOne(meals, locale)
-                                          ? "railMealsOne"
-                                          : "railMealsOther",
-                                      ),
-                                      { count: meals },
-                                    )
-                                  : null;
-                              }
-                              if (subStep.id === 4) {
-                                const count = effectiveMedications.length;
-                                return count > 0
-                                  ? fillWords(
-                                      t(
-                                        isPluralOne(count, locale)
-                                          ? "medsCountOne"
-                                          : "medsCountOther",
-                                      ),
-                                      { count },
-                                    )
-                                  : null;
-                              }
-                              return null;
-                            })();
-
-                            return (
-                              <div
-                                key={subStep.id}
-                                className={cn(
-                                  "w-full rounded-md px-3 py-2 text-left text-sm transition-all",
-                                  isSubActive
-                                    ? selectedService
-                                      ? `${accent.subStepBg} ${accent.subStepText} font-medium`
-                                      : "bg-primary/20 text-primary font-medium"
-                                    : isVisitedAndCompleted
-                                      ? "text-foreground"
-                                      : "text-muted-foreground",
-                                )}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <div
-                                    className={cn(
-                                      "flex size-4 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold",
-                                      isSubActive || isVisitedAndCompleted
-                                        ? selectedService
-                                          ? `${accent.stepBg} text-white`
-                                          : "bg-primary text-primary-foreground"
-                                        : "bg-muted-foreground/20 text-muted-foreground",
-                                    )}
-                                  >
-                                    {isVisitedAndCompleted ? (
-                                      <Check className="size-2.5" />
-                                    ) : (
-                                      subIdx + 1
-                                    )}
-                                  </div>
-                                  <div className="min-w-0 flex-1">
-                                    <span>{t(subStep.titleKey)}</span>
-                                    {subSummary && (
-                                      <p className="text-muted-foreground mt-0.5 truncate text-[10px]">
-                                        {subSummary}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-                {/* The client's design shows the stay and its doses BESIDE
-                    the Medications step; here it sits in the rail, under the
-                    steps, while that step is open (2026-10-01). Below 1024px,
-                    where the rail is hidden, the step shows it itself. */}
-                {!showingPackagePromptStep &&
-                displayedSteps[currentStep]?.id === "details" &&
-                currentSubSteps[currentSubStep]?.id ===
-                  MEDICATION_SUB_STEP_ID ? (
-                  <MedicationSchedulePreview
-                    step={medicationStep}
-                    className="mt-4"
-                  />
-                ) : null}
-                {/* The same for the Feeding step: the stay and its meals. */}
-                {!showingPackagePromptStep &&
-                displayedSteps[currentStep]?.id === "details" &&
-                currentSubSteps[currentSubStep]?.id === FEEDING_SUB_STEP_ID ? (
-                  <FeedingSchedulePreview step={feedingStep} className="mt-4" />
-                ) : null}
-              </div>
-            </ScrollArea>
-          </div>
-
-          {/* Main Content Area */}
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-            <div className="bg-background border-b p-4">
-              {/* Mobile-only progress strip (sidebar is hidden on small screens) */}
-              <div className="mb-3 flex items-center gap-3 lg:hidden">
-                <span className="text-muted-foreground shrink-0 text-[11px]">
-                  {currentStep + 1}/{displayedSteps.length}
-                </span>
-                <div className="bg-muted h-1 flex-1 overflow-hidden rounded-full">
-                  <div
-                    className={cn(
-                      "h-full rounded-full transition-all duration-300",
-                      selectedService ? accent.progressBar : "bg-primary",
-                    )}
-                    style={{
-                      width: `${((currentStep + (canProceed ? 1 : 0)) / displayedSteps.length) * 100}%`,
-                    }}
-                  />
-                </div>
-                <span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">
-                  {/* §5q: French is `42,50 $` — the sign follows, after a
-                      non-breaking space. A hard-coded `$` in front is the
-                      single most common French-Canadian money error, and this
-                      one sat in the wizard header on every step. */}
-                  {formatMoney(calculatePrice.total, locale)}
-                </span>
-              </div>
-              <h2 className="text-lg font-semibold">
-                {showingPackagePromptStep
-                  ? t("applyPackagePass")
-                  : t(displayedSteps[currentStep]?.titleKey ?? "")}
-              </h2>
-              {!showingPackagePromptStep &&
-                displayedSteps[currentStep]?.id === "details" &&
-                currentSubSteps.length > 1 && (
-                  <p className="text-muted-foreground mt-1 text-sm">
-                    {t(currentSubSteps[currentSubStep]?.titleKey ?? "")}
-                  </p>
-                )}
-            </div>
-            {showingPackagePromptStep ? (
-              <div className="min-h-0 flex-1 overflow-y-auto p-6">
-                <PackagePromptWizardContent
-                  applicablePackages={applicablePackages}
-                  onApply={(packageId) => {
-                    setRedeemedPackageId(packageId);
-                    setShowingPackagePromptStep(false);
-                  }}
-                  onSkip={() => {
-                    setShowingPackagePromptStep(false);
-                  }}
-                />
-              </div>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <WizardTopBar
+            title={wizardTitle}
+            stepLabel={stepLabel}
+            percent={percent}
+            percentLabel={percentLabel}
+            steps={stepViews}
+            subSteps={chipSubSteps}
+            onClose={requestClose}
+            closeLabel={t("wizClose")}
+            stepsLabel={t("wizSteps")}
+            subStepsLabel={t("wizDetailsScreens")}
+          />
+          <WizardHeader
+            title={header.title}
+            subtitle={header.subtitle}
+            chip={headerChip}
+          />
+          <div
+            ref={scrollAreaRef}
+            data-wizard-body
+            className="min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-6 sm:px-6 sm:pt-[22px] sm:pb-7 lg:px-8 lg:pt-[26px] lg:pb-8"
+          >
+            {isDone ? (
+              <SuccessScreen
+                attention={doneStatusValue === "pending_agreements"}
+                title={doneTitle}
+                status={doneStatus}
+                text={doneText}
+                summary={confirmModel.heroLine || detailsSummary}
+              />
             ) : (
-              <ScrollArea ref={scrollAreaRef} className="min-h-0 flex-1">
-                <div className="p-6">
-                  {displayedSteps[currentStep]?.id === "service" && (
-                    <ServiceStep
-                      selectedService={selectedService}
-                      setSelectedService={handleServiceChange}
-                      setServiceType={setServiceType}
-                      setCurrentSubStep={goToSubStep}
-                      configs={configs}
-                      bookingFlow={bookingFlow}
-                      selectedPets={selectedPets}
-                      onBookService={canProceed ? handleNext : undefined}
-                      onPickTrainingCourse={handlePickTrainingCourse}
-                      mayOverrideEvaluation={!isCustomerMode}
-                      evaluationDecision={
-                        !isCustomerMode && evaluationIssues.length > 0 ? (
-                          <EvaluationOverridePanel
-                            issues={evaluationIssues}
-                            overriding={
-                              evaluationOverride?.key === evaluationIssueKey
+              <>
+                {displayedSteps[currentStep]?.id === "service" && (
+                  <ServiceStep
+                    isCustomerMode={isCustomerMode}
+                    selectedService={selectedService}
+                    onSelect={(service) => {
+                      // What the old cards did, in their order: the service,
+                      // then no service type and the first Details screen.
+                      handleServiceChange(service);
+                      setServiceType("");
+                      goToSubStep(0);
+                    }}
+                    configs={configs}
+                    bookingFlow={bookingFlow}
+                    selectedPets={selectedPets}
+                    clientRef={selectedClient?.id}
+                  />
+                )}
+                {displayedSteps[currentStep]?.id === "client-pet" && (
+                  <ClientPetStep
+                    isCustomerMode={isCustomerMode}
+                    clients={clients}
+                    selectedClient={selectedClient}
+                    selectedPetIds={selectedPetIds}
+                    setSelectedPetIds={setSelectedPetIds}
+                    onPickClient={(clientId, petIds) => {
+                      setSelectedClientId(clientId);
+                      setSelectedPetIds(petIds);
+                      setSearchQuery("");
+                    }}
+                    onClearClient={
+                      preSelectedClientId
+                        ? undefined
+                        : () => {
+                            // The mock's Change client: back to the search with
+                            // nobody, no pets and no service chosen.
+                            setSelectedClientId(null);
+                            setSelectedPetIds([]);
+                            if (!(lockService && preSelectedService)) {
+                              handleServiceChange("");
                             }
-                            reason={
-                              evaluationOverride?.key === evaluationIssueKey
-                                ? evaluationOverride.reason
-                                : ""
-                            }
-                            onOverridingChange={(on) =>
-                              setEvaluationOverride(
-                                on
-                                  ? { key: evaluationIssueKey, reason: "" }
-                                  : null,
-                              )
-                            }
-                            onReasonChange={(reason) =>
-                              setEvaluationOverride({
-                                key: evaluationIssueKey,
-                                reason,
-                              })
-                            }
-                            onBookEvaluation={() =>
-                              handleServiceChange("evaluation")
-                            }
-                          />
-                        ) : undefined
+                          }
+                    }
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    onNewClient={
+                      mayCreateClients
+                        ? () => setCreatingClient(true)
+                        : undefined
+                    }
+                    selectedService={selectedService}
+                    preSelectedProgramId={preSelectedProgramId}
+                    configs={configs}
+                    guest={
+                      isEstimateMode && !preSelectedClientId
+                        ? {
+                            isGuest: isGuestEstimate,
+                            setIsGuest: setIsGuestEstimate,
+                            name: guestName,
+                            setName: setGuestName,
+                            email: guestEmail,
+                            setEmail: setGuestEmail,
+                            phone: guestPhone,
+                            setPhone: setGuestPhone,
+                            petNames: guestPetNames,
+                            setPetNames: setGuestPetNamesSynced,
+                            petWeights: guestPetWeights,
+                            setPetWeights: setGuestPetWeights,
+                          }
+                        : undefined
+                    }
+                  />
+                )}
+                {displayedSteps[currentStep]?.id === "details" &&
+                  selectedService === "boarding" &&
+                  (currentSubSteps[currentSubStep]?.id ?? 0) === 0 && (
+                    <BoardingSchedule
+                      isCustomer={isCustomerMode}
+                      start={boardingRangeStart}
+                      end={boardingRangeEnd}
+                      checkIn={checkInTime}
+                      checkOut={checkOutTime}
+                      onRange={(start, end, times) => {
+                        setBoardingRangeStart(start);
+                        setBoardingRangeEnd(end);
+                        setStartDate(start ? localDay(start) : "");
+                        setEndDate(end ? localDay(end) : "");
+                        if (start && end && times) {
+                          setCheckInTime(times.checkIn);
+                          setCheckOutTime(times.checkOut);
+                          setBoardingDateTimes(
+                            stayDays(start, end).map((day) => ({
+                              date: localDay(day),
+                              checkInTime: times.checkIn,
+                              checkOutTime: times.checkOut,
+                            })),
+                          );
+                        } else {
+                          setBoardingDateTimes([]);
+                        }
+                      }}
+                      onTimes={(checkIn, checkOut) => {
+                        setCheckInTime(checkIn);
+                        setCheckOutTime(checkOut);
+                        setBoardingDateTimes(
+                          boardingDateTimes.map((day) => ({
+                            ...day,
+                            checkInTime: checkIn,
+                            checkOutTime: checkOut,
+                          })),
+                        );
+                      }}
+                    />
+                  )}
+                {displayedSteps[currentStep]?.id === "details" &&
+                  selectedService === "daycare" &&
+                  (currentSubSteps[currentSubStep]?.id ?? 0) === 0 && (
+                    <DaycareSchedule
+                      isCustomer={isCustomerMode}
+                      pets={effectiveSelectedPets}
+                      days={daycareSelectedDates}
+                      onDays={setDaycareSelectedDates}
+                      dateTimes={daycareDateTimes}
+                      onDateTimes={setDaycareDateTimes}
+                      service={daycareService}
+                      onService={setDaycareService}
+                      part={daycarePart}
+                      onPart={setDaycarePart}
+                    />
+                  )}
+                {displayedSteps[currentStep]?.id === "details" &&
+                  selectedService === "boarding" &&
+                  currentSubSteps[currentSubStep]?.id === 1 && (
+                    <RoomTypeStep
+                      isCustomer={isCustomerMode}
+                      pets={effectiveSelectedPets}
+                      start={boardingRangeStart}
+                      end={boardingRangeEnd}
+                      value={{
+                        petServices: petRoomCards,
+                        petBoardingServices,
+                        roomAssignments,
+                        share: boardingShare,
+                        boardingService,
+                      }}
+                      onChange={(next) => {
+                        setPetRoomCards(next.petServices);
+                        setPetBoardingServices(next.petBoardingServices);
+                        setRoomAssignments(next.roomAssignments);
+                        setBoardingShare(next.share);
+                        setBoardingService(next.boardingService);
+                      }}
+                      kennelChanges={editMode ? undefined : kennelChanges}
+                      setKennelChanges={
+                        editMode || isCustomerMode
+                          ? undefined
+                          : setKennelChanges
                       }
                     />
                   )}
-                  {displayedSteps[currentStep]?.id === "client-pet" && (
-                    <ClientPetStep
-                      mayOverrideEvaluation={!isCustomerMode}
-                      searchQuery={searchQuery}
-                      setSearchQuery={setSearchQuery}
-                      filteredClients={filteredClients}
-                      selectedClientId={selectedClientId}
-                      setSelectedClientId={setSelectedClientId}
-                      selectedPetIds={selectedPetIds}
-                      setSelectedPetIds={setSelectedPetIds}
-                      selectedClient={selectedClient}
-                      preSelectedClientId={preSelectedClientId}
-                      preSelectedProgramId={preSelectedProgramId}
-                      selectedService={selectedService}
-                      configs={configs}
-                      isEstimateMode={isEstimateMode}
-                      isGuestEstimate={isGuestEstimate}
-                      setIsGuestEstimate={setIsGuestEstimate}
-                      guestName={guestName}
-                      setGuestName={setGuestName}
-                      guestEmail={guestEmail}
-                      setGuestEmail={setGuestEmail}
-                      guestPhone={guestPhone}
-                      setGuestPhone={setGuestPhone}
-                      guestPetNames={guestPetNames}
-                      setGuestPetNames={setGuestPetNamesSynced}
-                      guestPetWeights={guestPetWeights}
-                      setGuestPetWeights={setGuestPetWeights}
+                {displayedSteps[currentStep]?.id === "details" &&
+                  (selectedService === "boarding" ||
+                    selectedService === "daycare") &&
+                  currentSubSteps[currentSubStep]?.id === 2 && (
+                    <AddOnsStep
+                      careType={selectedService}
+                      serviceRowId={
+                        selectedService === "boarding"
+                          ? (boardingService?.rowId ?? null)
+                          : (daycareService?.rowId ?? null)
+                      }
+                      kindLabel={serviceKind}
+                      pets={effectiveSelectedPets}
+                      value={extraServices}
+                      onChange={setExtraServices}
+                      included={
+                        selectedService === "boarding" && boardingService
+                          ? {
+                              lines: boardingDefaultLines,
+                              serviceName: boardingService.name,
+                            }
+                          : undefined
+                      }
                     />
                   )}
-                  {displayedSteps[currentStep]?.id === "details" && (
+                {displayedSteps[currentStep]?.id === "details" &&
+                  selectedService === "grooming" &&
+                  currentSubSteps[currentSubStep]?.id === 1 && (
+                    <AddOnsStep
+                      careType="grooming"
+                      serviceRowId={(() => {
+                        // The add-on rules of ONE package when every pet has
+                        // it; any groom's otherwise.
+                        const ids = new Set(
+                          effectiveSelectedPets.map((pet) =>
+                            packageIdFor(pet.id),
+                          ),
+                        );
+                        const only = ids.size === 1 ? [...ids][0] : undefined;
+                        return (
+                          groomingMenu.find((p) => p.id === only)?.rowId ?? null
+                        );
+                      })()}
+                      kindLabel={serviceKind}
+                      pets={effectiveSelectedPets}
+                      value={extraServices}
+                      onChange={setExtraServices}
+                      maxQuantity={1}
+                      hint={t("wizAddOnsHintGroom")}
+                      included={
+                        groomingDefaultLines.length > 0
+                          ? {
+                              lines: groomingDefaultLines,
+                              serviceName:
+                                groomingMenu.find((p) => p.id === serviceType)
+                                  ?.name ?? serviceKind,
+                            }
+                          : undefined
+                      }
+                    />
+                  )}
+                {displayedSteps[currentStep]?.id === "details" &&
+                  selectedService === "grooming" &&
+                  currentSubSteps[currentSubStep]?.id === 2 && (
+                    <StaffTimeStep
+                      role="groomer"
+                      isCustomer={isCustomerMode}
+                      pets={effectiveSelectedPets}
+                      petMinutes={groomPets.map((g) => g.minutes)}
+                      packageIds={[...new Set(groomPets.map((g) => g.pkg.id))]}
+                      matted={groomPets.some(
+                        (g) => groomingMatted[g.pet.id] === true,
+                      )}
+                      noticeHours={
+                        isCustomerMode
+                          ? Math.max(
+                              0,
+                              ...groomPets.map(
+                                (g) => g.pkg.minBookingNoticeHours ?? 0,
+                              ),
+                            )
+                          : undefined
+                      }
+                      value={groomingTime}
+                      onChange={(next) => {
+                        setGroomingTime({
+                          ...next,
+                          minutes: groomTotalMinutes,
+                          groomerName: next.groomerName ?? null,
+                        });
+                        setGroomingStylistId(next.groomerId ?? "");
+                        if (next.date && next.start !== null) {
+                          setStartDate(next.date);
+                          setEndDate(next.date);
+                          setCheckInTime(hhmmOf(next.start));
+                          setCheckOutTime(
+                            hhmmOf(next.start + groomTotalMinutes),
+                          );
+                        }
+                      }}
+                    />
+                  )}
+                {displayedSteps[currentStep]?.id === "details" &&
+                  selectedService === "grooming" &&
+                  currentSubSteps[currentSubStep]?.id === 0 && (
+                    <PackageStep
+                      isCustomer={isCustomerMode}
+                      onlyApplicable={
+                        bookingFlow.onlyShowApplicableServices === true
+                      }
+                      pets={effectiveSelectedPets}
+                      value={Object.fromEntries(
+                        effectiveSelectedPets.flatMap((pet) => {
+                          const id = packageIdFor(pet.id);
+                          return id ? [[pet.id, id]] : [];
+                        }),
+                      )}
+                      onChange={(next) => {
+                        setGroomingPetPackages(next);
+                        const first = effectiveSelectedPets[0]?.id;
+                        setServiceType(
+                          (first !== undefined ? next[first] : undefined) ??
+                            Object.values(next)[0] ??
+                            "",
+                        );
+                      }}
+                      matted={groomingMatted}
+                      onMattedChange={setGroomingMatted}
+                    />
+                  )}
+                {displayedSteps[currentStep]?.id === "details" &&
+                  selectedService === "training" &&
+                  currentSubSteps[currentSubStep]?.id === 0 && (
+                    <ProgramStep
+                      isCustomer={isCustomerMode}
+                      value={trainingChoice}
+                      onChange={(next) => {
+                        // Another program: its class or slot is not this one's.
+                        if (next.programId !== trainingChoice.programId) {
+                          setTrainingClassId(null);
+                          setTrainingTime({
+                            date: null,
+                            start: null,
+                            groomerId: null,
+                            minutes: 0,
+                            groomerName: null,
+                          });
+                        }
+                        setTrainingChoice(next);
+                      }}
+                    />
+                  )}
+                {displayedSteps[currentStep]?.id === "details" &&
+                  selectedService === "training" &&
+                  currentSubSteps[currentSubStep]?.id === 1 &&
+                  (trainingFormat === "group" ? (
+                    <ClassStep
+                      classes={trainingClasses}
+                      isPending={offeredClasses.isPending}
+                      value={trainingClassId}
+                      needed={effectiveSelectedPets.length}
+                      weeks={trainingProgram?.sessions}
+                      maxDogs={trainingProgram?.maxGroupSize}
+                      onChange={(classId) => {
+                        setTrainingClassId(classId);
+                        const picked = trainingClasses.find(
+                          (c) => c.id === classId,
+                        );
+                        if (!picked) return;
+                        const first =
+                          classSessionDates(picked)[0] ?? picked.startDate;
+                        const from = minutesOf(picked.startTime) ?? 0;
+                        setStartDate(first);
+                        setEndDate(first);
+                        setCheckInTime(hhmmOf(from));
+                        setCheckOutTime(hhmmOf(from + picked.durationMinutes));
+                      }}
+                    />
+                  ) : (
+                    <StaffTimeStep
+                      role="trainer"
+                      isCustomer={isCustomerMode}
+                      pets={effectiveSelectedPets}
+                      petMinutes={[trainingMinutes]}
+                      packageIds={NO_PACKAGE_IDS}
+                      matted={false}
+                      value={trainingTime}
+                      onChange={(next) => {
+                        setTrainingTime({
+                          ...next,
+                          minutes: trainingMinutes,
+                          groomerName: next.groomerName ?? null,
+                        });
+                        if (next.date && next.start !== null) {
+                          setStartDate(next.date);
+                          setEndDate(next.date);
+                          setCheckInTime(hhmmOf(next.start));
+                          setCheckOutTime(hhmmOf(next.start + trainingMinutes));
+                        }
+                      }}
+                    />
+                  ))}
+                {displayedSteps[currentStep]?.id === "details" &&
+                  selectedService === "training" &&
+                  currentSubSteps[currentSubStep]?.id === 2 && (
+                    <GoalsStep
+                      goalOptions={trainingGoalOptions}
+                      value={trainingIntake}
+                      onChange={setTrainingIntake}
+                    />
+                  )}
+                {displayedSteps[currentStep]?.id === "details" &&
+                  !(
+                    (selectedService === "boarding" ||
+                      selectedService === "daycare") &&
+                    [0, 1, 2].includes(currentSubSteps[currentSubStep]?.id ?? 0)
+                  ) &&
+                  !(
+                    (selectedService === "grooming" ||
+                      selectedService === "training") &&
+                    [0, 1, 2].includes(currentSubSteps[currentSubStep]?.id ?? 0)
+                  ) && (
                     <DetailsStep
                       selectedService={selectedService}
-                      preSelectedCourseTypeId={selectedCourseTypeId}
-                      preSelectedProgramId={preSelectedProgramId}
-                      onRequestClose={() => onOpenChange(false)}
-                      onTrainingSelectionChange={handleTrainingSelectionChange}
                       currentSubStep={currentSubSteps[currentSubStep]?.id ?? 0}
                       isSubStepComplete={isSubStepComplete}
-                      daycareSelectedDates={daycareSelectedDates}
-                      setDaycareSelectedDates={setDaycareSelectedDates}
-                      daycareDateTimes={daycareDateTimes}
-                      setDaycareDateTimes={setDaycareDateTimes}
-                      roomAssignments={roomAssignments}
-                      setRoomAssignments={setRoomAssignments}
-                      boardingRangeStart={boardingRangeStart}
-                      setBoardingRangeStart={setBoardingRangeStart}
-                      boardingRangeEnd={boardingRangeEnd}
-                      setBoardingRangeEnd={setBoardingRangeEnd}
-                      boardingDateTimes={boardingDateTimes}
-                      setBoardingDateTimes={setBoardingDateTimes}
                       startDate={startDate}
                       setStartDate={setStartDate}
                       endDate={endDate}
@@ -4966,21 +5046,9 @@ export function BookingModal({
                       setCheckInTime={setCheckInTime}
                       checkOutTime={checkOutTime}
                       setCheckOutTime={setCheckOutTime}
-                      serviceType={serviceType}
-                      setServiceType={setServiceType}
-                      daycareServiceId={daycareService?.rowId ?? null}
-                      onDaycareServiceChange={setDaycareService}
-                      boardingService={boardingService}
-                      onBoardingServiceChange={setBoardingService}
-                      onBoardingMenuChange={setBoardingMenuOffered}
-                      boardingDefaultLines={boardingDefaultLines}
-                      kennelChanges={editMode ? undefined : kennelChanges}
-                      setKennelChanges={
-                        editMode || isCustomerMode
-                          ? undefined
-                          : setKennelChanges
-                      }
-                      isCustomerMode={isCustomerMode}
+                      extraServices={extraServices}
+                      setExtraServices={setExtraServices}
+                      selectedPets={effectiveSelectedPets}
                       feedingStep={feedingStep}
                       medicationStep={medicationStep}
                       careStepReady={currentSubSteps
@@ -4989,520 +5057,262 @@ export function BookingModal({
                       careStepLabel={t("stepOf")
                         .replace("{step}", String(currentStep + 1))
                         .replace("{total}", String(displayedSteps.length))}
-                      feedingMedicationTab={feedingMedicationTab}
-                      setFeedingMedicationTab={setFeedingMedicationTab}
-                      extraServices={extraServices}
-                      setExtraServices={setExtraServices}
-                      selectedPets={effectiveSelectedPets}
-                      applyEligibilityFilter={
-                        bookingFlow.onlyShowApplicableServices === true
-                      }
-                      groomingIsMobile={groomingIsMobile}
-                      setGroomingIsMobile={setGroomingIsMobile}
-                      selectedClient={selectedClient}
-                      groomingStylistId={groomingStylistId}
-                      setGroomingStylistId={setGroomingStylistId}
-                      groomingAdditionalStylistIds={
-                        groomingAdditionalStylistIds
-                      }
-                      setGroomingAdditionalStylistIds={
-                        setGroomingAdditionalStylistIds
-                      }
-                      groomingStationId={groomingStationId}
-                      setGroomingStationId={setGroomingStationId}
-                      groomingStages={groomingStages}
-                      setGroomingStages={setGroomingStages}
-                      groomingManualPrice={groomingManualPrice}
-                      setGroomingManualPrice={setGroomingManualPrice}
-                      groomingManualDuration={groomingManualDuration}
-                      setGroomingManualDuration={setGroomingManualDuration}
-                      groomingSelectedAddOnIds={groomingSelectedAddOnIds}
-                      setGroomingSelectedAddOnIds={setGroomingSelectedAddOnIds}
-                      groomingAutoAttachedAddOnIds={
-                        groomingAutoAttachedAddOnIds
-                      }
-                      setGroomingAutoAttachedAddOnIds={
-                        setGroomingAutoAttachedAddOnIds
-                      }
                     />
                   )}
 
-                  {!isCustomerMode &&
-                    displayedSteps[currentStep]?.id === "confirm" &&
-                    evaluationOverridden &&
-                    evaluationOverride && (
-                      <EvaluationOverrideSummary
-                        issues={evaluationIssues}
-                        reason={evaluationOverride.reason}
-                      />
-                    )}
-
-                  {/* Include Evaluation toggle — facility side only, confirm step, non-evaluation services */}
-                  {!isCustomerMode &&
-                    displayedSteps[currentStep]?.id === "confirm" &&
-                    selectedService !== "evaluation" &&
-                    !(isEstimateMode && estimateCreated) && (
-                      <div className="mx-1 mb-4 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className="flex size-8 items-center justify-center rounded-lg bg-amber-100">
-                            <ClipboardCheck className="size-4 text-amber-700" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-amber-900">
-                              {t("includeEvaluation")}
-                            </p>
-                            <p className="text-[11px] text-amber-700">
-                              {t("includeEvaluationHelp")}
-                            </p>
-                          </div>
-                        </div>
-                        <Switch
-                          checked={includesEvaluation}
-                          onCheckedChange={setIncludesEvaluation}
-                        />
-                      </div>
-                    )}
-
-                  {/* Staff-facing deposit prompt */}
-                  {!isCustomerMode &&
-                    displayedSteps[currentStep]?.id === "confirm" &&
-                    !(isEstimateMode && estimateCreated) &&
-                    applicableDepositRule && (
-                      <BookingDepositPrompt
-                        rule={applicableDepositRule}
-                        bookingTotal={calculatePrice.total}
-                        value={depositPrompt}
-                        onChange={setDepositPrompt}
-                      />
-                    )}
-
-                  {/* Customer-facing deposit panel: pay-now + card picker */}
-                  {isCustomerMode &&
-                    displayedSteps[currentStep]?.id === "confirm" &&
-                    !bookingRequested &&
-                    applicableDepositRule &&
-                    !passRedemption &&
-                    selectedClientId !== null &&
-                    selectedClientId > 0 &&
-                    (() => {
-                      const required = computeDepositAmount(
-                        applicableDepositRule,
-                        calculatePrice.total,
-                      );
-                      if (required <= 0) return null;
-                      return (
-                        <div className="mx-1 mb-4">
-                          <CustomerDepositPanel
-                            rule={applicableDepositRule}
-                            depositAmount={required}
-                          />
-                        </div>
-                      );
-                    })()}
-
-                  {/* Customer booking request confirmation state */}
-                  {isCustomerMode && bookingRequested && (
+                {/* Estimate success state */}
+                {displayedSteps[currentStep]?.id === "confirm" &&
+                  isEstimateMode &&
+                  estimateCreated && (
                     <div className="flex flex-col items-center px-6 py-12 text-center">
-                      <div className="flex size-16 items-center justify-center rounded-full bg-emerald-100">
-                        <Check className="size-7 text-emerald-600" />
-                      </div>
-                      <h3 className="mt-4 text-lg font-bold text-slate-800">
-                        {passRedemption
-                          ? t("bookingConfirmedTitle")
-                          : t("requestReceived")}
-                      </h3>
-                      <p className="text-muted-foreground mt-3 max-w-sm text-sm/relaxed">
-                        {passRedemption
-                          ? t("confirmedWithPass").replace(
-                              "{service}",
-                              passRedemption.serviceLabel,
-                            )
-                          : bookingRequestMessage ||
-                            bookingFlow.bookingRequestConfirmationMessage ||
-                            t("confirmedPending")}
-                      </p>
-                      <Button
-                        className="mt-6"
-                        onClick={() => {
-                          resetForm();
-                          onOpenChange(false);
-                        }}
-                      >
-                        {t("done")}
-                      </Button>
-                    </div>
-                  )}
-
-                  {/* Estimate success state */}
-                  {displayedSteps[currentStep]?.id === "confirm" &&
-                    isEstimateMode &&
-                    estimateCreated && (
-                      <div className="flex flex-col items-center px-6 py-12 text-center">
-                        {estimateSent ? (
-                          <>
-                            <div className="flex size-16 items-center justify-center rounded-full bg-emerald-100">
-                              <Check className="size-7 text-emerald-600" />
-                            </div>
-                            <h3 className="mt-4 text-lg font-bold text-slate-800">
-                              {t("estimateSent")}
-                            </h3>
-                            {generatedEstimateId && (
-                              <Badge
-                                variant="outline"
-                                className="mt-2 font-mono text-xs tracking-wider"
-                              >
-                                {generatedEstimateId}
-                              </Badge>
+                      {estimateSent ? (
+                        <>
+                          <div className="flex size-16 items-center justify-center rounded-full bg-emerald-100">
+                            <Check className="size-7 text-emerald-600" />
+                          </div>
+                          <h3 className="mt-4 text-lg font-bold text-slate-800">
+                            {t("estimateSent")}
+                          </h3>
+                          {generatedEstimateId && (
+                            <Badge
+                              variant="outline"
+                              className="mt-2 font-mono text-xs tracking-wider"
+                            >
+                              {generatedEstimateId}
+                            </Badge>
+                          )}
+                          <p className="text-muted-foreground mt-1 max-w-sm text-sm">
+                            {t("estimateSentTo").replace(
+                              "{who}",
+                              (isGuestEstimate
+                                ? guestEmail || guestName || t("inquiryContact")
+                                : selectedClient?.name) ?? "",
                             )}
-                            <p className="text-muted-foreground mt-1 max-w-sm text-sm">
-                              {t("estimateSentTo").replace(
-                                "{who}",
-                                (isGuestEstimate
-                                  ? guestEmail ||
-                                    guestName ||
-                                    t("inquiryContact")
-                                  : selectedClient?.name) ?? "",
-                              )}
+                          </p>
+                          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3">
+                            <p className="text-xl font-bold text-emerald-800 tabular-nums">
+                              {formatMoney(calculatePrice.total, locale)}
                             </p>
-                            <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3">
-                              <p className="text-xl font-bold text-emerald-800 tabular-nums">
-                                {formatMoney(calculatePrice.total, locale)}
-                              </p>
-                              <p className="text-xs text-emerald-600">
-                                {t("estimatedTotal")}
-                              </p>
-                            </div>
+                            <p className="text-xs text-emerald-600">
+                              {t("estimatedTotal")}
+                            </p>
+                          </div>
+                          <Button
+                            className="mt-6"
+                            onClick={() => {
+                              resetForm();
+                              onOpenChange(false);
+                            }}
+                          >
+                            {t("done")}
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex size-16 items-center justify-center rounded-full bg-blue-100">
+                            <Check className="size-7 text-blue-600" />
+                          </div>
+                          <h3 className="mt-4 text-lg font-bold text-slate-800">
+                            {t("estimateCreated")}
+                          </h3>
+                          {generatedEstimateId && (
+                            <Badge
+                              variant="outline"
+                              className="mt-2 font-mono text-xs tracking-wider"
+                            >
+                              {generatedEstimateId}
+                            </Badge>
+                          )}
+                          <p className="text-muted-foreground mt-1 max-w-sm text-sm">
+                            {t("estimateFor").replace(
+                              "{name}",
+                              (isGuestEstimate
+                                ? guestName || guestEmail || t("newInquiry")
+                                : selectedClient?.name) ?? "",
+                            )}{" "}
+                            —{" "}
+                            {isGuestEstimate
+                              ? guestPetSummary.length > 0
+                                ? guestPetSummary.join(", ")
+                                : t("noPetsAdded")
+                              : selectedPets.map((pet) => pet.name).join(", ")}
+                          </p>
+                          <div className="mt-4 rounded-xl border bg-slate-50 px-5 py-3">
+                            <p className="text-xl font-bold tabular-nums">
+                              {formatMoney(calculatePrice.total, locale)}
+                            </p>
+                            <p className="text-muted-foreground text-xs">
+                              {selectedService} · {serviceType || t("standard")}
+                            </p>
+                          </div>
+                          <div className="mt-6 flex gap-3">
                             <Button
-                              className="mt-6"
+                              variant="outline"
                               onClick={() => {
                                 resetForm();
                                 onOpenChange(false);
                               }}
                             >
-                              {t("done")}
+                              {t("saveAsDraft")}
                             </Button>
-                          </>
-                        ) : (
-                          <>
-                            <div className="flex size-16 items-center justify-center rounded-full bg-blue-100">
-                              <Check className="size-7 text-blue-600" />
-                            </div>
-                            <h3 className="mt-4 text-lg font-bold text-slate-800">
-                              {t("estimateCreated")}
-                            </h3>
-                            {generatedEstimateId && (
-                              <Badge
-                                variant="outline"
-                                className="mt-2 font-mono text-xs tracking-wider"
+                            <Button
+                              className="gap-1.5"
+                              onClick={handleSendEstimate}
+                            >
+                              <svg
+                                className="size-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={2}
                               >
-                                {generatedEstimateId}
-                              </Badge>
-                            )}
-                            <p className="text-muted-foreground mt-1 max-w-sm text-sm">
-                              {t("estimateFor").replace(
-                                "{name}",
-                                (isGuestEstimate
-                                  ? guestName || guestEmail || t("newInquiry")
-                                  : selectedClient?.name) ?? "",
-                              )}{" "}
-                              —{" "}
-                              {isGuestEstimate
-                                ? guestPetSummary.length > 0
-                                  ? guestPetSummary.join(", ")
-                                  : t("noPetsAdded")
-                                : selectedPets
-                                    .map((pet) => pet.name)
-                                    .join(", ")}
-                            </p>
-                            <div className="mt-4 rounded-xl border bg-slate-50 px-5 py-3">
-                              <p className="text-xl font-bold tabular-nums">
-                                {formatMoney(calculatePrice.total, locale)}
-                              </p>
-                              <p className="text-muted-foreground text-xs">
-                                {selectedService} ·{" "}
-                                {serviceType || t("standard")}
-                              </p>
-                            </div>
-                            <div className="mt-6 flex gap-3">
-                              <Button
-                                variant="outline"
-                                onClick={() => {
-                                  resetForm();
-                                  onOpenChange(false);
-                                }}
-                              >
-                                {t("saveAsDraft")}
-                              </Button>
-                              <Button
-                                className="gap-1.5"
-                                onClick={handleSendEstimate}
-                              >
-                                <svg
-                                  className="size-4"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                  strokeWidth={2}
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"
-                                  />
-                                </svg>
-                                {t("sendToCustomer")}
-                              </Button>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    )}
-
-                  {displayedSteps[currentStep]?.id === "confirm" &&
-                    !(isEstimateMode && estimateCreated) &&
-                    !(isCustomerMode && bookingRequested) &&
-                    selectedService === "training" && (
-                      <TrainingEnrollmentCartPanel
-                        cartItems={trainingCart}
-                        currentItems={currentTrainingLineItems}
-                        onRemoveCartItem={(index) =>
-                          setTrainingCart((prev) =>
-                            prev.filter((_, i) => i !== index),
-                          )
-                        }
-                        onEnrollAnotherDog={handleEnrollAnotherDog}
-                        canEnrollAnother={currentTrainingLineItems.length > 0}
-                      />
-                    )}
-
-                  {displayedSteps[currentStep]?.id === "confirm" &&
-                    !(isEstimateMode && estimateCreated) &&
-                    !(isCustomerMode && bookingRequested) && (
-                      <ConfirmStep
-                        selectedClient={selectedClient}
-                        selectedPets={selectedPets}
-                        selectedService={selectedService}
-                        serviceType={serviceType}
-                        startDate={startDate}
-                        endDate={endDate}
-                        checkInTime={checkInTime}
-                        checkOutTime={checkOutTime}
-                        daycareSelectedDates={daycareSelectedDates}
-                        daycareDateTimes={daycareDateTimes}
-                        boardingRangeStart={boardingRangeStart}
-                        boardingRangeEnd={boardingRangeEnd}
-                        boardingDateTimes={boardingDateTimes}
-                        roomAssignments={roomAssignments}
-                        feedingSchedule={effectiveFeeding}
-                        medications={effectiveMedications}
-                        medicationStay={careStay}
-                        noMedication={medicationStep.effectiveNoMedication}
-                        vetContacts={
-                          medicationUse === "disabled"
-                            ? undefined
-                            : medicationStep.effectiveVetContacts
-                        }
-                        extraServices={billedAddOnLines}
-                        onAddOnStaffChange={(serviceId, petId, staffId) =>
-                          setAddOnStaff((chosen) => ({
-                            ...chosen,
-                            [`${serviceId}::${petId}`]: staffId,
-                          }))
-                        }
-                        addOnsCatalog={storedAddOns}
-                        calculatePrice={calculatePrice}
-                        facilityTaxes={facilityTaxConfig?.taxes
-                          .filter(
-                            (t) =>
-                              t.enabled &&
-                              (t.appliesTo === "all" ||
-                                t.appliesTo === "services_only"),
-                          )
-                          .map((t) => ({ name: t.name, rate: t.rate }))}
-                        notificationEmail={notificationEmail}
-                        setNotificationEmail={setNotificationEmail}
-                        notificationSMS={notificationSMS}
-                        setNotificationSMS={setNotificationSMS}
-                        redeemedPackageId={redeemedPackageId}
-                        setRedeemedPackageId={setRedeemedPackageId}
-                        selectedStaffId={selectedStaffId}
-                        setSelectedStaffId={setSelectedStaffId}
-                        isMobileGrooming={groomingIsMobile}
-                        specialRequests={specialRequests}
-                        setSpecialRequests={setSpecialRequests}
-                        isCustomerMode={isCustomerMode}
-                        // The confirm step names a step by its place in the
-                        // FULL list (client & pet, service, details) and a
-                        // Details screen by its fixed id. What is shown can
-                        // hide a step (a locked service, an edit) and a
-                        // sub-step (no room step for a customer), so both
-                        // are looked up — the Medications link opened
-                        // Feeding, and a hidden step shifted every jump.
-                        onEditStep={(stepIdx, subStep) => {
-                          const shown = displayedSteps.findIndex(
-                            (step) => step.id === STEPS[stepIdx]?.id,
-                          );
-                          setCurrentStep(shown >= 0 ? shown : stepIdx);
-                          // An id: a step the list no longer has opens
-                          // the one after it (lib/bookings/care-steps.ts).
-                          setCurrentSubStepId(subStep ?? 0);
-                        }}
-                      />
-                    )}
-                </div>
-              </ScrollArea>
-            )}
-
-            {/* Navigation Buttons */}
-            {!(isEstimateMode && estimateCreated) &&
-              !(isCustomerMode && bookingRequested) && (
-                <div className="bg-background border-t">
-                  {/* A booking the facility has not set a rate for is refused,
-                      and the reason is on screen — not a disabled button with
-                      nothing to read (§5s). */}
-                  {/* The same shape as the rate gap beside it, and for the same
-                      reason: a default that looks like a decision. The
-                      check-in/check-out slider is built from the facility's
-                      opening hours, and a facility that has never saved any is
-                      shown the shipped 07:00-19:00 — which reads as "the
-                      product knows my hours" until somebody books a day that
-                      is nothing like theirs (§5s). */}
-                  {!hoursConfigured && (
-                    <div className="flex items-start gap-2 px-4 pt-4">
-                      <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-warning text-sm font-semibold">
-                          {t("noHoursTitle")}
-                        </p>
-                        <p className="text-warning text-[13.5px]">
-                          {t("noHoursBody")}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  {calculatePrice.rateGap && (
-                    <div className="flex items-start gap-2 px-4 pt-4">
-                      <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-warning text-sm font-semibold">
-                          {t("noRateTitle")}
-                        </p>
-                        <p className="text-warning text-[13.5px]">
-                          {rateGapMessage(calculatePrice.rateGap, t)}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  <div className="flex justify-between p-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handlePrevious}
-                      disabled={currentStep === 0}
-                    >
-                      {t("previous")}
-                    </Button>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          // If user has made progress, confirm before discarding
-                          if (currentStep > 0 || selectedService) {
-                            setShowCancelConfirm(true);
-                          } else {
-                            onOpenChange(false);
-                          }
-                        }}
-                      >
-                        {t("cancel")}
-                      </Button>
-                      {currentStep < displayedSteps.length - 1 ||
-                      showingPackagePromptStep ? (
-                        <Button
-                          type="button"
-                          onClick={handleNext}
-                          disabled={!canProceed}
-                          className={
-                            selectedService && canProceed
-                              ? `${accent.btnBg} text-white`
-                              : ""
-                          }
-                        >
-                          {showingPackagePromptStep ? t("skip") : t("next")}
-                        </Button>
-                      ) : (
-                        <Button
-                          type="button"
-                          onClick={() => void handleComplete()}
-                          disabled={
-                            !canProceed ||
-                            submitting ||
-                            estimateBusy ||
-                            !!calculatePrice.rateGap
-                          }
-                          aria-busy={submitting || estimateBusy}
-                          className={
-                            selectedService && canProceed
-                              ? `${accent.btnBg} text-white`
-                              : ""
-                          }
-                        >
-                          {submitting
-                            ? t("savingBooking")
-                            : editMode
-                              ? t("saveChanges")
-                              : isEstimateMode
-                                ? t("createEstimate")
-                                : isCustomerMode
-                                  ? t("requestBooking")
-                                  : t("createBooking")}
-                        </Button>
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"
+                                />
+                              </svg>
+                              {t("sendToCustomer")}
+                            </Button>
+                          </div>
+                        </>
                       )}
                     </div>
-                  </div>
-                </div>
-              )}
-          </div>
-        </div>
-      </DialogContent>
-
-      {/* Cancel confirmation */}
-      <AlertDialog open={showCancelConfirm} onOpenChange={setShowCancelConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {editMode
-                ? t("discardChangesTitle")
-                : t("discardTitle").replace(
-                    "{what}",
-                    isEstimateMode ? t("estimate") : t("booking"),
                   )}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {editMode ? t("discardHelp") : t("discardAllHelp")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("continueEditing")}</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
+
+                {displayedSteps[currentStep]?.id === "confirm" &&
+                  !(isEstimateMode && estimateCreated) &&
+                  !(isCustomerMode && bookingRequested) && (
+                    <ConfirmStep
+                      {...confirmProps}
+                      staffRows={confirmStaffRows}
+                    />
+                  )}
+              </>
+            )}
+          </div>
+
+          {showCancelConfirm ? (
+            <DiscardPanel
+              title={
+                editMode
+                  ? t("discardChangesTitle")
+                  : t("discardTitle").replace(
+                      "{what}",
+                      isEstimateMode ? t("estimate") : t("booking"),
+                    )
+              }
+              help={editMode ? t("discardHelp") : t("discardAllHelp")}
+              keepLabel={t("continueEditing")}
+              discardLabel={
+                editMode
+                  ? t("discardChanges")
+                  : t("discardWhat").replace(
+                      "{what}",
+                      isEstimateMode ? t("estimateBare") : t("bookingBare"),
+                    )
+              }
+              onKeep={() => setShowCancelConfirm(false)}
+              onDiscard={() => {
+                setShowCancelConfirm(false);
                 rememberUnfinished();
                 resetForm();
                 onOpenChange(false);
               }}
-            >
-              {editMode
-                ? t("discardChanges")
-                : t("discardWhat").replace(
-                    "{what}",
-                    isEstimateMode ? t("estimateBare") : t("bookingBare"),
-                  )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </Dialog>
+            />
+          ) : isEstimateMode && estimateCreated ? null : (
+            <WizardFooter
+              notices={
+                isDone ? null : (
+                  <>
+                    {!hoursConfigured && (
+                      <div className="flex items-start gap-2 px-4 pt-4">
+                        <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-warning text-sm font-semibold">
+                            {t("noHoursTitle")}
+                          </p>
+                          <p className="text-warning text-[13.5px]">
+                            {t("noHoursBody")}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    {calculatePrice.rateGap && (
+                      <div className="flex items-start gap-2 px-4 pt-4">
+                        <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-warning text-sm font-semibold">
+                            {t("noRateTitle")}
+                          </p>
+                          <p className="text-warning text-[13.5px]">
+                            {rateGapMessage(calculatePrice.rateGap, t)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )
+              }
+              showPrevious={!isDone}
+              previousDisabled={!canGoBack}
+              onPrevious={handlePrevious}
+              previousLabel={t("previous")}
+              backLabel={t("wizBack")}
+              estimate={footerEstimate}
+              estimateLabel={t("wizEstimate")}
+              showCancel={!isDone}
+              onCancel={requestClose}
+              cancelLabel={t("cancel")}
+              nextLabel={nextLabel}
+              onNext={onFooterNext}
+              nextDisabled={nextDisabled}
+              busy={atLastStep && (submitting || estimateBusy)}
+            />
+          )}
+        </div>
+      </WizardDialog>
+      {creatingClient ? (
+        <CreateClientModal
+          open
+          onOpenChange={(next) => {
+            // Cancelled: the booking comes back exactly as it was.
+            if (!next) setCreatingClient(false);
+          }}
+          facilityName={facilityName}
+          onSave={(newClient) =>
+            createClient.mutate(newClient, {
+              onSuccess: ({ client, failedPets }) => {
+                // The booking comes back for the client just made, every
+                // one of their pets chosen.
+                setAddedClients((prev) => [...prev, client]);
+                setSelectedClientId(client.id);
+                setSelectedPetIds(client.pets.map((pet) => pet.id));
+                setSearchQuery("");
+                setCreatingClient(false);
+                if (failedPets.length > 0) {
+                  toast.warning(
+                    fillWords(t("wizClientPetsNotSaved"), {
+                      name: client.name,
+                      pets: failedPets.join(", "),
+                    }),
+                  );
+                } else {
+                  toast.success(
+                    fillWords(t("wizNewClientSaved"), { name: client.name }),
+                  );
+                }
+              },
+              onError: (error) => {
+                toast.error(t("wizClientNotSaved"), {
+                  description:
+                    error instanceof Error ? error.message : undefined,
+                });
+              },
+            })
+          }
+        />
+      ) : null}
+    </>
   );
 }

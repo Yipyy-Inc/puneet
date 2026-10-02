@@ -102,6 +102,13 @@ export interface RoomCategory {
   /** Cover photo shown to clients in booking flow */
   imageUrl?: string;
   /**
+   * The size words on the booking wizard's room card — "4 × 4 ft", "Quiet
+   * wing". The facility's own, never measured (20261002122808).
+   */
+  dimensionsLabel?: string;
+  /** What comes with the room, as the card's chips. Eight at most. */
+  features?: string[];
+  /**
    * Whether the category is currently offered.
    *
    * Added for daycare play areas, which close seasonally. Boarding categories

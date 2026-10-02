@@ -38,6 +38,7 @@ import {
   type ProgramFormState,
 } from "./_components/program-dialog";
 import { ProgramCardGrid } from "./_components/program-card-grid";
+import { cleanPacks } from "@/lib/training/program-offer";
 import { useSettingsHref } from "@/lib/settings/use-settings-href";
 
 export default function TrainingRatesPage() {
@@ -139,6 +140,19 @@ export default function TrainingRatesPage() {
           ? Number(form.maxGroupSize)
           : undefined,
       imageUrl: form.imageUrl.trim() || undefined,
+      // How a private program is booked: a lesson (single or a pack) or a
+      // consult, and its length. A group program books its classes.
+      format: form.classType === "private" ? form.booking.format : undefined,
+      sessionMinutes:
+        form.classType === "private" &&
+        typeof form.booking.sessionMinutes === "number" &&
+        form.booking.sessionMinutes > 0
+          ? Math.round(form.booking.sessionMinutes)
+          : undefined,
+      packs:
+        form.classType === "private" && form.booking.format === "lesson"
+          ? cleanPacks(form.booking.packs)
+          : undefined,
     };
 
     void writePrograms(

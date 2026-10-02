@@ -5,7 +5,12 @@ import {
   type BookingListParams,
 } from "@/lib/api/booking-list-params";
 
-import { answerCareSteps } from "./_wizard";
+import {
+  answerCareSteps,
+  closeDoneScreen,
+  skipEvaluation,
+  toConfirm,
+} from "./_wizard";
 import { ACCOUNTS, signIn } from "./_auth";
 import { cancelBookingsMarked } from "./_sweep";
 
@@ -104,6 +109,14 @@ async function openWizard(page: Page, clientRef: number) {
   return dialog;
 }
 
+/** A Room type card — the button, not a summary that names it. */
+function roomCard(dialog: Locator, name: string) {
+  return dialog
+    .locator("button[aria-pressed]")
+    .filter({ hasText: name })
+    .first();
+}
+
 async function next(dialog: Locator) {
   // Boarding ships with its Medications step required (answerCareSteps).
   await answerCareSteps(dialog);
@@ -130,7 +143,7 @@ async function create(page: Page, dialog: Locator, tag: string) {
   const ref = Number(/#(\d+)/.exec(said)?.[1]);
   expect(ref, `the wizard said: ${said}`).toBeGreaterThan(0);
   made.push(ref);
-  await expect(dialog).toBeHidden({ timeout: 15_000 });
+  await closeDoneScreen(dialog);
   return ref;
 }
 
@@ -184,16 +197,8 @@ test.describe("staff finish the New Booking wizard for every service", () => {
       .getByText(/daycare/i)
       .first()
       .click();
-
-    // Staff are not locked out: the card opens, and the choice is theirs.
-    await expect(
-      dialog.getByRole("button", { name: /book an evaluation instead/i }),
-    ).toBeVisible();
-    await expect(
-      dialog.getByRole("button", { name: /^next$/i }),
-    ).toBeDisabled();
-    await dialog.getByRole("switch").last().click();
-    await dialog.getByLabel(/why is this booking/i).fill(`${MARKER} regular`);
+    // Staff are not locked out: the card picks, and the question is asked on
+    // Confirm (the client's flow, 2026-10-01).
     await next(dialog);
 
     await dialog
@@ -212,13 +217,20 @@ test.describe("staff finish the New Booking wizard for every service", () => {
       .getByRole("button", { name: /full day/i })
       .first()
       .click();
-    await next(dialog);
-    // The play area: Next waits for one, and the cards arrive with the day's
-    // capacity, so this waits for them rather than glancing.
-    await dialog
-      .locator("div.group.bg-card.rounded-2xl.cursor-pointer")
-      .first()
-      .click();
+    // The play area is assigned as a customer's is; staff can change it on
+    // Confirm. Confirm asks whether Daisy is evaluated on her first day —
+    // yes until somebody says otherwise — and this booking says no.
+    await toConfirm(dialog);
+    await expect(
+      dialog.getByRole("switch", { name: /^evaluation$/i }),
+    ).toBeChecked();
+    await expect(
+      dialog.getByRole("button", { name: /book an evaluation instead/i }),
+    ).toBeHidden();
+    await skipEvaluation(dialog, `${MARKER} regular`);
+    await expect(
+      dialog.getByRole("button", { name: /book an evaluation instead/i }),
+    ).toBeVisible();
 
     const ref = await create(page, dialog, "daycare");
     const saved = await byRef(page, ref);
@@ -245,13 +257,13 @@ test.describe("staff finish the New Booking wizard for every service", () => {
     await dialog.getByText("Max", { exact: true }).first().click();
     await next(dialog);
     await dialog.getByText(/groom/i).first().click();
-    await dialog.getByRole("switch").last().click();
-    await dialog.getByLabel(/why is this booking/i).fill(`${MARKER} expired`);
     await next(dialog);
     await dialog.getByText("Full Groom", { exact: true }).first().click();
     await next(dialog); // add-ons
-    await next(dialog); // schedule
-    await dialog.getByRole("button", { name: /next available/i }).click();
+    await next(dialog); // groomer & time
+    await dialog.getByRole("button", { name: /^take this slot$/i }).click();
+    await toConfirm(dialog);
+    await skipEvaluation(dialog, `${MARKER} expired`);
 
     const ref = await create(page, dialog, "grooming");
     const saved = await byRef(page, ref);
@@ -286,9 +298,11 @@ test.describe("staff finish the New Booking wizard for every service", () => {
       .click();
     await next(dialog);
 
-    // One click on the card places the only dog — no chip to find first.
-    await dialog.getByText("Condominium", { exact: true }).first().click();
-    await expect(dialog.getByText(/Buddy\s*·\s*Condominium/)).toBeVisible();
+    // The room types are the facility's boarding services (the client's
+    // flow): one click on the card places the only dog.
+    const condo = roomCard(dialog, "Condominium");
+    await condo.click();
+    await expect(condo).toHaveAttribute("aria-pressed", "true");
 
     const ref = await create(page, dialog, "boarding");
     const saved = await byRef(page, ref);
@@ -327,8 +341,7 @@ test.describe("staff finish the New Booking wizard for every service", () => {
       .click();
     await next(dialog);
 
-    await dialog.getByText("Condominium", { exact: true }).first().click();
-    await expect(dialog.getByText(/Buddy\s*·\s*Condominium/)).toBeVisible();
+    await roomCard(dialog, "Condominium").click();
 
     // The change starts on the second night, in the first kennel's type.
     await dialog

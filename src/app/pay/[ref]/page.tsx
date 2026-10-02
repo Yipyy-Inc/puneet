@@ -16,6 +16,13 @@ import { DEFAULT_TIMEZONE, wallClockParts } from "@/lib/time/facility-time";
 
 import { PayBooking } from "./_components/pay-booking";
 import { PayNotice } from "./_components/pay-notice";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  DEPOSIT_ROW_SELECT,
+  planDeposit,
+  requestRows,
+  type DepositRow,
+} from "@/lib/payments/booking-deposit-server";
 
 // ============================================================================
 // Paying a booking by card.
@@ -86,10 +93,13 @@ const AWAITING = new Set(["request_submitted", "estimate_sent", "waitlisted"]);
 
 export default async function PayBookingPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ ref: string }>;
+  searchParams: Promise<{ deposit?: string }>;
 }) {
   const { ref } = await params;
+  const asDeposit = (await searchParams).deposit === "1";
   const bookingRef = Number(ref);
   if (!Number.isInteger(bookingRef) || bookingRef <= 0) notFound();
 
@@ -136,9 +146,16 @@ export default async function PayBookingPage({
         booking.facilities?.timezone ?? DEFAULT_TIMEZONE,
       ).date
     : null;
-  const owedCents = Math.round(
+  const balanceCents = Math.round(
     (Number(booking.amount_due ?? 0) - Number(booking.amount_paid ?? 0)) * 100,
   );
+  // A deposit link (the booking wizard, 2026-10-02): this booking's share of
+  // the deposit its request owes, worked out from the rows as the card route
+  // will. Nothing left of it: the page asks for the balance, as any link.
+  const depositCents = asDeposit
+    ? await depositShareCents(booking.id, balanceCents)
+    : 0;
+  const owedCents = depositCents > 0 ? depositCents : balanceCents;
 
   if (booking.status === "cancelled") {
     return (
@@ -266,10 +283,34 @@ export default async function PayBookingPage({
       merchantId={connection.merchantId}
       publicApiKey={connection.publicApiKey}
       sdkUrl={config.checkoutSdkUrl}
-      tipConfig={tipConfig}
-      pledgedTipCents={pledgedTipCents}
+      tipConfig={depositCents > 0 ? null : tipConfig}
+      pledgedTipCents={depositCents > 0 ? 0 : pledgedTipCents}
+      deposit={depositCents > 0}
     />
   );
+}
+
+/** This booking's share of its request's deposit, in cents, or 0. */
+async function depositShareCents(
+  bookingId: string,
+  balanceCents: number,
+): Promise<number> {
+  try {
+    const admin = createAdminClient() as unknown as SupabaseClient;
+    const { data } = await admin
+      .from("bookings")
+      .select(DEPOSIT_ROW_SELECT)
+      .eq("id", bookingId)
+      .maybeSingle();
+    if (!data) return 0;
+    const rows = await requestRows(admin, data as unknown as DepositRow);
+    const share = (await planDeposit(admin, rows)).shares.find(
+      (s) => s.bookingId === bookingId,
+    );
+    return share ? Math.min(balanceCents, Math.round(share.amount * 100)) : 0;
+  } catch {
+    return 0;
+  }
 }
 
 /**

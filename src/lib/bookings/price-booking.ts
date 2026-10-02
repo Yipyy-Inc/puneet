@@ -4,12 +4,15 @@ import { SETTING_DOMAINS } from "@/lib/settings/domains";
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { loadBoardingServices } from "@/lib/pricing/boarding-services-server";
 import {
+  householdStayTotal,
   resolveBoardingService,
   stayUnits,
 } from "@/lib/pricing/boarding-service-choice";
 import { loadDaycareServices } from "@/lib/pricing/daycare-services-server";
 import { resolveDaycareService } from "@/lib/pricing/daycare-service-choice";
 import { isBuiltinService } from "@/lib/service-registry";
+import { trainingProgramsSchema } from "@/lib/settings/training-programs";
+import { programFormat, programPrice } from "@/lib/training/program-offer";
 import {
   addOnLinesFrom,
   missingRequiredLine,
@@ -187,8 +190,21 @@ export interface PriceRequest {
    * own catalogue.
    */
   extraServices?: unknown;
-  /** Boarding: the pets on the booking, by ref — for per-pet defaults. */
+  /** The pets on the booking, by ref: boarding's per-pet defaults, daycare's per-dog price. */
   petRefs?: readonly number[];
+  /**
+   * Boarding: each pet's own service by pet ref (`details.boardingPetServices`,
+   * the Room type step, 2026-10-01). Untrusted: every price is the
+   * facility's own, and a service this facility does not have is refused.
+   */
+  boardingPetServices?: unknown;
+  /** Boarding: the household asked for one room per service. */
+  boardingShare?: boolean;
+  /** Training: the class session an enrolment booked (2026-10-02). */
+  trainingSessionId?: string | null;
+  /** Training: a lesson's or a consult's program, and a lesson pack's size. */
+  trainingProgramId?: string | null;
+  trainingPack?: number | null;
   /** What the customer was shown. The quote this must agree with. */
   quotedTotal: number;
 }
@@ -274,6 +290,15 @@ async function boardingKennels(bookingId: string | undefined): Promise<{
   return { categoryIds, lodgings: 1, moves: roomIds.length > 1 };
 }
 
+/** `details.boardingPetServices` as a map of pet ref to service id, or null. */
+function petServicesOf(value: unknown): Record<string, string> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const entries = Object.entries(value as Record<string, unknown>).filter(
+    (entry): entry is [string, string] => typeof entry[1] === "string",
+  );
+  return entries.length > 0 ? Object.fromEntries(entries) : null;
+}
+
 /**
  * What a boarding stay costs: the SERVICE the booking names, else the class.
  *
@@ -306,6 +331,40 @@ async function priceBoarding(input: PriceRequest): Promise<ServerQuote> {
   const { categoryIds, lodgings, moves } = await boardingKennels(
     input.bookingId,
   );
+
+  // ── A SERVICE PER PET (the Room type step, 2026-10-01) ───────────────────
+  //
+  // A household's request names each pet's service, and whether the pets
+  // share. Priced the way the wizard quoted it — `householdStayTotal`, one
+  // function for both — so the request confirms only on the number shown.
+  const perPet = petServicesOf(input.boardingPetServices);
+  const refs = input.petRefs ?? [];
+  if (input.boardingServiceId && perPet && refs.length > 1) {
+    const services = await loadBoardingServices(
+      input.facilityId,
+      input.locationId ?? null,
+    );
+    const primary = resolveBoardingService(services, {
+      serviceId: input.boardingServiceId,
+    });
+    if (!primary) return { ok: false, reason: "no_rate" };
+    const pets = refs.map((ref) => ({
+      service: resolveBoardingService(services, {
+        serviceId: perPet[String(ref)] ?? input.boardingServiceId,
+      }),
+    }));
+    if (pets.some((pet) => !pet.service))
+      return { ok: false, reason: "no_rate" };
+    const total = householdStayTotal({
+      pets: pets as Array<{
+        service: NonNullable<(typeof pets)[number]["service"]>;
+      }>,
+      share: input.boardingShare === true,
+      nights,
+    });
+    if (total === null) return { ok: false, reason: "no_rate" };
+    return withAddOns(input, total, primary.defaultAddOns, nights);
+  }
 
   // ── THE SERVICE THE BOOKING NAMES ────────────────────────────────────────
   if (input.boardingServiceId) {
@@ -507,7 +566,9 @@ async function priceDaycare(input: PriceRequest): Promise<ServerQuote> {
     return { ok: false, reason: "bad_dates" };
   }
 
-  const total = perDay * days;
+  // Each dog is a day of daycare, as the wizard quotes it (2026-10-01).
+  const dogs = Math.max(1, input.petRefs?.length ?? 1);
+  const total = perDay * days * dogs;
   return withAddOns(input, total, [], days);
 }
 
@@ -590,6 +651,66 @@ async function priceGrooming(input: PriceRequest): Promise<ServerQuote> {
 }
 
 /**
+ * Training (the booking wizard, 2026-10-02):
+ *
+ *   a class session   the series' price per session, the last taking what is
+ *                     left — what enroll_in_training_series booked, one dog
+ *   a lesson/consult  the program's price, a lesson pack's when one was
+ *                     chosen, per dog
+ *
+ * Both from the facility's own rows and settings; the quote is only checked.
+ */
+async function priceTraining(input: PriceRequest): Promise<ServerQuote> {
+  const cents = (n: number) => Math.round(n * 100) / 100;
+  if (input.trainingSessionId) {
+    const { data } = await createAdminClient()
+      .from("training_series_sessions")
+      .select(
+        "session_number, training_series ( total_price, number_of_sessions )",
+      )
+      .eq("id", input.trainingSessionId)
+      .maybeSingle();
+    const row = data as {
+      session_number: number;
+      training_series: {
+        total_price: number | string;
+        number_of_sessions: number;
+      } | null;
+    } | null;
+    const series = row?.training_series;
+    if (!row || !series || series.number_of_sessions <= 0) {
+      return { ok: false, reason: "cannot_price" };
+    }
+    const total = Number(series.total_price);
+    const each = cents(total / series.number_of_sessions);
+    const last = cents(total - each * (series.number_of_sessions - 1));
+    const price =
+      row.session_number === series.number_of_sessions ? last : each;
+    return { ok: true, basePrice: price, total: price };
+  }
+  if (input.trainingProgramId) {
+    const parsed = trainingProgramsSchema.safeParse(
+      (await settingValue(input.facilityId, "training_programs")) ?? {},
+    );
+    const program = parsed.success
+      ? parsed.data.programs.find((p) => p.id === input.trainingProgramId)
+      : undefined;
+    if (!program || programFormat(program) === "group") {
+      return { ok: false, reason: "cannot_price" };
+    }
+    const pets = Math.max(1, input.petRefs?.length ?? 1);
+    const price = cents(
+      programPrice(
+        program,
+        programFormat(program) === "lesson" ? (input.trainingPack ?? 1) : 1,
+      ) * pets,
+    );
+    return { ok: true, basePrice: price, total: price };
+  }
+  return { ok: false, reason: "cannot_price" };
+}
+
+/**
  * The price the SERVER is willing to confirm, or why it will not.
  *
  * A refusal is never an error to show a customer — the caller turns it into a
@@ -608,7 +729,9 @@ export async function priceCustomerBooking(
         ? await priceDaycare(input)
         : input.service === "grooming"
           ? await priceGrooming(input)
-          : { ok: false, reason: "cannot_price" };
+          : input.service === "training"
+            ? await priceTraining(input)
+            : { ok: false, reason: "cannot_price" };
 
   if (!priced.ok) return priced;
 

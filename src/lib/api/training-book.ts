@@ -131,6 +131,26 @@ export async function fetchTrainingPrograms(
 }
 
 /**
+ * The facility's own training goals (`training_module_settings.goalOptions`)
+ * — the booking wizard's Goals step offers these, else the eight it ships.
+ */
+export async function fetchTrainingGoalOptions(
+  audience: SettingsAudience = "staff",
+): Promise<string[]> {
+  const response = await fetch(settingsPath(audience));
+  if (!response.ok) return [];
+  const settings = (await response.json()) as {
+    training_module_settings?: { value?: { goalOptions?: unknown } };
+  };
+  const goals = settings.training_module_settings?.value?.goalOptions;
+  return Array.isArray(goals)
+    ? goals.filter(
+        (goal): goal is string => typeof goal === "string" && !!goal.trim(),
+      )
+    : [];
+}
+
+/**
  * The trainers' notes, from `training_notes` — they were the `trainerNotes`
  * fixture, written with setQueryData. Writes: useTrainingNoteMutations.
  */

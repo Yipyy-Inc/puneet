@@ -7,6 +7,10 @@ import {
 
 import { NO_PAYROLL_RULES, payrollConfigSchema } from "@/lib/settings/payroll";
 import {
+  NO_SERVICE_TIME_WINDOWS,
+  serviceTimeWindowsSchema,
+} from "@/lib/settings/service-time-windows";
+import {
   DEFAULT_SCHEDULING_RULES,
   schedulingRulesSchema,
 } from "@/lib/settings/scheduling-rules";
@@ -814,6 +818,12 @@ export const SETTING_DOMAINS = {
   drop_off_pick_up_overrides: {
     schema: z.array(dropOffPickUpOverrideSchema),
     fallback: dropOffPickUpOverrides as DropOffPickUpOverride[],
+  },
+  // The standing drop-off and pick-up hours of boarding and daycare (the
+  // client's mock, 2026-10-01). Empty: the opening hours decide, as before.
+  service_time_windows: {
+    schema: serviceTimeWindowsSchema,
+    fallback: NO_SERVICE_TIME_WINDOWS,
   },
   notification_toggles: {
     schema: z.array(notificationToggleSchema),

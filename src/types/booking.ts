@@ -350,6 +350,12 @@ export const bookingPartSchema = z.object({
   totalCost: z.number(),
   unitAssignment: z.string().optional(),
   trainingSessionId: z.string().optional(),
+  /** This part's boarding service, where a household's pets differ. */
+  boardingServiceId: z.string().optional(),
+  /** Grooming: this pet's package (its `serviceType`), where pets differ. */
+  serviceType: z.string().optional(),
+  /** Grooming: staff marked this pet's coat matted. */
+  matted: z.boolean().optional(),
 });
 
 export type BookingPart = z.infer<typeof bookingPartSchema>;
@@ -423,6 +429,13 @@ export const newBookingSchema = z.object({
    * kennel class's own nightly rate — what that booking was actually sold at.
    */
   boardingServiceId: z.string().nullable().optional(),
+  /** Boarding: each pet's service by pet ref, where a household's differ. */
+  boardingPetServices: z.record(z.string(), z.string()).optional(),
+  /** Boarding: the household asked to share one room. */
+  boardingShare: z.boolean().optional(),
+  /** Grooming: staff marked the coat matted — its surcharge and minutes
+   *  are in the price and the times; check-in does not charge it again. */
+  groomingMatted: z.boolean().optional(),
   daycareSelectedDates: z.array(z.string()).optional(),
   daycareDateTimes: z.array(daycareDateTimeSchema).optional(),
   groomingStyle: z.string().optional(),
@@ -510,7 +523,29 @@ export const newBookingSchema = z.object({
     .array(z.object({ petId: z.number(), roomId: z.string() }))
     .optional(),
   trainerId: z.string().optional(),
-  trainingGoals: z.string().optional(),
+  /** The owner's goals for the trainer (the Goals step, 2026-10-01); a
+   *  single string on a booking made before it. */
+  trainingGoals: z.union([z.string(), z.array(z.string())]).optional(),
+  /** none · some · lots — the owner's word for the dog's training so far. */
+  trainingExperience: z.string().optional(),
+  /** The owner's notes for the trainer. */
+  trainerNotes: z.string().max(2000).optional(),
+  /** Made Pending because the client had agreements to sign (the booking
+   *  wizard, 2026-10-02): confirmed by the database when the last applicable
+   *  one is signed (20261002123123). */
+  awaitingAgreements: z.boolean().optional(),
+  /** A customer's request: the saved card they agreed may be charged the
+   *  deposit when the facility confirms it (the booking wizard, 2026-10-02).
+   *  The card is checked against the client and its consent when charged. */
+  depositCardId: z.string().uuid().optional(),
+  /** The facility program booked (the `training_programs` setting id). */
+  trainingProgramId: z.string().optional(),
+  /** group · lesson · consult. */
+  trainingFormat: z.string().optional(),
+  /** A lesson pack's sessions; 1 or absent is one session. */
+  trainingPack: z.number().int().positive().optional(),
+  /** A customer's request for a class: which one. */
+  trainingSeriesId: z.string().optional(),
   vetReason: z.string().optional(),
   vetSymptoms: z.string().optional(),
   isEmergency: z.boolean().optional(),

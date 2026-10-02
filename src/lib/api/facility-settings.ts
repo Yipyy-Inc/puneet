@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ServiceTimeWindows } from "@/lib/settings/service-time-windows";
 import {
   useAddOnCategories,
   useAddOns,
@@ -254,6 +255,8 @@ export interface FacilitySettings {
   service_date_blocks: SettingState<ServiceDateBlock[]>;
   schedule_time_overrides: SettingState<ScheduleTimeOverride[]>;
   drop_off_pick_up_overrides: SettingState<DropOffPickUpOverride[]>;
+  /** Boarding's and daycare's standing drop-off and pick-up hours. */
+  service_time_windows: SettingState<ServiceTimeWindows>;
   notification_toggles: SettingState<NotificationToggle[]>;
   service_notification_defaults: SettingState<ServiceNotificationDefault[]>;
   module_addons: SettingState<ModuleAddon[]>;

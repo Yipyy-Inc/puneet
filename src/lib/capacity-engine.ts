@@ -440,6 +440,12 @@ export function roomsForAssignments(input: {
   categories: RoomCategory[];
   units: FacilityRoom[];
   bookings: Booking[];
+  /**
+   * Each pet its own unit (2026-10-01): the booking form's pets do not share
+   * unless the household chose to, so a second dog of a room type gets a
+   * second room rather than a place in the first.
+   */
+  separate?: boolean;
 }): Array<{ petId: number; roomId: string }> {
   const { startDate, endDate, categories, units, bookings } = input;
   const placedHere = new Map<string, number>();
@@ -459,6 +465,7 @@ export function roomsForAssignments(input: {
       (unit) =>
         unit.categoryId === category.id &&
         unit.active &&
+        !(input.separate && (placedHere.get(unit.id) ?? 0) > 0) &&
         unitHasRoomFor({
           unit,
           category,

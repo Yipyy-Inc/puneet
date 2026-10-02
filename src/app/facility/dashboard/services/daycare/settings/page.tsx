@@ -20,6 +20,7 @@ import { Save, Edit, X } from "lucide-react";
 import { toast } from "sonner";
 import { useSettings } from "@/hooks/use-settings";
 import { MaxPetsPerStaffCard } from "@/components/smart-insights/MaxPetsPerStaffCard";
+import { DropOffHoursCard } from "@/components/facility/services/drop-off-hours-card";
 import type { ModuleConfig } from "@/types/facility";
 import { useSettingsHref } from "@/lib/settings/use-settings-href";
 
@@ -331,6 +332,10 @@ export default function DaycareSettingsPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* What the booking wizard offers for drop-off and pick-up, per
+            day type (the client, 2026-10-01). */}
+        <DropOffHoursCard service="daycare" />
 
         <MaxPetsPerStaffCard service="daycare" />
       </div>

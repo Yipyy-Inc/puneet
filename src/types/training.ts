@@ -326,6 +326,29 @@ export const trainingPackageSchema = z
      *  available at every location in the facility. When set, it is
      *  restricted to the listed location IDs only. */
     locationIds: z.array(z.string()).optional(),
+    /**
+     * How it is booked (the booking wizard's Program step, 2026-10-01):
+     * `group` — a class series, `price` per series; `lesson` — a one-on-one
+     * session with a trainer, `price` per session; `consult` — one behaviour
+     * consult, `price` per consult. Absent: `private` reads as a lesson and
+     * `group` as a group, which is what every program saved before meant.
+     */
+    format: z.enum(["group", "lesson", "consult"]).optional(),
+    /** A lesson's or consult's length, in minutes. Absent: 60, or 90. */
+    sessionMinutes: z.number().int().positive().optional(),
+    /**
+     * A lesson's session packs — "3-session pack · $270 · save $15". Each is
+     * sold as a prepaid package of that many sessions; the single session is
+     * always `price` and is not listed here.
+     */
+    packs: z
+      .array(
+        z.object({
+          sessions: z.number().int().min(2),
+          price: z.number().nonnegative(),
+        }),
+      )
+      .optional(),
   })
   .catchall(z.unknown());
 

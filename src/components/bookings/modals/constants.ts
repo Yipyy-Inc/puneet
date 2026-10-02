@@ -74,128 +74,6 @@ export const SERVICE_CATEGORIES = [
   },
 ];
 
-export const GROOMING_STYLES = [
-  { id: "bath_brush", name: "Bath & Brush", price: 40 },
-  { id: "full_groom", name: "Full Groom", price: 65 },
-  { id: "puppy_groom", name: "Puppy Groom", price: 35 },
-  { id: "hand_stripping", name: "Hand Stripping", price: 95 },
-  { id: "deshedding", name: "De-shedding Treatment", price: 55 },
-];
-
-export const TRAINING_TYPES = [
-  { id: "basic_obedience", name: "Basic Obedience", price: 250, sessions: 6 },
-  {
-    id: "advanced_obedience",
-    name: "Advanced Obedience",
-    price: 350,
-    sessions: 8,
-  },
-  { id: "private_session", name: "Private Session", price: 85, sessions: 1 },
-  { id: "puppy_training", name: "Puppy Training", price: 200, sessions: 4 },
-  {
-    id: "behavior_modification",
-    name: "Behavior Modification",
-    price: 150,
-    sessions: 1,
-  },
-  { id: "agility", name: "Agility Training", price: 300, sessions: 6 },
-];
-
-export const DAYCARE_TYPES = [
-  { id: "full_day", name: "Full Day", price: 35, hours: "8+" },
-  { id: "half_day", name: "Half Day", price: 22, hours: "up to 5" },
-];
-
-export const BOARDING_TYPES = [
-  { id: "standard", name: "Standard Boarding", price: 45 },
-  { id: "luxury", name: "Luxury Suite", price: 75 },
-  { id: "vip", name: "VIP Suite", price: 100 },
-];
-
-/** Customer-facing boarding room types: photo, inclusions, pet eligibility (type/size/weight), availability */
-export interface CustomerBoardingRoomType {
-  id: string;
-  name: string;
-  price: number;
-  description: string;
-  image: string;
-  included: string[];
-  allowedPetTypes: string[];
-  minWeightLbs?: number;
-  maxWeightLbs?: number;
-  totalRooms: number;
-  bookedRooms: number;
-  /** 3–5 facility-uploaded photos for details view */
-  images?: string[];
-  /** Facility notes e.g. "Best for anxious dogs", "Includes webcam" */
-  notes?: string;
-}
-export const CUSTOMER_BOARDING_ROOM_TYPES: CustomerBoardingRoomType[] = [
-  {
-    id: "standard",
-    name: "Standard Room",
-    price: 45,
-    // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
-    description:
-      "Comfortable indoor kennel with bedding and a calm environment.",
-    image: "/rooms/room-1.jpg",
-    included: ["Bedding", "Daily feeding", "Potty breaks", "Basic care"],
-    allowedPetTypes: ["Dog", "Cat"],
-    minWeightLbs: undefined,
-    maxWeightLbs: undefined,
-    totalRooms: 10,
-    bookedRooms: 7,
-    images: ["/rooms/room-1.jpg"],
-    notes: "Great for dogs who prefer a quiet, cozy space.",
-  },
-  {
-    id: "deluxe",
-    name: "Deluxe Suite",
-    price: 75,
-    // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
-    description:
-      "Spacious suite with play area and webcam so you can check in anytime.",
-    image: "/rooms/room-2.jpg",
-    included: [
-      "Luxury bedding",
-      "Play area",
-      "Webcam access",
-      "Daily feeding",
-      "Extra playtime",
-    ],
-    allowedPetTypes: ["Dog", "Cat"],
-    minWeightLbs: undefined,
-    maxWeightLbs: undefined,
-    totalRooms: 5,
-    bookedRooms: 2,
-    images: ["/rooms/room-2.jpg"],
-    notes: "Includes webcam. Best for social pets who love extra play.",
-  },
-  {
-    id: "vip",
-    name: "VIP Suite",
-    price: 120,
-    // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
-    description:
-      "Luxury suite with private outdoor access and premium amenities.",
-    image: "/rooms/room-3.jpg",
-    included: [
-      "Premium bedding",
-      "Private outdoor run",
-      "Webcam",
-      "Daily feeding",
-      "One-on-one time",
-    ],
-    allowedPetTypes: ["Dog", "Cat"],
-    minWeightLbs: 20,
-    maxWeightLbs: undefined,
-    totalRooms: 3,
-    bookedRooms: 1,
-    images: ["/rooms/room-3.jpg"],
-    notes: "Private outdoor run. Ideal for larger or high-energy dogs.",
-  },
-];
-
 /** Grooming packages for customer booking: duration, what's included, starting price */
 export interface GroomingPackage {
   id: string;
@@ -304,9 +182,10 @@ export const STEPS: WizardStepDef[] = [
 
 // Feeding (3) and Medication (4) are not in these lists: the facility decides
 // per service whether they appear, so `detailSubSteps` adds them.
+// The play area is not a screen any more (the client's mock, 2026-10-01): it
+// is assigned as a customer's always was, and staff change it on Confirm.
 export const DAYCARE_SUB_STEPS: WizardSubStepDef[] = [
   { id: 0, titleKey: "schedule", descriptionKey: "subDatesAndTimes" },
-  { id: 1, titleKey: "subRoomAssignment", descriptionKey: "subAssignToRoom" },
   { id: 2, titleKey: "addOnsLabel", descriptionKey: "subAddOnServices" },
 ];
 
@@ -322,20 +201,23 @@ export const EVALUATION_SUB_STEPS: WizardSubStepDef[] = [
 ];
 
 export const GROOMING_SUB_STEPS: WizardSubStepDef[] = [
-  { id: 0, titleKey: "service", descriptionKey: "subChooseGrooming" },
+  // The client's mock (2026-10-01): Package · Add-ons · Groomer & time.
+  { id: 0, titleKey: "wizSubPackage", descriptionKey: "subChooseGrooming" },
   { id: 1, titleKey: "addOnsLabel", descriptionKey: "subOptionalExtras" },
-  { id: 2, titleKey: "schedule", descriptionKey: "subDateAndTime" },
+  { id: 2, titleKey: "wizSubGroomerTime", descriptionKey: "subDateAndTime" },
 ];
 
 export const CUSTOM_SERVICE_SUB_STEPS: WizardSubStepDef[] = [
   { id: 0, titleKey: "schedule", descriptionKey: "subDateAndTime" },
 ];
 
-// Training sessions run at a fixed scheduled time on a fixed day — the
-// owner is enrolling in a series, not picking arrival/departure windows.
-// Keep the sub-step label specific so the sidebar makes the purpose clear.
+// Training (the client's mock, 2026-10-01): Program · Trainer & time ·
+// Goals. "Trainer & time" is a class for a group program, a trainer's slot
+// for a lesson or a consult.
 export const TRAINING_SUB_STEPS: WizardSubStepDef[] = [
-  { id: 0, titleKey: "subSelectSeries", descriptionKey: "subPickAClass" },
+  { id: 0, titleKey: "wizSubProgram", descriptionKey: "wizChooseProgram" },
+  { id: 1, titleKey: "wizSubTrainerTime", descriptionKey: "subDateAndTime" },
+  { id: 2, titleKey: "wizSubGoals", descriptionKey: "wizWorkOn" },
 ];
 
 /**
@@ -349,181 +231,14 @@ export function detailSubSteps(
 ): WizardSubStepDef[] {
   const care = careSubSteps(options.care);
   if (service === "daycare" || service === "boarding") {
+    // A customer chooses the room type too (the client's mock): what they
+    // buy is the room, and its count of free units is never shown to them.
     const own = service === "daycare" ? DAYCARE_SUB_STEPS : BOARDING_SUB_STEPS;
-    return [
-      ...(options.customer ? own.filter((step) => step.id !== 1) : own),
-      ...care,
-    ];
+    return [...own, ...care];
   }
   if (service === "grooming") return [...GROOMING_SUB_STEPS, ...care];
   if (service === "training") return [...TRAINING_SUB_STEPS, ...care];
   if (service === "evaluation") return EVALUATION_SUB_STEPS;
   if (service) return CUSTOM_SERVICE_SUB_STEPS;
   return [];
-}
-
-// ── Per-service accent colors ────────────────────────────────────────────────
-// Used throughout the booking flow for consistent service-branded styling.
-export const SERVICE_ACCENTS: Record<
-  string,
-  {
-    bg: string;
-    icon: string;
-    price: string;
-    ring: string;
-    border: string;
-    progressBar: string;
-    stepBg: string;
-    stepText: string;
-    badgeBg: string;
-    badgeText: string;
-    btnBg: string;
-    btnHover: string;
-    subStepBg: string;
-    subStepText: string;
-    subStepBorder: string;
-  }
-> = {
-  daycare: {
-    bg: "bg-amber-50",
-    icon: "text-amber-500",
-    price: "text-amber-600",
-    ring: "ring-amber-400",
-    border: "border-amber-400",
-    progressBar: "bg-amber-500",
-    stepBg: "bg-amber-500",
-    stepText: "text-amber-600",
-    badgeBg: "bg-amber-100",
-    badgeText: "text-amber-700",
-    btnBg: "bg-amber-500 hover:bg-amber-600",
-    btnHover: "hover:bg-amber-50",
-    subStepBg: "bg-amber-500/15",
-    subStepText: "text-amber-700",
-    subStepBorder: "border-amber-400/30",
-  },
-  boarding: {
-    bg: "bg-indigo-50",
-    icon: "text-indigo-500",
-    price: "text-indigo-600",
-    ring: "ring-indigo-400",
-    border: "border-indigo-400",
-    progressBar: "bg-indigo-500",
-    stepBg: "bg-indigo-500",
-    stepText: "text-indigo-600",
-    badgeBg: "bg-indigo-100",
-    badgeText: "text-indigo-700",
-    btnBg: "bg-indigo-500 hover:bg-indigo-600",
-    btnHover: "hover:bg-indigo-50",
-    subStepBg: "bg-indigo-500/15",
-    subStepText: "text-indigo-700",
-    subStepBorder: "border-indigo-400/30",
-  },
-  grooming: {
-    bg: "bg-pink-50",
-    icon: "text-pink-500",
-    price: "text-pink-600",
-    ring: "ring-pink-400",
-    border: "border-pink-400",
-    progressBar: "bg-pink-500",
-    stepBg: "bg-pink-500",
-    stepText: "text-pink-600",
-    badgeBg: "bg-pink-100",
-    badgeText: "text-pink-700",
-    btnBg: "bg-pink-500 hover:bg-pink-600",
-    btnHover: "hover:bg-pink-50",
-    subStepBg: "bg-pink-500/15",
-    subStepText: "text-pink-700",
-    subStepBorder: "border-pink-400/30",
-  },
-  training: {
-    bg: "bg-sky-50",
-    icon: "text-sky-500",
-    price: "text-sky-600",
-    ring: "ring-sky-400",
-    border: "border-sky-400",
-    progressBar: "bg-sky-500",
-    stepBg: "bg-sky-500",
-    stepText: "text-sky-600",
-    badgeBg: "bg-sky-100",
-    badgeText: "text-sky-700",
-    btnBg: "bg-sky-500 hover:bg-sky-600",
-    btnHover: "hover:bg-sky-50",
-    subStepBg: "bg-sky-500/15",
-    subStepText: "text-sky-700",
-    subStepBorder: "border-sky-400/30",
-  },
-  retail: {
-    bg: "bg-emerald-50",
-    icon: "text-emerald-500",
-    price: "text-emerald-600",
-    ring: "ring-emerald-400",
-    border: "border-emerald-400",
-    progressBar: "bg-emerald-500",
-    stepBg: "bg-emerald-500",
-    stepText: "text-emerald-600",
-    badgeBg: "bg-emerald-100",
-    badgeText: "text-emerald-700",
-    btnBg: "bg-emerald-500 hover:bg-emerald-600",
-    btnHover: "hover:bg-emerald-50",
-    subStepBg: "bg-emerald-500/15",
-    subStepText: "text-emerald-700",
-    subStepBorder: "border-emerald-400/30",
-  },
-  evaluation: {
-    bg: "bg-violet-50",
-    icon: "text-violet-500",
-    price: "text-violet-600",
-    ring: "ring-violet-400",
-    border: "border-violet-400",
-    progressBar: "bg-violet-500",
-    stepBg: "bg-violet-500",
-    stepText: "text-violet-600",
-    badgeBg: "bg-violet-100",
-    badgeText: "text-violet-700",
-    btnBg: "bg-violet-500 hover:bg-violet-600",
-    btnHover: "hover:bg-violet-50",
-    subStepBg: "bg-violet-500/15",
-    subStepText: "text-violet-700",
-    subStepBorder: "border-violet-400/30",
-  },
-  vet: {
-    bg: "bg-rose-50",
-    icon: "text-rose-500",
-    price: "text-rose-600",
-    ring: "ring-rose-400",
-    border: "border-rose-400",
-    progressBar: "bg-rose-500",
-    stepBg: "bg-rose-500",
-    stepText: "text-rose-600",
-    badgeBg: "bg-rose-100",
-    badgeText: "text-rose-700",
-    btnBg: "bg-rose-500 hover:bg-rose-600",
-    btnHover: "hover:bg-rose-50",
-    subStepBg: "bg-rose-500/15",
-    subStepText: "text-rose-700",
-    subStepBorder: "border-rose-400/30",
-  },
-  store: {
-    bg: "bg-teal-50",
-    icon: "text-teal-500",
-    price: "text-teal-600",
-    ring: "ring-teal-400",
-    border: "border-teal-400",
-    progressBar: "bg-teal-500",
-    stepBg: "bg-teal-500",
-    stepText: "text-teal-600",
-    badgeBg: "bg-teal-100",
-    badgeText: "text-teal-700",
-    btnBg: "bg-teal-500 hover:bg-teal-600",
-    btnHover: "hover:bg-teal-50",
-    subStepBg: "bg-teal-500/15",
-    subStepText: "text-teal-700",
-    subStepBorder: "border-teal-400/30",
-  },
-};
-
-const DEFAULT_ACCENT = SERVICE_ACCENTS.daycare;
-
-export function getServiceAccent(serviceId: string) {
-  return SERVICE_ACCENTS[serviceId] ?? DEFAULT_ACCENT;
 }

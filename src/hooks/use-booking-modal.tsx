@@ -32,6 +32,8 @@ interface BookingModalConfig {
   /** Training-only: deep-link the booking flow to a Course Type so Step 3
    *  skips the course-type picker and scopes its series to this course. */
   preSelectedCourseTypeId?: string;
+  /** Training: open on this program (a lesson pack's next session). */
+  preSelectedProgramId?: string;
   /** Skip the Service step entirely when a service is preselected. Useful when
    *  the caller already knows which module the booking belongs to (e.g. the
    *  global "+ New Booking" button fired from inside a service section). */
@@ -143,6 +145,7 @@ export function BookingModalProvider({ children }: { children: ReactNode }) {
           preSelectedPetIds={config.preSelectedPetIds}
           preSelectedService={config.preSelectedService}
           preSelectedCourseTypeId={config.preSelectedCourseTypeId}
+          preSelectedProgramId={config.preSelectedProgramId}
           lockService={config.lockService ?? false}
           preSelectedStartDate={config.preSelectedStartDate}
           preSelectedEndDate={config.preSelectedEndDate}

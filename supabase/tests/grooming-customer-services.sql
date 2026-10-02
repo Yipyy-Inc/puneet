@@ -1,6 +1,7 @@
 -- ============================================================================
 -- A customer reads the grooming menu they are offered — at ONE business. See
--- 20260924160000_a_customer_reads_the_grooming_menu_they_are_offered.sql
+-- 20260924160000_a_customer_reads_the_grooming_menu_they_are_offered.sql and
+-- 20261002122850_a_groom_card_knows_its_minutes_by_size_and_the_size_tiers.sql
 --
 --   bun run test:sql grooming-customer-services
 --
@@ -27,6 +28,10 @@
 --     client is a client of BOTH businesses, and each call returns one
 --     business's services rather than both merged.
 -- G6  anon cannot call it.
+-- G7  It carries the MINUTES per size, resolved per branch the way the price
+--     is, and the row's uuid — what an add-on offered for one service names.
+-- G8  A client reads the facility's SIZE BANDS (the ones create_booking
+--     prices by) and nothing else; a stranger reads null; anon cannot call.
 -- ============================================================================
 
 begin;
@@ -102,6 +107,13 @@ begin
   insert into public.grooming_services
     (facility_id, name, base_price, duration_min, is_active, display_order)
   values (v_iota, 'OGS Draft groom', 50, 60, false, 2);
+
+  -- G8: Iota's own bands, not the column default.
+  insert into public.grooming_config (facility_id, pet_size_tiers)
+  values (v_iota, '[{"id": "small", "label": "Small", "maxWeightLbs": 20},
+                   {"id": "medium", "label": "Medium", "maxWeightLbs": 45},
+                   {"id": "giant", "label": "Giant"}]'::jsonb)
+  on conflict (facility_id) do update set pet_size_tiers = excluded.pet_size_tiers;
 
   -- Kappa has its own menu, so G5 measures the SCOPING and not an empty list.
   insert into public.grooming_services
@@ -240,6 +252,62 @@ begin
     format('iota=%s kappa=%s', iota::text, kappa::text));
 end $$;
 
+-- ── G7 the minutes per size, and the row id ────────────────────────────────
+
+do $$
+declare
+  facility_wide jsonb; at_north jsonb; groom jsonb; v_fac uuid; v_north uuid;
+begin
+  select id into v_fac from public.facilities where slug = 'iota-pets-ogs';
+  select id into v_north from public.locations where legacy_id = 'iota-north-ogs';
+
+  select e into groom
+    from jsonb_array_elements(public.offered_grooming_services(v_fac)) e
+   where e->>'name' = 'OGS Full groom';
+  facility_wide := groom->'sizeDurations';
+
+  select e->'sizeDurations' into at_north
+    from jsonb_array_elements(public.offered_grooming_services(v_fac, v_north)) e
+   where e->>'name' = 'OGS Full groom';
+
+  perform pg_temp.t(7,
+    'the minutes per size are sent, per branch, and so is the row uuid',
+    (facility_wide->>'small')::int = 90
+      and (facility_wide->>'giant')::int = 150
+      and (at_north->>'medium')::int = 105
+      and (at_north->>'large')::int = 120
+      and groom->>'rowId' = (select s.id::text from public.grooming_services s
+                              where s.name = 'OGS Full groom'),
+    format('facility=%s north=%s', facility_wide::text, at_north::text));
+end $$;
+
+-- ── G8 the size bands ──────────────────────────────────────────────────────
+
+do $$
+declare
+  bands jsonb; stranger jsonb; v_iota uuid; v_kappa uuid; v_other uuid;
+begin
+  select id into v_iota  from public.facilities where slug = 'iota-pets-ogs';
+  select id into v_kappa from public.facilities where slug = 'kappa-pets-ogs';
+  select id into v_other from public.facilities
+   where id <> v_iota and id <> v_kappa
+     and id not in (select facility_id from public.clients c
+                     where c.email = 'amara@osei.invalid')
+   limit 1;
+
+  bands := public.grooming_size_tiers(v_iota);
+  stranger := case when v_other is null then null
+                   else public.grooming_size_tiers(v_other) end;
+
+  perform pg_temp.t(8,
+    'a client reads the facility''s bands, in order, and a stranger reads null',
+    bands = '[{"id": "small", "label": "Small", "maxWeightLbs": 20},
+              {"id": "medium", "label": "Medium", "maxWeightLbs": 45},
+              {"id": "giant", "label": "Giant", "maxWeightLbs": null}]'::jsonb
+      and stranger is null,
+    format('bands=%s stranger=%s', bands::text, coalesce(stranger::text, 'null')));
+end $$;
+
 reset role;
 
 -- ── G6 anon ────────────────────────────────────────────────────────────────
@@ -247,11 +315,15 @@ reset role;
 do $$
 begin
   perform pg_temp.t(6,
-    'anon cannot call offered_grooming_services',
+    'anon cannot call offered_grooming_services or grooming_size_tiers',
     not has_function_privilege('anon',
           'public.offered_grooming_services(uuid,uuid)', 'execute')
       and has_function_privilege('authenticated',
-          'public.offered_grooming_services(uuid,uuid)', 'execute'));
+          'public.offered_grooming_services(uuid,uuid)', 'execute')
+      and not has_function_privilege('anon',
+          'public.grooming_size_tiers(uuid)', 'execute')
+      and has_function_privilege('authenticated',
+          'public.grooming_size_tiers(uuid)', 'execute'));
 end $$;
 
 -- ── Report ──────────────────────────────────────────────────────────────────

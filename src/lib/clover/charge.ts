@@ -133,6 +133,13 @@ export interface ChargeRequest {
   orderLines?: OrderLine[];
   /** The booking this belongs to, written on the order as a note. */
   orderNote?: string;
+  /**
+   * The intent's key, when the caller must never charge twice for the same
+   * thing — a booking's deposit (`deposit:<booking>`), charged by staff or
+   * when it is confirmed. A second attempt with it is refused before Clover
+   * is called (`duplicate`). Absent: a fresh key, one per attempt.
+   */
+  idempotencyKey?: string;
 }
 
 export async function chargeCard(
@@ -206,7 +213,7 @@ export async function chargeCard(
   }
 
   const admin = createAdminClient();
-  const idempotencyKey = randomUUID();
+  const idempotencyKey = request.idempotencyKey ?? randomUUID();
 
   // ── 1. The intent, before anything can move ──────────────────────────────
   const opened = await admin.rpc("open_payment_intent", {
@@ -220,6 +227,15 @@ export async function chargeCard(
     p_created_by: request.createdBy,
   });
 
+  if (opened.error?.code === "23505") {
+    // That key was used: this exact charge was attempted already.
+    return {
+      ok: false,
+      intentId: null,
+      code: "duplicate",
+      message: "This payment was already attempted.",
+    };
+  }
   if (opened.error || !opened.data) {
     return {
       ok: false,

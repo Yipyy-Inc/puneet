@@ -7,13 +7,8 @@ import { useCustomServices } from "@/hooks/use-custom-services";
 import { useSettings } from "@/hooks/use-settings";
 import type { CustomServiceModule } from "@/types/facility";
 import type { Pet } from "@/types/pet";
-import type { Client } from "@/types/client";
 import { resolveIcon, isBuiltinService } from "@/lib/service-registry";
 import { SERVICE_CATEGORIES } from "../constants";
-import {
-  TrainingScheduleStep,
-  type TrainingSelection,
-} from "./TrainingScheduleStep";
 import { useShellText } from "@/lib/shell/use-shell-text";
 
 // Module-level constants
@@ -44,18 +39,6 @@ interface CustomServiceDetailsProps {
   selectedPets: Pet[];
   specialRequests?: string;
   setSpecialRequests?: (value: string) => void;
-  /** Training-only: scope the series list to this Course Type (Course Catalog).
-   *  The single source of truth for what a client books. */
-  preSelectedCourseTypeId?: string;
-  /** Training-only: legacy deep link by Program — resolved to its course type. */
-  preSelectedProgramId?: string;
-  /** Training-only: client picked in Step 1 — owner on a waitlist entry. */
-  selectedClient?: Client;
-  /** Training-only: closes the booking modal so the "Create a series"
-   *  shortcut can navigate away cleanly. */
-  onRequestClose?: () => void;
-  /** Training-only: lifts the chosen series/course up for the multi-dog cart. */
-  onTrainingSelectionChange?: (selection: TrainingSelection | null) => void;
 }
 
 export function CustomServiceDetails({
@@ -68,11 +51,6 @@ export function CustomServiceDetails({
   checkOutTime,
   setCheckOutTime,
   selectedPets,
-  preSelectedCourseTypeId,
-  preSelectedProgramId,
-  selectedClient,
-  onRequestClose,
-  onTrainingSelectionChange,
 }: CustomServiceDetailsProps) {
   const t = useShellText("booking");
   const { getModuleBySlug } = useCustomServices();
@@ -82,26 +60,6 @@ export function CustomServiceDetails({
   // custom module, show a basic scheduling form instead of "not found."
   if (!serviceModule) {
     if (isBuiltinService(serviceId) && currentSubStep === 0) {
-      // Training has a bespoke "Select Series" step — sessions run at a
-      // fixed scheduled time, so a check-in/check-out picker doesn't apply.
-      if (serviceId === "training") {
-        return (
-          <TrainingScheduleStep
-            startDate={startDate}
-            setStartDate={setStartDate}
-            checkInTime={checkInTime}
-            setCheckInTime={setCheckInTime}
-            checkOutTime={checkOutTime}
-            setCheckOutTime={setCheckOutTime}
-            preSelectedCourseTypeId={preSelectedCourseTypeId}
-            preSelectedProgramId={preSelectedProgramId}
-            selectedPets={selectedPets}
-            selectedClient={selectedClient}
-            onRequestClose={onRequestClose}
-            onSelectionChange={onTrainingSelectionChange}
-          />
-        );
-      }
       return (
         <BuiltinServiceSchedule
           serviceId={serviceId}

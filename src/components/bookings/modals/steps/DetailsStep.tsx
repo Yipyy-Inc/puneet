@@ -1,65 +1,35 @@
-import {
-  DaycareDetails,
-  BoardingDetails,
-  EvaluationDetails,
-  GroomingDetails,
-  CustomServiceDetails,
-} from "../service-details";
-import type { ChosenBoardingService } from "../service-details/BoardingDetails";
-import type { TrainingSelection } from "../service-details/TrainingScheduleStep";
 import type { ExtraService } from "@/types/booking";
 import type { MedicationStepState } from "@/components/booking/medications/use-medication-step";
 import {
   FEEDING_SUB_STEP_ID,
   MEDICATION_SUB_STEP_ID,
 } from "@/lib/bookings/care-steps";
-import { CareStepPanel } from "./care-step-panel";
 import type { FeedingStepState } from "@/components/booking/feeding/use-feeding-step";
 import type { Pet } from "@/types/pet";
-import type { KennelChange } from "@/lib/boarding/kennel-changes";
-import type { Client } from "@/types/client";
-import type { AppointmentStage } from "@/types/grooming";
+
+import { CustomServiceDetails } from "../service-details/CustomServiceDetails";
+import { EvaluationDetails } from "../service-details/EvaluationDetails";
+import { CareStepPanel } from "./care-step-panel";
+
+// ============================================================================
+// The Details screens the booking wizard does not draw itself (2026-10-02):
+//
+//   the care steps   Feeding (3) and Medication (4), for every service the
+//                    facility turns them on for
+//   an evaluation    its date, slot and extras
+//   a custom service its date and time
+//
+// Boarding, daycare, grooming and training draw their own screens in the
+// wizard — schedule, room type, add-ons, package, groomer or trainer and
+// time, program, class, goals — from the client's mock. Their old detail
+// screens (BoardingDetails, DaycareDetails, GroomingDetails and the training
+// series step) were reachable from here only, and are gone.
+// ============================================================================
 
 interface DetailsStepProps {
   selectedService: string;
-  /** Deep-link the training Step 3 to a specific Course Type (Course Catalog)
-   *  — flows into TrainingScheduleStep so the series list scopes to it. */
-  preSelectedCourseTypeId?: string;
-  /** Legacy deep link by Program — resolved to its course type downstream. */
-  preSelectedProgramId?: string;
-  /** Closes the booking modal — used by the training "Create a series"
-   *  shortcut to navigate to the Series tab cleanly. */
-  onRequestClose?: () => void;
-  /** Training-only: lifts the chosen series/course up for the multi-dog cart. */
-  onTrainingSelectionChange?: (selection: TrainingSelection | null) => void;
   currentSubStep: number;
   isSubStepComplete?: (stepIndex: number) => boolean;
-  // Daycare
-  daycareSelectedDates: Date[];
-  setDaycareSelectedDates: (value: Date[]) => void;
-  daycareDateTimes: Array<{
-    date: string;
-    checkInTime: string;
-    checkOutTime: string;
-  }>;
-  setDaycareDateTimes: (
-    value: Array<{ date: string; checkInTime: string; checkOutTime: string }>,
-  ) => void;
-  roomAssignments: Array<{ petId: number; roomId: string }>;
-  setRoomAssignments: (value: Array<{ petId: number; roomId: string }>) => void;
-  // Boarding
-  boardingRangeStart: Date | null;
-  setBoardingRangeStart: (value: Date | null) => void;
-  boardingRangeEnd: Date | null;
-  setBoardingRangeEnd: (value: Date | null) => void;
-  boardingDateTimes: Array<{
-    date: string;
-    checkInTime: string;
-    checkOutTime: string;
-  }>;
-  setBoardingDateTimes: (
-    value: Array<{ date: string; checkInTime: string; checkOutTime: string }>,
-  ) => void;
   startDate: string;
   setStartDate: (value: string) => void;
   endDate: string;
@@ -68,108 +38,21 @@ interface DetailsStepProps {
   setCheckInTime: (value: string) => void;
   checkOutTime: string;
   setCheckOutTime: (value: string) => void;
-  serviceType: string;
-  setServiceType: (value: string) => void;
-  /** Daycare: the service chosen, by row id. */
-  daycareServiceId: string | null;
-  /**
-   * WHICH boarding service, since Phase 6.
-   *
-   * Drilled rather than read from a context for the same reason the daycare
-   * one is: the id has to be the SAME row the server re-prices and the tax
-   * stamp resolves, and a value picked up somewhere en route is a value that
-   * can differ from the one the customer was quoted.
-   */
-  boardingService: ChosenBoardingService | null;
-  onBoardingServiceChange: (service: ChosenBoardingService | null) => void;
-  /** How many services the customer's boarding menu offers; null while loading. */
-  onBoardingMenuChange?: (offered: number | null) => void;
-  /** What the chosen boarding service attaches by itself, as priced. */
-  boardingDefaultLines?: ExtraService[];
-  /** Boarding: kennel changes planned with a new booking. */
-  kennelChanges?: KennelChange[];
-  setKennelChanges?: (changes: KennelChange[]) => void;
-  /** True when a pet owner is booking for themselves, not staff at the desk. */
-  isCustomerMode?: boolean;
-  onDaycareServiceChange: (
-    service: { rowId: string; name: string; price: number } | null,
-  ) => void;
-  // Common
-  /** The Feeding step (2026-10-01): its state, held by BookingModal. */
-  feedingStep: FeedingStepState;
-  /** The Medications step (2026-10-01): its state, held by BookingModal. */
-  medicationStep: MedicationStepState;
-  /** "Step 3 of 4", as the rail counts — both care steps show it. */
-  careStepLabel: string;
-  /**
-   * The service's own sub-steps are answered, so a care step has its days —
-   * for the services whose screens do not draw the care steps themselves.
-   */
-  careStepReady: boolean;
-  feedingMedicationTab: "feeding" | "medication";
-  setFeedingMedicationTab: (value: "feeding" | "medication") => void;
-  extraServices: Array<{ serviceId: string; quantity: number; petId: number }>;
-  setExtraServices: (
-    services: Array<{ serviceId: string; quantity: number; petId: number }>,
-  ) => void;
+  extraServices: ExtraService[];
+  setExtraServices: (value: ExtraService[]) => void;
   selectedPets: Pet[];
-  /** When true, room/section eligibility rules are bypassed (used for guest estimates
-   *  where pet weight/type are unknown). */
-  skipEligibility?: boolean;
-  /** When true, packages/services are pre-filtered by pet-size eligibility
-   *  (driven by the facility's `onlyShowApplicableServices` toggle). */
-  applyEligibilityFilter?: boolean;
-  /** Grooming-only: mobile/salon mode state. Drives the schedule sub-step's
-   *  segmented control, coverage filter, and arrival-window picker. */
-  groomingIsMobile?: boolean;
-  setGroomingIsMobile?: (next: boolean) => void;
-  /** Selected client — used for postal-code-based coverage lookup. */
-  selectedClient?: Client;
-  /** Grooming-only: primary stylist (groomer) id. */
-  groomingStylistId?: string;
-  setGroomingStylistId?: (id: string) => void;
-  /** Grooming-only: secondary co-groomers. */
-  groomingAdditionalStylistIds?: string[];
-  setGroomingAdditionalStylistIds?: (ids: string[]) => void;
-  /** Grooming-only: assigned station id (filtered by pet size). */
-  groomingStationId?: string;
-  setGroomingStationId?: (id: string) => void;
-  /** Grooming-only: split-service stages. */
-  groomingStages?: AppointmentStage[];
-  setGroomingStages?: (stages: AppointmentStage[]) => void;
-  /** Grooming-only: manual price/duration override. */
-  groomingManualPrice?: number;
-  setGroomingManualPrice?: (price: number | undefined) => void;
-  groomingManualDuration?: number;
-  setGroomingManualDuration?: (mins: number | undefined) => void;
-  /** Grooming-only: full list of selected grooming-specific add-on ids. */
-  groomingSelectedAddOnIds?: string[];
-  setGroomingSelectedAddOnIds?: (ids: string[]) => void;
-  /** Grooming-only: which add-on ids were auto-attached by the package rules. */
-  groomingAutoAttachedAddOnIds?: string[];
-  setGroomingAutoAttachedAddOnIds?: (ids: string[]) => void;
+  feedingStep: FeedingStepState;
+  medicationStep: MedicationStepState;
+  /** The service's own sub-steps are answered: the care steps have days. */
+  careStepReady: boolean;
+  /** "Step 3 of 4", for the care steps' own heading. */
+  careStepLabel: string;
 }
 
 export function DetailsStep({
   selectedService,
-  preSelectedCourseTypeId,
-  preSelectedProgramId,
-  onRequestClose,
-  onTrainingSelectionChange,
   currentSubStep,
   isSubStepComplete,
-  daycareSelectedDates,
-  setDaycareSelectedDates,
-  daycareDateTimes,
-  setDaycareDateTimes,
-  roomAssignments,
-  setRoomAssignments,
-  boardingRangeStart,
-  setBoardingRangeStart,
-  boardingRangeEnd,
-  setBoardingRangeEnd,
-  boardingDateTimes,
-  setBoardingDateTimes,
   startDate,
   setStartDate,
   endDate,
@@ -178,55 +61,17 @@ export function DetailsStep({
   setCheckInTime,
   checkOutTime,
   setCheckOutTime,
-  serviceType,
-  setServiceType,
-  daycareServiceId,
-  boardingService,
-  onBoardingServiceChange,
-  onBoardingMenuChange,
-  boardingDefaultLines,
-  kennelChanges,
-  setKennelChanges,
-  isCustomerMode = false,
-  onDaycareServiceChange,
-  feedingStep,
-  medicationStep,
-  careStepLabel,
-  careStepReady,
   extraServices,
   setExtraServices,
   selectedPets,
-  skipEligibility,
-  applyEligibilityFilter,
-  groomingIsMobile,
-  setGroomingIsMobile,
-  selectedClient,
-  groomingStylistId,
-  setGroomingStylistId,
-  groomingAdditionalStylistIds,
-  setGroomingAdditionalStylistIds,
-  groomingStationId,
-  setGroomingStationId,
-  groomingStages,
-  setGroomingStages,
-  groomingManualPrice,
-  setGroomingManualPrice,
-  groomingManualDuration,
-  setGroomingManualDuration,
-  groomingSelectedAddOnIds,
-  setGroomingSelectedAddOnIds,
-  groomingAutoAttachedAddOnIds,
-  setGroomingAutoAttachedAddOnIds,
+  feedingStep,
+  medicationStep,
+  careStepReady,
+  careStepLabel,
 }: DetailsStepProps) {
-  // Grooming and training have the care steps when the facility turns them
-  // on (2026-10-01), and draw them here; daycare and boarding in their own
-  // screens, as before.
-  const drawsCareSteps =
-    selectedService === "daycare" || selectedService === "boarding";
   if (
-    !drawsCareSteps &&
-    (currentSubStep === FEEDING_SUB_STEP_ID ||
-      currentSubStep === MEDICATION_SUB_STEP_ID)
+    currentSubStep === FEEDING_SUB_STEP_ID ||
+    currentSubStep === MEDICATION_SUB_STEP_ID
   ) {
     return (
       <CareStepPanel
@@ -239,148 +84,37 @@ export function DetailsStep({
     );
   }
 
+  if (selectedService === "evaluation") {
+    return (
+      <EvaluationDetails
+        currentSubStep={currentSubStep}
+        isSubStepComplete={isSubStepComplete}
+        startDate={startDate}
+        setStartDate={setStartDate}
+        checkInTime={checkInTime}
+        setCheckInTime={setCheckInTime}
+        checkOutTime={checkOutTime}
+        setCheckOutTime={setCheckOutTime}
+        extraServices={extraServices}
+        setExtraServices={setExtraServices}
+        selectedPets={selectedPets}
+      />
+    );
+  }
+
   return (
-    <div className="space-y-4">
-      {/* Service-specific fields */}
-      {selectedService === "daycare" && (
-        <DaycareDetails
-          currentSubStep={currentSubStep}
-          isSubStepComplete={isSubStepComplete}
-          daycareSelectedDates={daycareSelectedDates}
-          setDaycareSelectedDates={setDaycareSelectedDates}
-          daycareDateTimes={daycareDateTimes}
-          setDaycareDateTimes={setDaycareDateTimes}
-          setServiceType={setServiceType}
-          daycareServiceId={daycareServiceId}
-          isCustomerMode={isCustomerMode}
-          onDaycareServiceChange={onDaycareServiceChange}
-          feedingStep={feedingStep}
-          medicationStep={medicationStep}
-          careStepLabel={careStepLabel}
-          roomAssignments={roomAssignments}
-          setRoomAssignments={setRoomAssignments}
-          extraServices={extraServices}
-          setExtraServices={setExtraServices}
-          selectedPets={selectedPets}
-          skipEligibility={skipEligibility}
-        />
-      )}
-
-      {selectedService === "boarding" && (
-        <BoardingDetails
-          currentSubStep={currentSubStep}
-          isSubStepComplete={isSubStepComplete}
-          boardingRangeStart={boardingRangeStart}
-          setBoardingRangeStart={setBoardingRangeStart}
-          boardingRangeEnd={boardingRangeEnd}
-          setBoardingRangeEnd={setBoardingRangeEnd}
-          boardingDateTimes={boardingDateTimes}
-          setBoardingDateTimes={setBoardingDateTimes}
-          setStartDate={setStartDate}
-          setEndDate={setEndDate}
-          setCheckInTime={setCheckInTime}
-          setCheckOutTime={setCheckOutTime}
-          serviceType={serviceType}
-          setServiceType={setServiceType}
-          roomAssignments={roomAssignments}
-          setRoomAssignments={setRoomAssignments}
-          feedingStep={feedingStep}
-          medicationStep={medicationStep}
-          careStepLabel={careStepLabel}
-          extraServices={extraServices}
-          setExtraServices={setExtraServices}
-          selectedPets={selectedPets}
-          skipEligibility={skipEligibility}
-          boardingService={boardingService}
-          onBoardingServiceChange={onBoardingServiceChange}
-          onBoardingMenuChange={onBoardingMenuChange}
-          boardingDefaultLines={boardingDefaultLines}
-          kennelChanges={kennelChanges}
-          setKennelChanges={setKennelChanges}
-          isCustomerMode={isCustomerMode}
-        />
-      )}
-
-      {selectedService === "evaluation" && (
-        <EvaluationDetails
-          currentSubStep={currentSubStep}
-          isSubStepComplete={isSubStepComplete}
-          startDate={startDate}
-          setStartDate={setStartDate}
-          checkInTime={checkInTime}
-          setCheckInTime={setCheckInTime}
-          checkOutTime={checkOutTime}
-          setCheckOutTime={setCheckOutTime}
-          extraServices={extraServices}
-          setExtraServices={setExtraServices}
-          selectedPets={selectedPets}
-        />
-      )}
-
-      {selectedService === "grooming" && (
-        <GroomingDetails
-          isCustomerMode={isCustomerMode}
-          currentSubStep={currentSubStep}
-          serviceType={serviceType}
-          setServiceType={setServiceType}
-          startDate={startDate}
-          setStartDate={setStartDate}
-          checkInTime={checkInTime}
-          setCheckInTime={setCheckInTime}
-          checkOutTime={checkOutTime}
-          setCheckOutTime={setCheckOutTime}
-          selectedPets={selectedPets}
-          applyEligibilityFilter={applyEligibilityFilter}
-          isMobile={groomingIsMobile ?? false}
-          setIsMobile={setGroomingIsMobile ?? (() => {})}
-          selectedClient={selectedClient}
-          stylistId={groomingStylistId ?? ""}
-          setStylistId={setGroomingStylistId ?? (() => {})}
-          additionalStylistIds={groomingAdditionalStylistIds ?? []}
-          setAdditionalStylistIds={
-            setGroomingAdditionalStylistIds ?? (() => {})
-          }
-          stationId={groomingStationId ?? ""}
-          setStationId={setGroomingStationId ?? (() => {})}
-          stages={groomingStages ?? []}
-          setStages={setGroomingStages ?? (() => {})}
-          manualPrice={groomingManualPrice}
-          setManualPrice={setGroomingManualPrice ?? (() => {})}
-          manualDuration={groomingManualDuration}
-          setManualDuration={setGroomingManualDuration ?? (() => {})}
-          selectedGroomingAddOnIds={groomingSelectedAddOnIds ?? []}
-          setSelectedGroomingAddOnIds={
-            setGroomingSelectedAddOnIds ?? (() => {})
-          }
-          autoAttachedAddOnIds={groomingAutoAttachedAddOnIds ?? []}
-          setAutoAttachedAddOnIds={
-            setGroomingAutoAttachedAddOnIds ?? (() => {})
-          }
-        />
-      )}
-
-      {!["daycare", "boarding", "evaluation", "grooming"].includes(
-        selectedService,
-      ) && (
-        <CustomServiceDetails
-          serviceId={selectedService}
-          currentSubStep={currentSubStep}
-          startDate={startDate}
-          setStartDate={setStartDate}
-          endDate={endDate}
-          setEndDate={setEndDate}
-          checkInTime={checkInTime}
-          setCheckInTime={setCheckInTime}
-          checkOutTime={checkOutTime}
-          setCheckOutTime={setCheckOutTime}
-          selectedPets={selectedPets}
-          preSelectedCourseTypeId={preSelectedCourseTypeId}
-          preSelectedProgramId={preSelectedProgramId}
-          selectedClient={selectedClient}
-          onRequestClose={onRequestClose}
-          onTrainingSelectionChange={onTrainingSelectionChange}
-        />
-      )}
-    </div>
+    <CustomServiceDetails
+      serviceId={selectedService}
+      currentSubStep={currentSubStep}
+      startDate={startDate}
+      setStartDate={setStartDate}
+      endDate={endDate}
+      setEndDate={setEndDate}
+      checkInTime={checkInTime}
+      setCheckInTime={setCheckInTime}
+      checkOutTime={checkOutTime}
+      setCheckOutTime={setCheckOutTime}
+      selectedPets={selectedPets}
+    />
   );
 }

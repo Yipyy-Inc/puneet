@@ -23,6 +23,7 @@
 // ============================================================================
 
 import type { Database } from "@/types/database";
+import type { RoomRule } from "@/types/rooms";
 import {
   DEFAULT_ADD_ON_WHENS,
   type BoardingDefaultAddOn,
@@ -40,7 +41,7 @@ export type BoardingPriceUnit =
 
 export const BOARDING_SERVICE_SELECT = `
   id, legacy_id, category_id, name, description, image_url, color,
-  price, unit, taxable,
+  price, unit, taxable, additional_pet_price,
   lodging_type_ids,
   eligible_species, eligible_breeds, eligible_weight_tiers,
   eligible_pet_tags, blocked_pet_tags,
@@ -69,6 +70,7 @@ export interface BoardingServiceRow {
   price: number | string;
   unit: BoardingPriceUnit;
   taxable: boolean;
+  additional_pet_price: number | string | null;
   lodging_type_ids: string[] | null;
   eligible_species: string[] | null;
   eligible_breeds: string[] | null;
@@ -93,6 +95,20 @@ export interface BoardingDefaultAddOnRow {
   min_nights: number | null;
 }
 
+/** A lodging type as a customer's menu carries it — never a count. */
+export interface OfferedLodging {
+  id: string;
+  name: string;
+  description: string | null;
+  imageUrl: string | null;
+  dimensions: string | null;
+  features: string[];
+  /** More than one pet of a family may share it. */
+  holdsSeveral: boolean;
+  /** The enabled rules, with the message the facility wrote for clients. */
+  rules: RoomRule[];
+}
+
 /** One branch's price for a service, for the screen that shows them all. */
 export interface BoardingServiceBranchPrice {
   locationId: string | null;
@@ -115,6 +131,18 @@ export interface BoardingService {
   /** Per night or per day. `stayUnits` is what turns dates into a quantity. */
   unit: BoardingPriceUnit;
   taxable: boolean;
+  /**
+   * Per `unit`, for EACH pet after the first sharing one room of this
+   * service (20261002122808). Null or absent: a shared room is the room's
+   * price, once — what it always cost before.
+   */
+  additionalPetPrice?: number | null;
+  /**
+   * A CUSTOMER's menu only: the lodging types this may be booked into, as the
+   * room card shows them — a customer cannot read `room_categories`, so the
+   * projection carries them (20261002122808). Staff read the types directly.
+   */
+  lodging?: OfferedLodging[];
   /**
    * The lodging types this may be booked into. EMPTY MEANS EVERY TYPE.
    *
@@ -205,6 +233,8 @@ export function rowToBoardingService(
     facilityPrice: effectiveBoardingPrice(row, null),
     unit: row.unit,
     taxable: row.taxable,
+    additionalPetPrice:
+      row.additional_pet_price === null ? null : num(row.additional_pet_price),
     lodgingTypeIds: row.lodging_type_ids ?? [],
     eligibleSpecies: row.eligible_species ?? [],
     eligibleBreeds: row.eligible_breeds ?? [],
@@ -258,6 +288,8 @@ export interface BoardingServiceInput {
   price?: number;
   unit?: BoardingPriceUnit;
   taxable?: boolean;
+  /** Null clears it: a shared room is then the room's price, once. */
+  additionalPetPrice?: number | null;
   lodgingTypeIds?: string[];
   eligibleSpecies?: string[];
   eligibleBreeds?: string[];
@@ -318,6 +350,13 @@ export function boardingServiceToRow(
     row.unit = input.unit;
   }
   if (input.taxable !== undefined) row.taxable = Boolean(input.taxable);
+  if (input.additionalPetPrice !== undefined) {
+    const rate = Number(input.additionalPetPrice);
+    row.additional_pet_price =
+      input.additionalPetPrice === null || !Number.isFinite(rate)
+        ? null
+        : Math.max(0, rate);
+  }
 
   for (const [key, column] of Object.entries(TEXT_ARRAYS)) {
     const value = input[key as keyof typeof TEXT_ARRAYS];

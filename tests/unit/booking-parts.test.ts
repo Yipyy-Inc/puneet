@@ -5,6 +5,7 @@ import {
   boardingParts,
   daycareParts,
   expandBookingParts,
+  groomingParts,
   splitMoney,
 } from "@/lib/bookings/booking-parts";
 import type { NewBooking } from "@/types/booking";
@@ -272,5 +273,83 @@ describe("a discount, split across parts", () => {
       expect(part.discount, "its share, not the whole").toBe(20);
     }
     expect(owed(parts)).toBe(16000);
+  });
+});
+
+// Grooming (the client's mock, 2026-10-01): one appointment per pet, back to
+// back, each its own package, matting and length, money by each pet's price.
+describe("groomingParts", () => {
+  test("back to back, each pet its own package and share", () => {
+    const parts = groomingParts({
+      date: "2026-10-02",
+      start: "10:00",
+      pets: [
+        {
+          petId: 1,
+          serviceType: "full",
+          minutes: 105,
+          price: 85,
+          matted: false,
+        },
+        {
+          petId: 2,
+          serviceType: "deshed",
+          minutes: 120,
+          price: 110,
+          matted: true,
+        },
+      ],
+      money: { basePrice: 195, discount: 0, totalCost: 195 },
+    });
+    expect(
+      parts.map((p) => [
+        p.petIds,
+        p.checkInTime,
+        p.checkOutTime,
+        p.serviceType,
+        p.matted,
+      ]),
+    ).toEqual([
+      [[1], "10:00", "11:45", "full", undefined],
+      [[2], "11:45", "13:45", "deshed", true],
+    ]);
+    expect(parts.map((p) => p.totalCost)).toEqual([85, 110]);
+  });
+
+  test("a part keeps its package and matting when the request is expanded", () => {
+    const [first, second] = expandBookingParts({
+      service: "grooming",
+      serviceType: "full",
+      parts: groomingParts({
+        date: "2026-10-02",
+        start: "09:30",
+        pets: [
+          {
+            petId: 1,
+            serviceType: "full",
+            minutes: 60,
+            price: 50,
+            matted: false,
+          },
+          {
+            petId: 2,
+            serviceType: "tidy",
+            minutes: 45,
+            price: 40,
+            matted: true,
+          },
+        ],
+        money: { basePrice: 90, discount: 0, totalCost: 90 },
+      }),
+    } as unknown as NewBooking);
+    expect([first!.serviceType, first!.groomingMatted]).toEqual([
+      "full",
+      undefined,
+    ]);
+    expect([
+      second!.serviceType,
+      second!.groomingMatted,
+      second!.checkInTime,
+    ]).toEqual(["tidy", true, "10:30"]);
   });
 });

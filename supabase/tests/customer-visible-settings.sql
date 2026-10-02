@@ -287,6 +287,11 @@ begin
     'feeding_instructions and medication_instructions are on the customer allowlist',
     array['feeding_instructions', 'medication_instructions'] <@ domains,
     array_to_string(domains, ', '));
+  -- The drop-off and pick-up hours the booking wizard offers (2026-10-02):
+  -- the customer picks from the same chips staff do.
+  perform pg_temp.t(16,
+    'service_time_windows is on the customer allowlist',
+    'service_time_windows' = any(domains), array_to_string(domains, ', '));
   -- ...and nothing that is the facility's own business.
   perform pg_temp.t(13,
     'staff, payroll, messaging and integration domains stay off it',

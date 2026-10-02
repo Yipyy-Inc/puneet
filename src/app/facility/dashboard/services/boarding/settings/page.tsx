@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { useSettings } from "@/hooks/use-settings";
 import { DailyCareSettings } from "@/components/facility/boarding/daily-care-settings";
 import { CheckoutCutOffCard } from "@/components/facility/boarding/checkout-cut-off-card";
+import { DropOffHoursCard } from "@/components/facility/services/drop-off-hours-card";
 import type {
   EarlyCheckoutPolicy,
   EarlyCheckoutPolicyConfig,
@@ -558,6 +559,10 @@ export default function BoardingSettingsPage() {
         {/* The late check-out that keeps the kennel for the night. Beside the
             early-checkout policy, its opposite. */}
         <CheckoutCutOffCard />
+
+        {/* What the booking wizard offers for drop-off and pick-up, per
+            weekday (the client, 2026-10-01). */}
+        <DropOffHoursCard service="boarding" />
 
         <MaxPetsPerStaffCard service="boarding" />
       </div>

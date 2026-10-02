@@ -32,7 +32,7 @@ import { usePermission } from "@/hooks/use-facility-rbac";
 import { useAssignedScope } from "@/lib/facility-permissions";
 import { useStylistIdForStaff } from "@/lib/api/stylists";
 import { useGroomingStations } from "@/hooks/use-grooming-stations";
-import { isStationEligibleForPetSize } from "@/components/rooms/GroomingStationsClient";
+import { isStationEligibleForPetSize } from "@/lib/grooming/stations";
 import { useGroomingAddOns } from "@/lib/api/grooming-catalogue";
 import type { GroomingAddOnOption } from "@/app/api/grooming/add-ons/route";
 import { useQuery } from "@tanstack/react-query";
@@ -51,6 +51,7 @@ import type {
 } from "@/types/rooms";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 const STATION_STATUS_LABEL: Record<string, string> = {
   available: "Available",
@@ -223,6 +224,7 @@ export function CheckInConfirmationDialog({
   const [showStationPicker, setShowStationPicker] = useState(false);
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
   const [observations, setObservations] = useState<string>("");
+  const { t: checkInText } = useStaffText("groomingCheckIn");
   const [mattedSurchargeEnabled, setMattedSurchargeEnabled] = useState(false);
   const [mattedSurchargeAmount, setMattedSurchargeAmount] = useState<number>(0);
   // Quick-tap arrival flags — coat + behavior are single-select; health is
@@ -1142,13 +1144,23 @@ export function CheckInConfirmationDialog({
           title="Matted surcharge"
           subtitle="Apply if the coat requires significant dematting work. It goes on the booking's bill."
         >
+          {apt?.mattedAtBooking ? (
+            <p className="text-meta text-ink-secondary">
+              {checkInText("mattedAtBooking")}
+            </p>
+          ) : null}
           {/* Toggle */}
           <div
             role="button"
             tabIndex={0}
-            onClick={() => setMattedSurchargeEnabled((v) => !v)}
+            aria-disabled={apt?.mattedAtBooking || undefined}
+            onClick={() =>
+              !apt?.mattedAtBooking && setMattedSurchargeEnabled((v) => !v)
+            }
             onKeyDown={(e) =>
-              e.key === "Enter" && setMattedSurchargeEnabled((v) => !v)
+              e.key === "Enter" &&
+              !apt?.mattedAtBooking &&
+              setMattedSurchargeEnabled((v) => !v)
             }
             className={cn(
               "flex cursor-pointer items-center justify-between rounded-lg border px-3 py-2.5 transition-colors select-none",

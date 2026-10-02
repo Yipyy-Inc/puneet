@@ -106,6 +106,7 @@ export interface UpdateTrainingSeriesInput {
   capacity?: number;
   totalPrice?: number;
   taxable?: boolean;
+  programId?: string | null;
 }
 
 /** Edits name/staff/location/capacity/price -- the schedule is immutable
@@ -160,9 +161,22 @@ export interface EnrollInput {
   joinWaitlist?: boolean;
   /** The pet's feeding and medications, for every session it is booked into. */
   care?: BookingCare;
+  /** What the owner asked the trainer to work on (the booking wizard's
+   *  Goals step), on every session it is booked into. */
+  intake?: {
+    goals?: string[];
+    experience?: string | null;
+    notes?: string;
+  };
+  /** A customer's class request: the saved card the deposit may be charged
+   *  to when the facility confirms it (2026-10-02). */
+  depositCardId?: string;
 }
 
 export interface EnrollResult {
+  /** The sessions' booking numbers, in order (2026-10-01): what a pass is
+   *  redeemed against. */
+  bookingRefs?: number[];
   enrollment: {
     id: string;
     series_id: string;
