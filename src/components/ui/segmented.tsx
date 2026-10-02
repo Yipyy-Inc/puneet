@@ -46,7 +46,8 @@ export function Segmented<T extends string>({
       {options.map((option) => (
         <label
           key={option.value}
-          className="text-ink-secondary has-checked:bg-card has-checked:text-body-ink has-checked:shadow-card has-focus-visible:outline-primary text-body flex min-h-8.5 cursor-pointer items-center rounded-full px-4 font-semibold transition-[background-color,box-shadow,color] duration-120 ease-[ease] has-focus-visible:outline-2 has-focus-visible:outline-offset-2 motion-reduce:transition-none max-lg:min-h-10.5"
+          // Positioned so its hidden input stays inside it (see ChoicePill).
+          className="text-ink-secondary has-checked:bg-card has-checked:text-body-ink has-checked:shadow-card has-focus-visible:outline-primary text-body relative flex min-h-8.5 cursor-pointer items-center rounded-full px-4 font-semibold transition-[background-color,box-shadow,color] duration-120 ease-[ease] has-focus-visible:outline-2 has-focus-visible:outline-offset-2 motion-reduce:transition-none max-lg:min-h-10.5"
         >
           <input
             type="radio"

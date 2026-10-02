@@ -3,7 +3,7 @@ import { test, expect, type Locator, type Page } from "@playwright/test";
 import { bookingListSearch } from "@/lib/api/booking-list-params";
 
 import { ACCOUNTS, signIn } from "./_auth";
-import { answerCareSteps, pickRoomType } from "./_wizard";
+import { answerCareSteps, expectFrameSteady, pickRoomType } from "./_wizard";
 import { bookingsMarked, cancelBookingsMarked } from "./_sweep";
 
 // ============================================================================
@@ -473,6 +473,8 @@ test("S2 staff write Buddy's plan, and the house food is one line on the bill", 
     .click();
   await pick(dialog, "radio", "No treats");
   await pick(dialog, "checkbox", "Beef");
+  // A pill this far down used to push the whole form out of its window.
+  await expectFrameSteady(dialog);
   await dialog.getByLabel("Other food allergy").fill("Turkey");
   await dialog.getByLabel("Other food allergy").press("Enter");
   await expect(dialog.getByRole("checkbox", { name: "Turkey" })).toBeChecked();

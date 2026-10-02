@@ -22384,3 +22384,29 @@ training booking was ever a drop-in.
 - A booking made inside 20 hours of its start gets no day-before reminder.
 - A play area's capacity counts bookings, not pets (`getDaycareSectionUsage`), and the Confirm row
   puts every pet of a booking in one area — the old screen placed pets one by one.
+
+## 2026-10-02 — A pill's hidden input scrolled the booking form out of its own window
+
+The client reported it twice: choosing an option on the Feeding or Medications step — a food type,
+a pill pocket — "crashed" the booking form, and the window went white. Nothing crashed. Every pill
+(`ChoicePill`, `Segmented`) is a label around a visually hidden radio or checkbox, and `sr-only` is
+absolutely positioned. No label was positioned, so the input was placed against the nearest
+positioned ancestor — the dialog's frame — and stayed where the step had first laid it out while
+the step scrolled under it. Clicking a pill further down focused an input hundreds of pixels below
+the window, and the browser scrolled the frame to show it: `overflow: hidden` is not scrollable by
+the user, but focus and `scrollIntoView` scroll it. The whole form rose out of view.
+
+- **Fixed at the cause:** the pill's label, `Segmented`'s label and `FileDropzone`'s zone are
+  `relative`, so the hidden input sits inside what holds it. `choicePillClass` carries it, so the
+  pre-arrival form's pills have it too.
+- **And at the frame:** the wizard's window clips instead of hiding (`overflow: clip`, `hidden`
+  where a browser lacks it), so focus can never scroll it again, whatever the cause.
+- **Why no test saw it:** every assertion read text, and the text was all still there — only off
+  screen. `expectFrameSteady` (tests/e2e/\_wizard.ts) checks what a person sees: the form's
+  header is in the viewport, the frame has not scrolled, and each pill's input is inside its pill.
+  The Feeding and Medications walks call it after the pills that did it; both failed before the
+  fix.
+- **Still open:** any OTHER label written by hand around an `sr-only` input inside a dialog whose
+  frame hides overflow has the same flaw. A search on 2026-10-02 found only file and colour inputs
+  opened from buttons (not focused by a click), but nothing stops the next one — position the
+  label (`relative`), or use `ChoicePill`.

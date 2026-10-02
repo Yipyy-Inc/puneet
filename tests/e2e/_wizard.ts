@@ -109,3 +109,45 @@ export async function closeDoneScreen(dialog: Locator): Promise<void> {
   await dialog.page().keyboard.press("Escape");
   await dialog.waitFor({ state: "hidden" });
 }
+
+/**
+ * The form has not slid out of its own window.
+ *
+ * Every pill (`ChoicePill`, `Segmented`) is a label around a visually hidden
+ * radio or checkbox. Until 2026-10-02 nothing positioned that label, so the
+ * hidden input was placed against the dialog's frame and stayed where the
+ * step had first laid it out while the step scrolled under it. Clicking a pill
+ * further down the Feeding or Medications step focused an input hundreds of
+ * pixels below the window, and the browser scrolled the frame (overflow
+ * hidden, but scrollable by focus) to show it: the whole form rose out of
+ * view and the window went white. The client reported it twice. Text
+ * assertions cannot see it, because the text is all still there.
+ *
+ * Call it straight after clicking a pill on a long step.
+ */
+export async function expectFrameSteady(dialog: Locator): Promise<void> {
+  await expect(dialog.locator("header h2").first()).toBeInViewport();
+  const frame = await dialog.evaluate((element) => {
+    const astray: string[] = [];
+    for (const input of element.querySelectorAll<HTMLInputElement>(
+      "label > input.sr-only",
+    )) {
+      const label = input.parentElement!.getBoundingClientRect();
+      const box = input.getBoundingClientRect();
+      if (label.width === 0 && label.height === 0) continue;
+      const inside =
+        box.top >= label.top - 2 &&
+        box.bottom <= label.bottom + 2 &&
+        box.left >= label.left - 2 &&
+        box.right <= label.right + 2;
+      if (!inside) {
+        astray.push(
+          (input.parentElement!.textContent ?? "").trim().slice(0, 40),
+        );
+      }
+    }
+    return { scrolled: element.scrollTop + element.scrollLeft, astray };
+  });
+  expect(frame.scrolled, "the dialog's frame itself never scrolls").toBe(0);
+  expect(frame.astray, "each pill's input sits inside its pill").toEqual([]);
+}

@@ -107,7 +107,10 @@ export function FileDropzone({
           setOver(false);
           take(event.dataTransfer.files);
         }}
-        className="border-line-strong bg-card focus-visible:outline-primary data-[invalid=true]:border-destructive data-[over=true]:border-primary aria-disabled:bg-surface-inset flex min-h-[148px] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-[1.5px] border-dashed p-[22px] text-center focus-visible:outline-2 focus-visible:outline-offset-2 aria-disabled:cursor-not-allowed data-[over=true]:border-2 data-[over=true]:border-solid"
+        // Positioned so the hidden file input stays inside it: the label
+        // above focuses it, and an input placed against a dialog's frame
+        // scrolls the frame to be seen (see ChoicePill).
+        className="border-line-strong bg-card focus-visible:outline-primary data-[invalid=true]:border-destructive data-[over=true]:border-primary aria-disabled:bg-surface-inset relative flex min-h-[148px] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-[1.5px] border-dashed p-[22px] text-center focus-visible:outline-2 focus-visible:outline-offset-2 aria-disabled:cursor-not-allowed data-[over=true]:border-2 data-[over=true]:border-solid"
       >
         <Upload className="text-ink-tertiary size-6" aria-hidden />
         <span

@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { bookingListSearch } from "@/lib/api/booking-list-params";
 
 import { ACCOUNTS, signIn } from "./_auth";
-import { answerCareSteps, pickRoomType } from "./_wizard";
+import { answerCareSteps, expectFrameSteady, pickRoomType } from "./_wizard";
 import { bookingsMarked, cancelBookingsMarked } from "./_sweep";
 
 // ============================================================================
@@ -509,6 +509,8 @@ test("S2 staff enter two medications the way they are given, and the pill pocket
 
   // In a pill pocket, which the facility supplies.
   await pick(dialog, "radio", /^Pill pocket/);
+  // The pill that sent the whole form out of its window (2026-10-02).
+  await expectFrameSteady(dialog);
   await dialog.getByRole("radio", { name: /facility provides/i }).click();
   await expect(dialog.getByText("8 pill pockets")).toBeVisible();
   await expect(dialog.getByText("4 days × 2 doses/day × $0.75")).toBeVisible();

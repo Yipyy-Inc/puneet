@@ -13,10 +13,18 @@ import { cn } from "@/lib/utils";
 // Moved here from the pre-arrival form's ChoicePills (2026-10-01) when the
 // booking form's Medications step and its settings came to need the same pill
 // with more inside it — a time under a label, a tag beside a method.
+//
+// `relative` is load-bearing, not layout. The input is `sr-only`, which is
+// absolutely positioned: without a positioned label it is placed against the
+// nearest positioned ancestor — a dialog's frame — and stays where the step
+// first laid it out while the step scrolls. Clicking the pill focuses it, and
+// the browser scrolls whatever it must to show it, the frame included: on
+// 2026-10-02 the booking form's Feeding and Medications steps rose out of
+// their window and left it white (tests/e2e/_wizard.ts, expectFrameSteady).
 // ============================================================================
 
 export const choicePillClass =
-  "border-line-strong bg-card text-body-ink hover:border-ink-disabled has-checked:text-primary-hover has-focus-visible:outline-primary flex min-h-10 cursor-pointer items-center gap-2 rounded-full border px-4 text-body font-semibold has-checked:shadow-[inset_0_0_0_2px_var(--primary)] has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-disabled:cursor-not-allowed has-disabled:text-ink-tertiary max-lg:min-h-12";
+  "border-line-strong bg-card text-body-ink hover:border-ink-disabled has-checked:text-primary-hover relative has-focus-visible:outline-primary flex min-h-10 cursor-pointer items-center gap-2 rounded-full border px-4 text-body font-semibold has-checked:shadow-[inset_0_0_0_2px_var(--primary)] has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-disabled:cursor-not-allowed has-disabled:text-ink-tertiary max-lg:min-h-12";
 
 export function ChoicePill({
   type,
