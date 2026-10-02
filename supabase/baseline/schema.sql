@@ -346,6 +346,93 @@ $$;
 ALTER FUNCTION "private"."add_on_for_booking"("p_booking" "public"."bookings", "p_requested" "text") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "private"."agreement_applies"("p_services" "text"[], "p_service" "text") RETURNS boolean
+    LANGUAGE "sql" IMMUTABLE
+    SET "search_path" TO ''
+    AS $$
+  select coalesce(cardinality(p_services), 0) = 0
+      or 'general' = any (p_services)
+      or (p_service is not null and p_service = any (p_services));
+$$;
+
+
+ALTER FUNCTION "private"."agreement_applies"("p_services" "text"[], "p_service" "text") OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."waiver_signing_links" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "facility_id" "uuid" NOT NULL,
+    "client_id" "uuid" NOT NULL,
+    "token_hash" "bytea" NOT NULL,
+    "waiver_ids" "uuid"[] DEFAULT '{}'::"uuid"[] NOT NULL,
+    "service" "text",
+    "booking_id" "uuid",
+    "channel" "text" NOT NULL,
+    "sent_to" "text" DEFAULT ''::"text" NOT NULL,
+    "created_by" "text",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "expires_at" timestamp with time zone NOT NULL,
+    CONSTRAINT "waiver_signing_links_channel_check" CHECK (("channel" = ANY (ARRAY['email'::"text", 'sms'::"text"]))),
+    CONSTRAINT "waiver_signing_links_expiry" CHECK (("expires_at" > "created_at"))
+);
+
+
+ALTER TABLE "public"."waiver_signing_links" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."waiver_signing_links" IS 'A link a client signs the facility''s agreements from without an account (the booking wizard, 2026-10-02). token_hash is sha256 of the token; the token itself is never stored.';
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."waivers" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "facility_id" "uuid" NOT NULL,
+    "name" "text" NOT NULL,
+    "services" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "body" "text" NOT NULL,
+    "blocks" "jsonb" DEFAULT '[]'::"jsonb" NOT NULL,
+    "version" "text" DEFAULT '1.0'::"text" NOT NULL,
+    "category" "text",
+    "active" boolean DEFAULT true NOT NULL,
+    "requires_signature" boolean DEFAULT true NOT NULL,
+    "requires_digital_signature" boolean DEFAULT true NOT NULL,
+    "requires_witness" boolean DEFAULT false NOT NULL,
+    "expiry_days" integer,
+    "created_by" "text",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "waivers_body_not_empty" CHECK (("btrim"("body") <> ''::"text")),
+    CONSTRAINT "waivers_expiry_days_check" CHECK ((("expiry_days" IS NULL) OR ("expiry_days" > 0)))
+);
+
+
+ALTER TABLE "public"."waivers" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."waivers" IS 'A waiver document a facility publishes. Editable - which is why a signature COPIES the text rather than pointing here. See waiver_signatures.';
+
+
+
+CREATE OR REPLACE FUNCTION "private"."agreements_of_link"("p_link" "public"."waiver_signing_links") RETURNS SETOF "public"."waivers"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select w.*
+    from public.waivers w
+   where w.facility_id = p_link.facility_id
+     and w.active
+     and w.requires_signature
+     and (
+       (cardinality(p_link.waiver_ids) > 0 and w.id = any (p_link.waiver_ids))
+       or (cardinality(p_link.waiver_ids) = 0
+           and private.agreement_applies(w.services, p_link.service))
+     );
+$$;
+
+
+ALTER FUNCTION "private"."agreements_of_link"("p_link" "public"."waiver_signing_links") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "private"."area_pets_in_use"("p_room_id" "uuid", "p_range" "tstzrange", "p_exclude_booking" "uuid" DEFAULT NULL::"uuid") RETURNS integer
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -2168,6 +2255,39 @@ COMMENT ON FUNCTION "private"."client_outstanding_balance"("p_client_id" "uuid")
 
 
 
+CREATE OR REPLACE FUNCTION "private"."confirm_bookings_awaiting_agreements"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_booking record;
+begin
+  for v_booking in
+    select b.id, b.service
+      from public.bookings b
+     where b.client_id = new.client_id
+       and b.facility_id = new.facility_id
+       and b.status = 'pending'
+       and coalesce(b.details->>'awaitingAgreements', '') = 'true'
+  loop
+    if private.unsigned_agreement_count(new.client_id, new.facility_id, v_booking.service) = 0 then
+      -- Status only, through the integrity trigger's system path.
+      perform set_config('yipyy.presence_sync', 'on', true);
+      update public.bookings
+         set status = 'confirmed'
+       where id = v_booking.id
+         and status = 'pending';
+      perform set_config('yipyy.presence_sync', '', true);
+    end if;
+  end loop;
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "private"."confirm_bookings_awaiting_agreements"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "private"."customer_visible_setting_domains"() RETURNS "text"[]
     LANGUAGE "sql" IMMUTABLE
     SET "search_path" TO ''
@@ -2200,6 +2320,7 @@ CREATE OR REPLACE FUNCTION "private"."customer_visible_setting_domains"() RETURN
     'service_date_blocks',
     'schedule_time_overrides',
     'drop_off_pick_up_overrides',
+    'service_time_windows',
     'grooming_scheduling',
     'training_programs',
     'training_course_types',
@@ -4021,6 +4142,17 @@ $$;
 
 
 ALTER FUNCTION "private"."has_platform_role"("p_role" "public"."platform_role") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."hash_agreement_token"("p_token" "text") RETURNS "bytea"
+    LANGUAGE "sql" IMMUTABLE
+    SET "search_path" TO ''
+    AS $$
+  select extensions.digest(p_token, 'sha256');
+$$;
+
+
+ALTER FUNCTION "private"."hash_agreement_token"("p_token" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "private"."hash_check_in_token"("p_token" "text") RETURNS "bytea"
@@ -7225,6 +7357,30 @@ $$;
 ALTER FUNCTION "private"."unfinished_booking_guard"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "private"."unsigned_agreement_count"("p_client_id" "uuid", "p_facility_id" "uuid", "p_service" "text") RETURNS integer
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select count(*)::integer
+    from public.waivers w
+   where w.facility_id = p_facility_id
+     and w.active
+     and w.requires_signature
+     and private.agreement_applies(w.services, p_service)
+     and not exists (
+       select 1
+         from public.waiver_signatures s
+        where s.client_id = p_client_id
+          and s.waiver_id = w.id
+          and s.revoked_at is null
+          and (s.expires_at is null or s.expires_at > now())
+     );
+$$;
+
+
+ALTER FUNCTION "private"."unsigned_agreement_count"("p_client_id" "uuid", "p_facility_id" "uuid", "p_service" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "private"."waiver_signature_is_append_only"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     AS $$
@@ -7260,6 +7416,7 @@ begin
      or new.signed_by           is distinct from old.signed_by
      or new.expires_at          is distinct from old.expires_at
      or new.created_at          is distinct from old.created_at
+     or new.consented_at        is distinct from old.consented_at
   then
     raise exception
       'A signature records what a person agreed to and cannot be edited. Only revoking it is allowed.'
@@ -8032,6 +8189,67 @@ ALTER FUNCTION "public"."adjust_gift_card"("p_gift_card_id" "uuid", "p_amount" n
 
 
 COMMENT ON FUNCTION "public"."adjust_gift_card"("p_gift_card_id" "uuid", "p_amount" numeric, "p_reason" "text") IS 'Correct a gift card balance by appending a signed `adjusted` ledger entry. Requires financial_manage_gift_cards, checked in the same query that finds the card. A reason is mandatory - it is the only record of why. The overdraft is refused by the applying trigger, not here.';
+
+
+
+CREATE OR REPLACE FUNCTION "public"."agreement_link_by_token"("p_token" "text") RETURNS "jsonb"
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_link public.waiver_signing_links;
+  v      jsonb;
+begin
+  if p_token is null or length(p_token) < 16 then
+    return null;
+  end if;
+
+  select * into v_link
+    from public.waiver_signing_links l
+   where l.token_hash = private.hash_agreement_token(p_token)
+     and l.expires_at > now();
+  if not found then
+    return null;
+  end if;
+
+  select jsonb_build_object(
+      'facilityName',    f.name,
+      'facilitySlug',    f.slug,
+      'locale',          coalesce(c.preferred_language, 'en'),
+      'clientFirstName', split_part(c.name, ' ', 1),
+      'expiresAt',       v_link.expires_at,
+      'agreements', coalesce((
+        select jsonb_agg(jsonb_build_object(
+                 'id',       w.id,
+                 'name',     w.name,
+                 'body',     w.body,
+                 'blocks',   w.blocks,
+                 'version',  w.version,
+                 'requiresDigitalSignature', w.requires_digital_signature,
+                 'requiresWitness', w.requires_witness,
+                 'signed', exists (
+                   select 1 from public.waiver_signatures s
+                    where s.client_id = v_link.client_id
+                      and s.waiver_id = w.id
+                      and s.revoked_at is null
+                      and (s.expires_at is null or s.expires_at > now()))
+               ) order by w.name)
+          from private.agreements_of_link(v_link) w), '[]'::jsonb)
+    )
+    into v
+    from public.facilities f
+    join public.clients c on c.id = v_link.client_id
+   where f.id = v_link.facility_id;
+
+  return v;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."agreement_link_by_token"("p_token" "text") OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."agreement_link_by_token"("p_token" "text") IS 'The agreement-signing page, by link token: the facility, the client''s first name, and each agreement with whether it is signed. Null for every kind of failure.';
 
 
 
@@ -9730,9 +9948,12 @@ CREATE TABLE IF NOT EXISTS "public"."training_series" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "taxable" boolean DEFAULT true NOT NULL,
+    "program_id" "text",
+    "kind" "text" DEFAULT 'class'::"text" NOT NULL,
     CONSTRAINT "training_series_capacity_check" CHECK (("capacity" >= 0)),
     CONSTRAINT "training_series_day_of_week_check" CHECK ((("day_of_week" >= 0) AND ("day_of_week" <= 6))),
     CONSTRAINT "training_series_duration_minutes_check" CHECK (("duration_minutes" > 0)),
+    CONSTRAINT "training_series_kind_check" CHECK (("kind" = ANY (ARRAY['class'::"text", 'private'::"text"]))),
     CONSTRAINT "training_series_number_of_sessions_check" CHECK (("number_of_sessions" > 0)),
     CONSTRAINT "training_series_status_check" CHECK (("status" = ANY (ARRAY['draft'::"text", 'active'::"text", 'completed'::"text", 'cancelled'::"text"]))),
     CONSTRAINT "training_series_total_price_check" CHECK (("total_price" >= (0)::numeric))
@@ -9747,6 +9968,14 @@ COMMENT ON TABLE "public"."training_series" IS 'A real training class offering -
 
 
 COMMENT ON COLUMN "public"."training_series"."taxable" IS 'Whether enrolment in this series is charged the facility''s tax. The SERIES rather than the program, because training_series.total_price is what actually prices a training booking and a series carries no reference to the program it was modelled on. Default true — see 20260921171524.';
+
+
+
+COMMENT ON COLUMN "public"."training_series"."program_id" IS 'The facility program (the training_programs setting id) this series runs. Null: matched to a program by name, as every series before it was.';
+
+
+
+COMMENT ON COLUMN "public"."training_series"."kind" IS 'class = a series dogs enrol in together; private = a one-on-one session (a lesson or a consult) for one household.';
 
 
 
@@ -10057,9 +10286,12 @@ declare
   v_enrollment public.training_series_enrollments;
   v_session    public.training_series_sessions;
   v_created    record;
+  v_each       numeric;
+  v_last       numeric;
   v_price      numeric;
   v_bookings   jsonb := '[]'::jsonb;
 begin
+  -- An advisory lock, not `for update`: see 20260826110000.
   perform pg_advisory_xact_lock(hashtext(p_series_id::text));
 
   select * into v_series from public.training_series where id = p_series_id;
@@ -10091,14 +10323,21 @@ begin
   )
   returning * into v_enrollment;
 
+  -- Waitlisted: no bookings. Nothing to check in for a spot that isn't held.
   if v_status = 'waitlisted' then
     return jsonb_build_object('enrollment', to_jsonb(v_enrollment), 'bookings', v_bookings);
   end if;
 
-  v_price := case when v_series.number_of_sessions > 0
-                  then round(v_series.total_price / v_series.number_of_sessions, 2)
-                  else 0 end;
+  -- Each session the rounded share; the last, what is left of the price.
+  v_each := case when v_series.number_of_sessions > 0
+                 then round(v_series.total_price / v_series.number_of_sessions, 2)
+                 else 0 end;
+  v_last := case when v_series.number_of_sessions > 0
+                 then v_series.total_price - v_each * (v_series.number_of_sessions - 1)
+                 else 0 end;
 
+  -- Only sessions still ahead of us -- enrolling partway through a series
+  -- must not retroactively book a session that already happened.
   for v_session in
     select * from public.training_series_sessions
      where series_id = p_series_id
@@ -10106,6 +10345,9 @@ begin
        and start_at >= now()
      order by session_number
   loop
+    v_price := case when v_session.session_number = v_series.number_of_sessions
+                    then v_last else v_each end;
+
     select * into v_created from public.create_booking(
       jsonb_build_object(
         'facility_id', v_series.facility_id,
@@ -10140,7 +10382,7 @@ $$;
 ALTER FUNCTION "public"."enroll_in_training_series"("p_series_id" "uuid", "p_pet_id" "uuid", "p_client_id" "uuid", "p_join_waitlist" boolean) OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "public"."enroll_in_training_series"("p_series_id" "uuid", "p_pet_id" "uuid", "p_client_id" "uuid", "p_join_waitlist" boolean) IS 'Enrolls a pet in a series and books every remaining session through create_booking() itself -- pricing/status-by-caller is not reimplemented here, the bookings-level trigger already does it. Full + not joining the waitlist raises; full + joining creates the enrollment as waitlisted with no bookings. SECURITY INVOKER -- judged by training_series_enrollments_insert and create_booking''s own policies.';
+COMMENT ON FUNCTION "public"."enroll_in_training_series"("p_series_id" "uuid", "p_pet_id" "uuid", "p_client_id" "uuid", "p_join_waitlist" boolean) IS 'Enrolls a pet in a series and books every remaining session through create_booking() itself -- each at the series price divided by its sessions, the last session at what is left of the price, so a whole series costs its price to the cent (20261002090000). Full + not joining the waitlist raises; full + joining creates the enrollment as waitlisted with no bookings. SECURITY INVOKER -- judged by training_series_enrollments_insert and create_booking''s own policies.';
 
 
 
@@ -11700,6 +11942,36 @@ $$;
 ALTER FUNCTION "public"."grant_platform_role"("p_profile_id" "text", "p_role" "public"."platform_role") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."grooming_size_tiers"("p_facility_id" "uuid") RETURNS "jsonb"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select case
+           when private.is_platform_admin()
+             or p_facility_id in (select private.client_facility_ids())
+             or p_facility_id in (select private.member_facility_ids_all())
+           then coalesce(
+                  (select coalesce(jsonb_agg(jsonb_build_object(
+                                     'id',           t.tier->>'id',
+                                     'label',        t.tier->>'label',
+                                     'maxWeightLbs', t.tier->'maxWeightLbs')
+                                   order by t.n), '[]'::jsonb)
+                     from public.grooming_config c,
+                          lateral jsonb_array_elements(c.pet_size_tiers)
+                            with ordinality as t(tier, n)
+                    where c.facility_id = p_facility_id),
+                  '[]'::jsonb)
+         end;
+$$;
+
+
+ALTER FUNCTION "public"."grooming_size_tiers"("p_facility_id" "uuid") OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."grooming_size_tiers"("p_facility_id" "uuid") IS 'The facility''s grooming size bands (id, label, maxWeightLbs) for a client or member of it — the bands create_booking prices by. [] with no config row; null for anybody else.';
+
+
+
 CREATE OR REPLACE FUNCTION "public"."hq_client_network_value"("p_facility_id" "uuid") RETURNS "jsonb"
     LANGUAGE "sql"
     SET "search_path" TO ''
@@ -13072,10 +13344,44 @@ CREATE OR REPLACE FUNCTION "public"."offered_boarding_services"("p_facility_id" 
              -- PER NIGHT OR PER DAY. Not withholdable: it is half of the price.
              'unit',                s.unit::text,
              'taxable',             s.taxable,
+             -- Each pet after the first, sharing one room. Part of the price.
+             'additionalPetPrice',  s.additional_pet_price,
              -- Which lodging types this may be booked into. The wizard filters
              -- the kennel list by it AFTER the service is picked, so a customer
              -- is never offered a kennel the service cannot be sold into.
              'lodgingTypeIds',      to_jsonb(s.lodging_type_ids),
+             -- Those types, as the room card shows them (20261001190000).
+             -- Words, photo, size, features, whether it holds more than one
+             -- pet, and the enabled rules with the message the facility wrote
+             -- for clients. No count and no unit: the facility's alone.
+             'lodging',             coalesce((
+               select jsonb_agg(jsonb_build_object(
+                        'id',           c.id,
+                        'name',         c.name,
+                        'description',  c.description,
+                        'imageUrl',     c.image_url,
+                        'dimensions',   c.dimensions_label,
+                        'features',     to_jsonb(c.features),
+                        'holdsSeveral', (c.space_type = 'area'
+                                         or c.default_capacity > 1),
+                        'rules',        coalesce((
+                          select jsonb_agg(jsonb_build_object(
+                                   'type',          r->>'type',
+                                   'value',         r->'value',
+                                   'clientMessage', coalesce(r->>'clientMessage', '')))
+                            from jsonb_array_elements(c.rules) r
+                           where coalesce((r->>'enabled')::boolean, true)),
+                          '[]'::jsonb))
+                      order by c.sort_order, c.name)
+                 from public.room_categories c
+                where c.facility_id = p_facility_id
+                  and c.service = 'boarding'
+                  and c.active
+                  and c.visible_to_clients
+                  -- Empty means EVERY type, the convention this schema uses
+                  -- for every eligibility array.
+                  and (cardinality(s.lodging_type_ids) = 0
+                       or c.id = any (s.lodging_type_ids))), '[]'::jsonb),
              -- These describe the SERVICE ("for dogs under 20 lb"), which is
              -- exactly what a customer needs to understand the menu. The pet
              -- TAG rules describe the PET, and are applied above instead.
@@ -13132,7 +13438,7 @@ $$;
 ALTER FUNCTION "public"."offered_boarding_services"("p_facility_id" "uuid", "p_location_id" "uuid", "p_pet_ids" "uuid"[]) OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "public"."offered_boarding_services"("p_facility_id" "uuid", "p_location_id" "uuid", "p_pet_ids" "uuid"[]) IS 'The boarding services a facility offers online, as a customer may see them: active, offered at that branch, pet-tag rules already applied, projected to an allowlist of keys. Colour, pet tags and the STAFF evaluation flag are the facility own and are not returned. The unit and the lodging types ARE, because the unit is half of the price and the types decide which kennels the wizard may then offer. Default add-ons are part of the price.';
+COMMENT ON FUNCTION "public"."offered_boarding_services"("p_facility_id" "uuid", "p_location_id" "uuid", "p_pet_ids" "uuid"[]) IS 'The boarding services a facility offers online, as a customer may see them: active, offered at that branch, pet-tag rules already applied, projected to an allowlist of keys. Colour, pet tags and the STAFF evaluation flag are the facility own and are not returned. The unit, the second-pet rate and the lodging types ARE — the lodging as the room card shows it (words, photo, size, features, whether it holds several pets, enabled rules with their client message), never a count. Default add-ons are part of the price.';
 
 
 
@@ -13295,6 +13601,8 @@ CREATE OR REPLACE FUNCTION "public"."offered_grooming_services"("p_facility_id" 
            s.name,
            jsonb_build_object(
              'id',                    coalesce(s.legacy_id, s.id::text),
+             -- The uuid: what an add-on rule for one service names it by.
+             'rowId',                 s.id,
              'name',                  s.name,
              'description',           s.description,
              'basePrice',             s.base_price,
@@ -13335,6 +13643,23 @@ CREATE OR REPLACE FUNCTION "public"."offered_grooming_services"("p_facility_id" 
                     order by sp.size_label,
                              (sp.location_id is not null) desc
                  ) resolved
+             ), '{}'::jsonb),
+             -- The minutes per size, resolved the same way (20261001200000).
+             -- A size with no minutes is absent: it takes `duration`.
+             'sizeDurations', coalesce((
+               select jsonb_object_agg(size_label, duration_min)
+                 from (
+                   select distinct on (sp.size_label)
+                          sp.size_label, sp.duration_min
+                     from public.grooming_service_size_prices sp
+                    where sp.service_id = s.id
+                      and sp.duration_min is not null
+                      and (sp.location_id is null
+                           or sp.location_id = p_location_id)
+                      and sp.size_label in ('small','medium','large','giant')
+                    order by sp.size_label,
+                             (sp.location_id is not null) desc
+                 ) resolved
              ), '{}'::jsonb)
            ) as service
       from public.grooming_services s
@@ -13356,7 +13681,7 @@ $$;
 ALTER FUNCTION "public"."offered_grooming_services"("p_facility_id" "uuid", "p_location_id" "uuid") OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "public"."offered_grooming_services"("p_facility_id" "uuid", "p_location_id" "uuid") IS 'The grooming services a facility offers, as a customer may see them: active, size prices resolved for one branch, projected to an allowlist of keys. Colour, required skill level, per-day capacity and the cross-branch price breakdown are the facility own and are not returned.';
+COMMENT ON FUNCTION "public"."offered_grooming_services"("p_facility_id" "uuid", "p_location_id" "uuid") IS 'The grooming services a facility offers, as a customer may see them: active, size prices and minutes resolved for one branch, projected to an allowlist of keys. Colour, required skill level, per-day capacity and the cross-branch price breakdown are the facility own and are not returned.';
 
 
 
@@ -13450,6 +13775,77 @@ ALTER FUNCTION "public"."offered_mobile_grooming"("p_facility_id" "uuid") OWNER 
 
 
 COMMENT ON FUNCTION "public"."offered_mobile_grooming"("p_facility_id" "uuid") IS 'Mobile grooming as a customer may see it: whether van visits are offered, the arrival window, active service areas and travel zones, and the base postal code. Vans and staff area schedules are never returned; the mobile_grooming setting itself is not customer-readable.';
+
+
+
+CREATE OR REPLACE FUNCTION "public"."offered_training_classes"("p_facility_id" "uuid") RETURNS "jsonb"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  with allowed as (
+    select private.is_platform_admin()
+        or p_facility_id in (select private.client_facility_ids())
+        or p_facility_id in (select private.member_facility_ids_all()) as ok
+  ),
+  classes as (
+    select s.*,
+           (select count(*) from public.training_series_sessions ss
+             where ss.series_id = s.id and ss.start_at > now()
+               and ss.status <> 'cancelled') as sessions_left,
+           (select min(ss.start_at) from public.training_series_sessions ss
+             where ss.series_id = s.id and ss.start_at > now()
+               and ss.status <> 'cancelled') as next_session_at,
+           (select count(*) from public.training_series_enrollments e
+             where e.series_id = s.id and e.status = 'enrolled') as enrolled
+      from public.training_series s
+      cross join allowed
+     where allowed.ok
+       and s.facility_id = p_facility_id
+       and s.status = 'active'
+       and s.kind = 'class'
+       -- One place is a one-on-one session, however it was made: the book
+       -- mapper has always read capacity 1 as private.
+       and s.capacity > 1
+  )
+  select coalesce(jsonb_agg(jsonb_build_object(
+           'id',               c.id,
+           'name',             c.name,
+           'courseTypeName',   c.course_type_name,
+           'programId',        c.program_id,
+           'dayOfWeek',        c.day_of_week,
+           'startTime',        to_char(c.start_time, 'HH24:MI'),
+           'durationMinutes',  c.duration_minutes,
+           'startDate',        c.start_date,
+           'numberOfSessions', c.number_of_sessions,
+           'sessionsLeft',     c.sessions_left,
+           'nextSessionAt',    c.next_session_at,
+           'capacity',         c.capacity,
+           -- How many places, never who holds them.
+           'spotsLeft',        greatest(c.capacity - c.enrolled, 0),
+           'totalPrice',       c.total_price,
+           'taxable',          c.taxable,
+           'locationId',       c.location_id,
+           -- "Alex M.", where the trainer is shown online.
+           'trainerName',      (select case when tp.visible_online
+                                         then trim(st.first_name || ' ' ||
+                                              left(coalesce(st.last_name, ''), 1) ||
+                                              case when coalesce(st.last_name, '') = ''
+                                                   then '' else '.' end)
+                                    end
+                                  from public.staff st
+                                  left join public.training_trainer_profiles tp
+                                    on tp.staff_id = st.id
+                                 where st.id = c.staff_id))
+         order by c.next_session_at nulls last, c.name), '[]'::jsonb)
+    from classes c
+   where c.sessions_left > 0;
+$$;
+
+
+ALTER FUNCTION "public"."offered_training_classes"("p_facility_id" "uuid") OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."offered_training_classes"("p_facility_id" "uuid") IS 'The active training classes of a facility with a session still to come, as a client or member may see them: schedule, price, how many places are left (never who), and the trainer as "First L." where shown online.';
 
 
 
@@ -17635,6 +18031,110 @@ COMMENT ON FUNCTION "public"."settle_bookings"("p_facility_id" "uuid", "p_method
 
 
 
+CREATE OR REPLACE FUNCTION "public"."sign_agreement_by_token"("p_token" "text", "p_waiver_id" "uuid", "p_signature_name" "text", "p_signature_data" "text" DEFAULT NULL::"text", "p_witness_name" "text" DEFAULT NULL::"text", "p_witness_signature_data" "text" DEFAULT NULL::"text", "p_consent" boolean DEFAULT false, "p_ip_address" "text" DEFAULT NULL::"text", "p_user_agent" "text" DEFAULT NULL::"text") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_link    public.waiver_signing_links;
+  v_waiver  public.waivers;
+  v_text    text;
+  v_left    integer;
+begin
+  if p_token is null or length(p_token) < 16 then
+    raise exception 'That link is not valid.' using errcode = '42501';
+  end if;
+
+  select * into v_link
+    from public.waiver_signing_links l
+   where l.token_hash = private.hash_agreement_token(p_token)
+     and l.expires_at > now();
+  if not found then
+    raise exception 'That link is not valid.' using errcode = '42501';
+  end if;
+
+  select * into v_waiver
+    from private.agreements_of_link(v_link) w
+   where w.id = p_waiver_id;
+  if not found then
+    raise exception 'That agreement is not on this link.' using errcode = '42501';
+  end if;
+
+  if not coalesce(p_consent, false) then
+    raise exception 'Confirm you have read and agree to it first.'
+      using errcode = '22023';
+  end if;
+  if nullif(btrim(coalesce(p_signature_name, '')), '') is null then
+    raise exception 'A signature needs the name of the person agreeing.'
+      using errcode = '22023';
+  end if;
+  if v_waiver.requires_digital_signature
+     and nullif(btrim(coalesce(p_signature_data, '')), '') is null then
+    raise exception 'This agreement needs a drawn signature.'
+      using errcode = '22023';
+  end if;
+  if v_waiver.requires_witness
+     and nullif(btrim(coalesce(p_witness_name, '')), '') is null then
+    raise exception 'This agreement has to be witnessed.'
+      using errcode = '22023';
+  end if;
+
+  v_text := btrim(coalesce(v_waiver.body, ''));
+  if v_text = '' then
+    raise exception 'That agreement has no text to sign.' using errcode = '22023';
+  end if;
+
+  -- Signed already, and still valid: nothing to add.
+  if not exists (
+    select 1 from public.waiver_signatures s
+     where s.client_id = v_link.client_id
+       and s.waiver_id = v_waiver.id
+       and s.revoked_at is null
+       and (s.expires_at is null or s.expires_at > now())
+  ) then
+    insert into public.waiver_signatures (
+      facility_id, waiver_id, client_id, pet_id,
+      waiver_name, waiver_version, waiver_text, waiver_hash,
+      signature_name, signature_data, witness_name, witness_signature_data,
+      ip_address, user_agent, signed_by, expires_at, consented_at
+    ) values (
+      v_link.facility_id, v_waiver.id, v_link.client_id, null,
+      v_waiver.name, v_waiver.version, v_text,
+      encode(extensions.digest(v_text, 'sha256'), 'hex'),
+      left(btrim(p_signature_name), 200),
+      nullif(p_signature_data, ''),
+      nullif(left(btrim(coalesce(p_witness_name, '')), 200), ''),
+      nullif(p_witness_signature_data, ''),
+      left(p_ip_address, 100), left(p_user_agent, 500),
+      -- Who signed is the person the link was sent to; there is no login.
+      null,
+      case when v_waiver.expiry_days is null then null
+           else now() + make_interval(days => v_waiver.expiry_days) end,
+      now()
+    );
+  end if;
+
+  select count(*) into v_left
+    from private.agreements_of_link(v_link) w
+   where not exists (
+     select 1 from public.waiver_signatures s
+      where s.client_id = v_link.client_id
+        and s.waiver_id = w.id
+        and s.revoked_at is null
+        and (s.expires_at is null or s.expires_at > now()));
+
+  return jsonb_build_object('signed', true, 'remaining', v_left);
+end;
+$$;
+
+
+ALTER FUNCTION "public"."sign_agreement_by_token"("p_token" "text", "p_waiver_id" "uuid", "p_signature_name" "text", "p_signature_data" "text", "p_witness_name" "text", "p_witness_signature_data" "text", "p_consent" boolean, "p_ip_address" "text", "p_user_agent" "text") OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."sign_agreement_by_token"("p_token" "text", "p_waiver_id" "uuid", "p_signature_name" "text", "p_signature_data" "text", "p_witness_name" "text", "p_witness_signature_data" "text", "p_consent" boolean, "p_ip_address" "text", "p_user_agent" "text") IS 'One agreement signed from a signing link, with consent. The text is read from waivers and hashed here. Refuses an unknown or expired link, an agreement not on it, and a signature without consent.';
+
+
+
 CREATE OR REPLACE FUNCTION "public"."skip_training_makeup"("p_missed_booking_id" "uuid") RETURNS "public"."training_makeups"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
@@ -18938,6 +19438,8 @@ CREATE TABLE IF NOT EXISTS "public"."boarding_services" (
     "is_active" boolean DEFAULT true NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "additional_pet_price" numeric,
+    CONSTRAINT "boarding_services_additional_pet_price_check" CHECK ((("additional_pet_price" IS NULL) OR ("additional_pet_price" >= (0)::numeric))),
     CONSTRAINT "boarding_services_price_check" CHECK (("price" >= (0)::numeric))
 );
 
@@ -18954,6 +19456,10 @@ COMMENT ON COLUMN "public"."boarding_services"."unit" IS 'The reference''s "Unit
 
 
 COMMENT ON COLUMN "public"."boarding_services"."lodging_type_ids" IS 'room_categories this service may be booked into. Empty = every type. Not an FK: Postgres cannot reference array elements, so a deleted type leaves a dead id the app must filter rather than trust.';
+
+
+
+COMMENT ON COLUMN "public"."boarding_services"."additional_pet_price" IS 'Per night or per day (the service''s unit), for EACH pet after the first sharing one room of this service. NULL = a shared room is the room''s price, once — what it cost before this column.';
 
 
 
@@ -20920,9 +21426,11 @@ CREATE TABLE IF NOT EXISTS "public"."grooming_services" (
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "taxable" boolean DEFAULT true NOT NULL,
     "category_id" "uuid",
+    "matted_extra_minutes" integer DEFAULT 0 NOT NULL,
     CONSTRAINT "grooming_services_base_price_check" CHECK (("base_price" >= (0)::numeric)),
     CONSTRAINT "grooming_services_coat_adjustment_mode_check" CHECK (("coat_adjustment_mode" = ANY (ARRAY['flat'::"text", 'percent'::"text"]))),
     CONSTRAINT "grooming_services_duration_min_check" CHECK (("duration_min" > 0)),
+    CONSTRAINT "grooming_services_matted_extra_minutes_check" CHECK ((("matted_extra_minutes" >= 0) AND ("matted_extra_minutes" <= 240))),
     CONSTRAINT "grooming_services_matted_surcharge_default_check" CHECK (("matted_surcharge_default" >= (0)::numeric)),
     CONSTRAINT "grooming_services_max_per_day_check" CHECK (("max_per_day" > 0)),
     CONSTRAINT "grooming_services_min_booking_notice_hours_check" CHECK (("min_booking_notice_hours" >= 0))
@@ -20937,6 +21445,10 @@ COMMENT ON TABLE "public"."grooming_services" IS 'What a facility SELLS (Bath & 
 
 
 COMMENT ON COLUMN "public"."grooming_services"."taxable" IS 'Whether this grooming service is charged the facility''s tax. Default true — see 20260921171524.';
+
+
+
+COMMENT ON COLUMN "public"."grooming_services"."matted_extra_minutes" IS 'Minutes a matted coat adds to this groom, set by staff at booking or intake. 0 = no extra time.';
 
 
 
@@ -22959,10 +23471,14 @@ CREATE TABLE IF NOT EXISTS "public"."room_categories" (
     "taxable" boolean DEFAULT true NOT NULL,
     "space_type" "public"."lodging_space_type" DEFAULT 'room'::"public"."lodging_space_type" NOT NULL,
     "max_pets_per_area" integer,
+    "dimensions_label" "text",
+    "features" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
     CONSTRAINT "room_categories_area_max_pets" CHECK ((("space_type" = 'area'::"public"."lodging_space_type") = ("max_pets_per_area" IS NOT NULL))),
     CONSTRAINT "room_categories_area_max_pets_positive" CHECK ((("max_pets_per_area" IS NULL) OR ("max_pets_per_area" > 0))),
     CONSTRAINT "room_categories_default_base_price_check" CHECK ((("default_base_price" IS NULL) OR ("default_base_price" >= (0)::numeric))),
     CONSTRAINT "room_categories_default_capacity_check" CHECK (("default_capacity" > 0)),
+    CONSTRAINT "room_categories_dimensions_label_length" CHECK ((("dimensions_label" IS NULL) OR ("char_length"("dimensions_label") <= 60))),
+    CONSTRAINT "room_categories_features_count" CHECK (("cardinality"("features") <= 8)),
     CONSTRAINT "room_category_rules_are_read" CHECK ((NOT ("rules" @? '$[*]?(!(exists (@."type")) || !((@."type" == "min_weight" || @."type" == "max_weight") || @."type" == "pet_type"))'::"jsonpath"))),
     CONSTRAINT "room_category_rules_is_array" CHECK (("jsonb_typeof"("rules") = 'array'::"text"))
 );
@@ -22988,6 +23504,14 @@ COMMENT ON COLUMN "public"."room_categories"."space_type" IS 'The reference''s S
 
 
 COMMENT ON COLUMN "public"."room_categories"."max_pets_per_area" IS 'The reference''s "Max # of pets per area" — pets in the area at once, regardless of family. Null for a room type, and required for an area.';
+
+
+
+COMMENT ON COLUMN "public"."room_categories"."dimensions_label" IS 'The size line a client reads on the room card ("4 × 4 ft", "Quiet wing"). Words, not a measurement: nothing computes with it.';
+
+
+
+COMMENT ON COLUMN "public"."room_categories"."features" IS 'What comes with the room, as the card''s chips ("Raised bed", "Webcam"). At most eight.';
 
 
 
@@ -23921,6 +24445,7 @@ CREATE TABLE IF NOT EXISTS "public"."waiver_signatures" (
     "revoked_reason" "text",
     "revoked_by" "text",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "consented_at" timestamp with time zone,
     CONSTRAINT "waiver_signatures_revocation_has_a_reason" CHECK ((("revoked_at" IS NULL) OR ("btrim"(COALESCE("revoked_reason", ''::"text")) <> ''::"text"))),
     CONSTRAINT "waiver_signatures_text_not_empty" CHECK (("btrim"("waiver_text") <> ''::"text"))
 );
@@ -23937,32 +24462,7 @@ COMMENT ON COLUMN "public"."waiver_signatures"."waiver_id" IS 'Which waiver this
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."waivers" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "facility_id" "uuid" NOT NULL,
-    "name" "text" NOT NULL,
-    "services" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
-    "body" "text" NOT NULL,
-    "blocks" "jsonb" DEFAULT '[]'::"jsonb" NOT NULL,
-    "version" "text" DEFAULT '1.0'::"text" NOT NULL,
-    "category" "text",
-    "active" boolean DEFAULT true NOT NULL,
-    "requires_signature" boolean DEFAULT true NOT NULL,
-    "requires_digital_signature" boolean DEFAULT true NOT NULL,
-    "requires_witness" boolean DEFAULT false NOT NULL,
-    "expiry_days" integer,
-    "created_by" "text",
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "waivers_body_not_empty" CHECK (("btrim"("body") <> ''::"text")),
-    CONSTRAINT "waivers_expiry_days_check" CHECK ((("expiry_days" IS NULL) OR ("expiry_days" > 0)))
-);
-
-
-ALTER TABLE "public"."waivers" OWNER TO "postgres";
-
-
-COMMENT ON TABLE "public"."waivers" IS 'A waiver document a facility publishes. Editable - which is why a signature COPIES the text rather than pointing here. See waiver_signatures.';
+COMMENT ON COLUMN "public"."waiver_signatures"."consented_at" IS 'When the signer confirmed they had read and agreed to the text (the signing panel''s consent box). Null on signatures recorded before 2026-10-02.';
 
 
 
@@ -25521,6 +26021,16 @@ ALTER TABLE ONLY "public"."waiver_signatures"
 
 
 
+ALTER TABLE ONLY "public"."waiver_signing_links"
+    ADD CONSTRAINT "waiver_signing_links_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."waiver_signing_links"
+    ADD CONSTRAINT "waiver_signing_links_token_hash_key" UNIQUE ("token_hash");
+
+
+
 ALTER TABLE ONLY "public"."waivers"
     ADD CONSTRAINT "waivers_pkey" PRIMARY KEY ("id");
 
@@ -26898,6 +27408,10 @@ CREATE INDEX "waiver_signatures_facility_idx" ON "public"."waiver_signatures" US
 
 
 
+CREATE INDEX "waiver_signing_links_client" ON "public"."waiver_signing_links" USING "btree" ("client_id");
+
+
+
 CREATE INDEX "waivers_facility_idx" ON "public"."waivers" USING "btree" ("facility_id", "active");
 
 
@@ -27952,6 +28466,10 @@ CREATE OR REPLACE TRIGGER "unfinished_bookings_guard" BEFORE INSERT OR UPDATE ON
 
 
 CREATE OR REPLACE TRIGGER "waiver_signatures_append_only" BEFORE UPDATE ON "public"."waiver_signatures" FOR EACH ROW EXECUTE FUNCTION "private"."waiver_signature_is_append_only"();
+
+
+
+CREATE OR REPLACE TRIGGER "waiver_signatures_confirm_bookings" AFTER INSERT ON "public"."waiver_signatures" FOR EACH ROW EXECUTE FUNCTION "private"."confirm_bookings_awaiting_agreements"();
 
 
 
@@ -30153,6 +30671,21 @@ ALTER TABLE ONLY "public"."waiver_signatures"
 
 ALTER TABLE ONLY "public"."waiver_signatures"
     ADD CONSTRAINT "waiver_signatures_facility_id_fkey" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."waiver_signing_links"
+    ADD CONSTRAINT "waiver_signing_links_booking_id_fkey" FOREIGN KEY ("booking_id") REFERENCES "public"."bookings"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."waiver_signing_links"
+    ADD CONSTRAINT "waiver_signing_links_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "public"."clients"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."waiver_signing_links"
+    ADD CONSTRAINT "waiver_signing_links_facility_id_fkey" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE CASCADE;
 
 
 
@@ -33029,6 +33562,19 @@ CREATE POLICY "waiver_signatures_revoke" ON "public"."waiver_signatures" FOR UPD
 
 
 
+ALTER TABLE "public"."waiver_signing_links" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "waiver_signing_links_insert" ON "public"."waiver_signing_links" FOR INSERT TO "authenticated" WITH CHECK (("private"."has_permission"("facility_id", 'edit_clients'::"text") AND (EXISTS ( SELECT 1
+   FROM "public"."clients" "c"
+  WHERE (("c"."id" = "waiver_signing_links"."client_id") AND ("c"."facility_id" = "waiver_signing_links"."facility_id"))))));
+
+
+
+CREATE POLICY "waiver_signing_links_read" ON "public"."waiver_signing_links" FOR SELECT TO "authenticated" USING ("private"."has_permission"("facility_id", 'view_client_documents'::"text"));
+
+
+
 ALTER TABLE "public"."waivers" ENABLE ROW LEVEL SECURITY;
 
 
@@ -33859,6 +34405,25 @@ REVOKE ALL ON FUNCTION "private"."add_on_for_booking"("p_booking" "public"."book
 
 
 
+REVOKE ALL ON FUNCTION "private"."agreement_applies"("p_services" "text"[], "p_service" "text") FROM PUBLIC;
+
+
+
+GRANT ALL ON TABLE "public"."waiver_signing_links" TO "authenticated";
+GRANT ALL ON TABLE "public"."waiver_signing_links" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."waivers" TO "anon";
+GRANT ALL ON TABLE "public"."waivers" TO "authenticated";
+GRANT ALL ON TABLE "public"."waivers" TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "private"."agreements_of_link"("p_link" "public"."waiver_signing_links") FROM PUBLIC;
+
+
+
 REVOKE ALL ON FUNCTION "private"."area_pets_in_use"("p_room_id" "uuid", "p_range" "tstzrange", "p_exclude_booking" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "private"."area_pets_in_use"("p_room_id" "uuid", "p_range" "tstzrange", "p_exclude_booking" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "private"."area_pets_in_use"("p_room_id" "uuid", "p_range" "tstzrange", "p_exclude_booking" "uuid") TO "service_role";
@@ -33965,6 +34530,10 @@ REVOKE ALL ON FUNCTION "private"."client_outstanding_balance"("p_client_id" "uui
 
 
 
+REVOKE ALL ON FUNCTION "private"."confirm_bookings_awaiting_agreements"() FROM PUBLIC;
+
+
+
 REVOKE ALL ON FUNCTION "private"."daily_care_record_touch"() FROM PUBLIC;
 
 
@@ -34003,6 +34572,10 @@ GRANT ALL ON FUNCTION "private"."has_permission"("p_facility_id" "uuid", "p_perm
 
 REVOKE ALL ON FUNCTION "private"."has_platform_role"("p_role" "public"."platform_role") FROM PUBLIC;
 GRANT ALL ON FUNCTION "private"."has_platform_role"("p_role" "public"."platform_role") TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "private"."hash_agreement_token"("p_token" "text") FROM PUBLIC;
 
 
 
@@ -34269,6 +34842,10 @@ REVOKE ALL ON FUNCTION "private"."unfinished_booking_guard"() FROM PUBLIC;
 
 
 
+REVOKE ALL ON FUNCTION "private"."unsigned_agreement_count"("p_client_id" "uuid", "p_facility_id" "uuid", "p_service" "text") FROM PUBLIC;
+
+
+
 REVOKE ALL ON FUNCTION "private"."yipyy_go_deadline"("p_booking_id" "uuid") FROM PUBLIC;
 
 
@@ -34358,6 +34935,13 @@ GRANT ALL ON TABLE "public"."gift_cards" TO "service_role";
 REVOKE ALL ON FUNCTION "public"."adjust_gift_card"("p_gift_card_id" "uuid", "p_amount" numeric, "p_reason" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."adjust_gift_card"("p_gift_card_id" "uuid", "p_amount" numeric, "p_reason" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."adjust_gift_card"("p_gift_card_id" "uuid", "p_amount" numeric, "p_reason" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."agreement_link_by_token"("p_token" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."agreement_link_by_token"("p_token" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."agreement_link_by_token"("p_token" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."agreement_link_by_token"("p_token" "text") TO "service_role";
 
 
 
@@ -34696,6 +35280,12 @@ GRANT ALL ON FUNCTION "public"."grant_platform_role"("p_profile_id" "text", "p_r
 
 
 
+REVOKE ALL ON FUNCTION "public"."grooming_size_tiers"("p_facility_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."grooming_size_tiers"("p_facility_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."grooming_size_tiers"("p_facility_id" "uuid") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."hq_client_network_value"("p_facility_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."hq_client_network_value"("p_facility_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."hq_client_network_value"("p_facility_id" "uuid") TO "service_role";
@@ -34899,6 +35489,12 @@ GRANT ALL ON FUNCTION "public"."offered_grooming_services"("p_facility_id" "uuid
 REVOKE ALL ON FUNCTION "public"."offered_mobile_grooming"("p_facility_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."offered_mobile_grooming"("p_facility_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."offered_mobile_grooming"("p_facility_id" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."offered_training_classes"("p_facility_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."offered_training_classes"("p_facility_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."offered_training_classes"("p_facility_id" "uuid") TO "service_role";
 
 
 
@@ -35353,6 +35949,13 @@ GRANT ALL ON FUNCTION "public"."set_subscription_status"("p_facility_id" "uuid",
 REVOKE ALL ON FUNCTION "public"."settle_bookings"("p_facility_id" "uuid", "p_method" "text", "p_booking_ids" "uuid"[], "p_receipt_channels" "text"[]) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."settle_bookings"("p_facility_id" "uuid", "p_method" "text", "p_booking_ids" "uuid"[], "p_receipt_channels" "text"[]) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."settle_bookings"("p_facility_id" "uuid", "p_method" "text", "p_booking_ids" "uuid"[], "p_receipt_channels" "text"[]) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."sign_agreement_by_token"("p_token" "text", "p_waiver_id" "uuid", "p_signature_name" "text", "p_signature_data" "text", "p_witness_name" "text", "p_witness_signature_data" "text", "p_consent" boolean, "p_ip_address" "text", "p_user_agent" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."sign_agreement_by_token"("p_token" "text", "p_waiver_id" "uuid", "p_signature_name" "text", "p_signature_data" "text", "p_witness_name" "text", "p_witness_signature_data" "text", "p_consent" boolean, "p_ip_address" "text", "p_user_agent" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."sign_agreement_by_token"("p_token" "text", "p_waiver_id" "uuid", "p_signature_name" "text", "p_signature_data" "text", "p_witness_name" "text", "p_witness_signature_data" "text", "p_consent" boolean, "p_ip_address" "text", "p_user_agent" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."sign_agreement_by_token"("p_token" "text", "p_waiver_id" "uuid", "p_signature_name" "text", "p_signature_data" "text", "p_witness_name" "text", "p_witness_signature_data" "text", "p_consent" boolean, "p_ip_address" "text", "p_user_agent" "text") TO "service_role";
 
 
 
@@ -36559,12 +37162,6 @@ GRANT ALL ON TABLE "public"."waitlist_signups" TO "service_role";
 GRANT ALL ON TABLE "public"."waiver_signatures" TO "anon";
 GRANT ALL ON TABLE "public"."waiver_signatures" TO "authenticated";
 GRANT ALL ON TABLE "public"."waiver_signatures" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."waivers" TO "anon";
-GRANT ALL ON TABLE "public"."waivers" TO "authenticated";
-GRANT ALL ON TABLE "public"."waivers" TO "service_role";
 
 
 
