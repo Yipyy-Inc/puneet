@@ -2,6 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { groomingAvailability } from "@/lib/grooming/availability-server";
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
+import {
+  activeFacilityIdForStaff,
+  inFacility,
+} from "@/lib/api/facility-context";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 
 // ============================================================================
@@ -33,9 +37,14 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createServerClient();
+  // The facility is the caller's own client row's. For a customer the scope
+  // is null and this reads through RLS, as the menus do; a member of staff is
+  // held to the facility they are working in (check:facility-scoped-reads).
+  const scope = await activeFacilityIdForStaff();
   const { data: client } = await supabase
     .from("clients")
     .select("facility_id")
+    .match(inFacility(scope))
     .limit(1)
     .maybeSingle();
   if (!client?.facility_id) {

@@ -13,7 +13,13 @@ import {
 // `bun test` runs in UTC, where the two agree — which is how it hid. Each case
 // sets the zone itself.
 
-const ORIGINAL_TZ = process.env.TZ;
+// The zone this process STARTED in, which is what afterAll puts back. Not
+// `process.env.TZ`: it is usually unset, and assigning it `undefined` sets
+// the string "undefined", which Bun ignores — the process stayed in the last
+// zone set here, and every test file after this one ran in Pacific/Auckland.
+// Found on 2026-10-02, when CI's file order put a date test after it.
+const ORIGINAL_TZ =
+  process.env.TZ ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
 afterAll(() => {
   process.env.TZ = ORIGINAL_TZ;
 });

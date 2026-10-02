@@ -424,7 +424,10 @@ describe("formatDayHeading", () => {
 
 describe("formatCalendarDayLong", () => {
   test("a day is the day, whatever zone the process is in", () => {
-    const original = process.env.TZ;
+    // The zone the process is in, not `process.env.TZ` (usually unset —
+    // see tests/unit/schedule-local-day.test.ts).
+    const original =
+      process.env.TZ ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
     try {
       for (const zone of ["Pacific/Kiritimati", "Etc/GMT+12", "UTC"]) {
         process.env.TZ = zone;
