@@ -51,9 +51,10 @@ export const evaluationConfig: EvaluationConfig = {
   // Booking window
   minLeadTimeHours: 24,
   maxAdvanceDays: 30,
-  // Daily capacity
+  // Daily capacity — off until the facility sets it: since 2026-10-02 the
+  // evaluation schedule enforces it (lib/evaluations/schedule.ts).
   dailyPetLimits: {
-    enabled: true,
+    enabled: false,
     defaultLimit: 4,
     perDay: {
       mon: 4,
@@ -85,167 +86,25 @@ export const evaluationConfig: EvaluationConfig = {
   taxSettings: {
     taxable: false,
   },
+  customerPicksEvaluator: true,
+  multiPet: true,
+  vaccinesRequired: false,
+  intakeQuestions: {
+    energy: true,
+    others: true,
+    history: true,
+    triggers: true,
+    vet: false,
+  },
 };
 
 export const evaluationFormTemplate: EvaluationFormTemplate = {
-  sections: [
-    {
-      id: "temperament",
-      title: "Temperament Assessment",
-      description: "Evaluate the pet's behavior around dogs and people",
-      core: true,
-      questions: [
-        {
-          id: "dog_friendly",
-          label: "Dog-friendly",
-          type: "yes_no",
-          required: true,
-          allowNotes: true,
-          helpText: "Does the pet interact well with other dogs?",
-        },
-        {
-          id: "human_friendly",
-          label: "Human-friendly",
-          type: "yes_no",
-          required: true,
-          allowNotes: true,
-          helpText: "Does the pet interact well with unfamiliar people?",
-        },
-        {
-          id: "energy_level",
-          label: "Energy level",
-          type: "scale",
-          required: true,
-          scaleLabels: { low: "Low", mid: "Medium", high: "High" },
-        },
-        {
-          id: "anxiety_level",
-          label: "Anxiety level",
-          type: "scale",
-          required: true,
-          scaleLabels: { low: "Low", mid: "Medium", high: "High" },
-        },
-        {
-          id: "reactivity",
-          label: "Reactivity",
-          type: "scale",
-          required: true,
-          scaleLabels: { low: "Low", mid: "Medium", high: "High" },
-          helpText: "Reaction to stimuli like loud sounds, quick movements",
-        },
-      ],
-    },
-    {
-      id: "play_profile",
-      title: "Play Profile",
-      description: "Assess play style and assign an appropriate group",
-      core: true,
-      questions: [
-        {
-          id: "play_style",
-          label: "Play style",
-          type: "single_select",
-          required: true,
-          options: ["Gentle", "Balanced", "Rough", "Chase", "Wrestle"],
-        },
-        {
-          id: "play_group",
-          label: "Recommended play group",
-          type: "single_select",
-          required: true,
-          options: [
-            "Small dogs",
-            "Large dogs",
-            "Mixed",
-            "Puppies",
-            "Seniors",
-            "Solo / Separate",
-          ],
-        },
-      ],
-    },
-    {
-      id: "additional",
-      title: "Additional Observations",
-      description: "Any other notes or concerns",
-      questions: [
-        {
-          id: "temperament_notes",
-          label: "Temperament notes",
-          type: "text",
-          required: false,
-          placeholder: "General observations about the pet's temperament...",
-        },
-        {
-          id: "resource_guarding",
-          label: "Resource guarding observed?",
-          type: "yes_no",
-          required: false,
-          allowNotes: true,
-          helpText: "Food, toys, or space guarding behavior",
-        },
-        {
-          id: "leash_behavior",
-          label: "Leash behavior",
-          type: "single_select",
-          required: false,
-          options: [
-            "Calm",
-            "Pulls slightly",
-            "Reactive on leash",
-            "Not tested",
-          ],
-        },
-      ],
-    },
-  ],
-  behaviorCodes: [
-    { id: "bc-1", label: "Food motivated", color: "#22c55e" },
-    { id: "bc-2", label: "Toy motivated", color: "#3b82f6" },
-    { id: "bc-3", label: "Shy / Timid", color: "#f59e0b" },
-    { id: "bc-4", label: "Mouthy", color: "#ef4444" },
-    { id: "bc-5", label: "Resource guarder", color: "#ef4444" },
-    { id: "bc-6", label: "Escape artist", color: "#f59e0b" },
-    { id: "bc-7", label: "Jumper", color: "#f59e0b" },
-    { id: "bc-8", label: "Excellent recall", color: "#22c55e" },
-    { id: "bc-9", label: "Needs slow intro", color: "#8b5cf6" },
-    { id: "bc-10", label: "Velcro dog", color: "#ec4899" },
-  ],
-  internalNotesEnabled: true,
+  customQuestions: [],
 };
 
 // Persistence for the evaluation form template (same localStorage key the
 // settings context uses, so the two stay consistent). Wrapped by the
 // evaluations query factory in @/lib/api/evaluations.
-const EVAL_FORM_TEMPLATE_KEY = "settings-eval-form-template";
-
-export function getEvaluationFormTemplate(): EvaluationFormTemplate {
-  if (typeof window === "undefined") return evaluationFormTemplate;
-  try {
-    const raw = window.localStorage.getItem(EVAL_FORM_TEMPLATE_KEY);
-    return raw
-      ? (JSON.parse(raw) as EvaluationFormTemplate)
-      : evaluationFormTemplate;
-  } catch {
-    return evaluationFormTemplate;
-  }
-}
-
-export function saveEvaluationFormTemplate(
-  template: EvaluationFormTemplate,
-): EvaluationFormTemplate {
-  if (typeof window !== "undefined") {
-    try {
-      window.localStorage.setItem(
-        EVAL_FORM_TEMPLATE_KEY,
-        JSON.stringify(template),
-      );
-    } catch {
-      /* ignore quota / serialization errors */
-    }
-  }
-  return template;
-}
 
 // ========================================
 // BUSINESS CONFIGURATION DATA
@@ -351,22 +210,13 @@ export const facilityBookingFlowConfig: FacilityBookingFlowConfig = {
 };
 
 export const evaluationReportCardConfig: EvaluationReportCardConfig = {
-  enabled: true,
-  headerMessage: "Thank you for bringing your pet in for an evaluation!",
-  passMessage:
-    "Great news — your pet has passed their evaluation and is ready to join us! The services below are now unlocked for booking.",
-  failMessage:
-    "After careful assessment, we feel your pet may need a little more time before joining our programs. We encourage you to reach out so we can discuss next steps.",
-  footerNote:
-    "We look forward to welcoming your pet. Feel free to contact us with any questions.",
-  showEvaluatorName: true,
-  showEvaluationDate: true,
-  showTemperament: true,
-  showPlayStyle: true,
-  showPlayGroup: true,
-  showBehaviorTags: false,
-  showStaffNotes: true,
-  showApprovedServices: true,
+  deliveryMode: "review",
+  reviewerRoles: ["reception", "supervisor"],
+  evaluatorSelfSend: false,
+  includePhoto: true,
+  bookFirstVisitButton: true,
+  hideInternal: true,
+  theme: "green",
   notifyViaEmail: true,
   notifyViaSMS: false,
 };

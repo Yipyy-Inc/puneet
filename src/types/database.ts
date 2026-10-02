@@ -2618,6 +2618,168 @@ export type Database = {
           },
         ];
       };
+      evaluations: {
+        Row: {
+          answers: NonNullable<Json>;
+          approved_services: string[];
+          auto_sent: boolean;
+          booking_id: string | null;
+          card_options: NonNullable<Json>;
+          card_status: string;
+          client_id: string;
+          completed_at: string | null;
+          created_at: string;
+          created_by: string | null;
+          custom_questions: NonNullable<Json>;
+          evaluator_name: string;
+          evaluator_staff_id: string | null;
+          facility_id: string;
+          id: string;
+          internal_note: string;
+          opened_at: string | null;
+          owner_note: string;
+          pet_id: string;
+          photo_path: string | null;
+          reminded_at: string | null;
+          result: string | null;
+          returned_comment: string | null;
+          sent_at: string | null;
+          sent_by_name: string | null;
+          sent_channels: string[];
+          started_at: string;
+          status: string;
+          strengths: string[];
+          submitted_at: string | null;
+          updated_at: string;
+          watch_for: string[];
+        };
+        Insert: {
+          answers?: NonNullable<Json>;
+          approved_services?: string[];
+          auto_sent?: boolean;
+          booking_id?: string | null;
+          card_options?: NonNullable<Json>;
+          card_status?: string;
+          client_id: string;
+          completed_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          custom_questions?: NonNullable<Json>;
+          evaluator_name?: string;
+          evaluator_staff_id?: string | null;
+          facility_id: string;
+          id?: string;
+          internal_note?: string;
+          opened_at?: string | null;
+          owner_note?: string;
+          pet_id: string;
+          photo_path?: string | null;
+          reminded_at?: string | null;
+          result?: string | null;
+          returned_comment?: string | null;
+          sent_at?: string | null;
+          sent_by_name?: string | null;
+          sent_channels?: string[];
+          started_at?: string;
+          status?: string;
+          strengths?: string[];
+          submitted_at?: string | null;
+          updated_at?: string;
+          watch_for?: string[];
+        };
+        Update: {
+          answers?: NonNullable<Json>;
+          approved_services?: string[];
+          auto_sent?: boolean;
+          booking_id?: string | null;
+          card_options?: NonNullable<Json>;
+          card_status?: string;
+          client_id?: string;
+          completed_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          custom_questions?: NonNullable<Json>;
+          evaluator_name?: string;
+          evaluator_staff_id?: string | null;
+          facility_id?: string;
+          id?: string;
+          internal_note?: string;
+          opened_at?: string | null;
+          owner_note?: string;
+          pet_id?: string;
+          photo_path?: string | null;
+          reminded_at?: string | null;
+          result?: string | null;
+          returned_comment?: string | null;
+          sent_at?: string | null;
+          sent_by_name?: string | null;
+          sent_channels?: string[];
+          started_at?: string;
+          status?: string;
+          strengths?: string[];
+          submitted_at?: string | null;
+          updated_at?: string;
+          watch_for?: string[];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "evaluations_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "evaluations_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_yipyy_go";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "evaluations_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "evaluations_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "evaluations_evaluator_staff_id_fkey";
+            columns: ["evaluator_staff_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
+          },
+          {
+            foreignKeyName: "evaluations_evaluator_staff_id_fkey";
+            columns: ["evaluator_staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "evaluations_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "evaluations_pet_id_fkey";
+            columns: ["pet_id"];
+            isOneToOne: false;
+            referencedRelation: "pets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       facilities: {
         Row: {
           address: Json | null;
@@ -11395,6 +11557,7 @@ export type Database = {
           client_id: string;
           created_at: string;
           created_by: string | null;
+          evaluation_id: string | null;
           facility_id: string;
           id: string;
           note: string;
@@ -11408,6 +11571,7 @@ export type Database = {
           client_id: string;
           created_at?: string;
           created_by?: string | null;
+          evaluation_id?: string | null;
           facility_id: string;
           id?: string;
           note?: string;
@@ -11421,6 +11585,7 @@ export type Database = {
           client_id?: string;
           created_at?: string;
           created_by?: string | null;
+          evaluation_id?: string | null;
           facility_id?: string;
           id?: string;
           note?: string;
@@ -13787,6 +13952,121 @@ export type Database = {
     };
     Functions: {
       agreement_link_by_token: { Args: { p_token: string }; Returns: Json };
+      discard_evaluation: {
+        Args: { p_evaluation_id: string };
+        Returns: string;
+      };
+      evaluation_card_for_owner: {
+        Args: { p_evaluation_id: string };
+        Returns: Json;
+      };
+      evaluation_reviewers: {
+        Args: { p_facility_id: string };
+        Returns: {
+          membership_id: string;
+          profile_id: string;
+        }[];
+      };
+      evaluation_viewer: {
+        Args: { p_facility_id: string };
+        Returns: {
+          may_review: boolean;
+          may_run: boolean;
+          may_self_send: boolean;
+          staff_id: string;
+        }[];
+      };
+      facility_evaluators: {
+        Args: { p_facility_id: string };
+        Returns: {
+          first_name: string;
+          job_title: string;
+          last_name: string;
+          membership_id: string;
+          primary_role: string;
+          staff_id: string;
+        }[];
+      };
+      finish_evaluation: {
+        Args: { p_channels?: string[]; p_evaluation_id: string };
+        Returns: string;
+      };
+      mark_evaluation_card_opened: {
+        Args: { p_evaluation_id: string };
+        Returns: undefined;
+      };
+      my_evaluation_cards: {
+        Args: { p_facility_id?: string };
+        Returns: {
+          completed_at: string;
+          facility_id: string;
+          id: string;
+          opened_at: string;
+          pet_id: string;
+          pet_name: string;
+          result: string;
+          sent_at: string;
+        }[];
+      };
+      purge_e2e_evaluations: {
+        Args: Record<PropertyKey, never>;
+        Returns: number;
+      };
+      return_evaluation_card: {
+        Args: { p_comment: string; p_evaluation_id: string };
+        Returns: undefined;
+      };
+      save_evaluation: {
+        Args: { p_evaluation_id: string; p_patch: Json };
+        Returns: {
+          answers: NonNullable<Json>;
+          approved_services: string[];
+          auto_sent: boolean;
+          booking_id: string | null;
+          card_options: NonNullable<Json>;
+          card_status: string;
+          client_id: string;
+          completed_at: string | null;
+          created_at: string;
+          created_by: string | null;
+          custom_questions: NonNullable<Json>;
+          evaluator_name: string;
+          evaluator_staff_id: string | null;
+          facility_id: string;
+          id: string;
+          internal_note: string;
+          opened_at: string | null;
+          owner_note: string;
+          pet_id: string;
+          photo_path: string | null;
+          reminded_at: string | null;
+          result: string | null;
+          returned_comment: string | null;
+          sent_at: string | null;
+          sent_by_name: string | null;
+          sent_channels: string[];
+          started_at: string;
+          status: string;
+          strengths: string[];
+          submitted_at: string | null;
+          updated_at: string;
+          watch_for: string[];
+        };
+        SetofOptions: {
+          from: "*";
+          to: "evaluations";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      send_evaluation_card: {
+        Args: {
+          p_channels?: string[];
+          p_evaluation_id: string;
+          p_owner_note?: string;
+        };
+        Returns: undefined;
+      };
       sign_agreement_by_token: {
         Args: {
           p_consent?: boolean;
@@ -15649,6 +15929,10 @@ export type Database = {
           p_room_id: string;
         };
         Returns: number;
+      };
+      start_evaluation: {
+        Args: { p_booking_id?: string; p_pet_id: string };
+        Returns: string;
       };
       status_page_maintenance: {
         Args: never;

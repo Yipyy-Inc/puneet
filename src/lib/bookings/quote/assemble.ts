@@ -1,4 +1,5 @@
 import { resolveEffectivePricing } from "@/lib/api/grooming";
+import { evaluationPetPrices } from "@/lib/evaluations/pricing";
 import { boardingPricing } from "@/lib/boarding-pricing";
 import { type RateGap } from "@/lib/bookings/rate-gap";
 import { houseFoodName } from "@/lib/feeding/labels";
@@ -145,7 +146,13 @@ export interface QuoteInput {
     typeof computeBookingTotals
   >[0]["basePostalCode"];
   trainingLines: QuoteTrainingLine[];
-  evaluation: { price: number; internalName?: string | null };
+  evaluation: {
+    price: number;
+    internalName?: string | null;
+    /** Several pets share one evaluation, the second and later at half
+     *  price (Settings › Evaluations); absent is on. */
+    multiPet?: boolean;
+  };
   includesEvaluation: boolean;
   /** A custom module's base price, by slug; undefined when it is not one. */
   customBasePrice: (slug: string) => number | undefined;
@@ -500,14 +507,35 @@ function servicePrice(input: QuoteInput): {
     };
   }
 
+  // An evaluation is priced per pet (the client's mock, 2026-10-02):
+  // "$45 per pet", the second and later at half when they share it.
   if (selectedService === "evaluation") {
-    lines.push({
-      key: "evaluation",
-      label: withPets(input.evaluation.internalName ?? t("evaluation")),
-      amount: input.evaluation.price,
-    });
+    const pets = input.selectedPets;
+    const multiPet = input.evaluation.multiPet !== false;
+    const prices = evaluationPetPrices(
+      input.evaluation.price,
+      Math.max(1, pets.length),
+      multiPet,
+    );
+    const label = input.evaluation.internalName ?? t("evaluation");
+    if (pets.length <= 1) {
+      lines.push({
+        key: "evaluation",
+        label: withPets(label),
+        amount: prices[0] ?? 0,
+      });
+    } else {
+      pets.forEach((pet, index) =>
+        lines.push({
+          key: `evaluation:${pet.id}`,
+          label: withPets(label, pet.name),
+          ...(index > 0 && multiPet ? { detail: t("wizEvSecondPetHalf") } : {}),
+          amount: prices[index] ?? 0,
+        }),
+      );
+    }
     return {
-      basePrice: input.evaluation.price,
+      basePrice: prices.reduce((sum, price) => sum + price, 0),
       rateGap: null,
       groomingPriceBreakdown,
       lines,

@@ -12,6 +12,7 @@ import { loadDaycareServices } from "@/lib/pricing/daycare-services-server";
 import { resolveDaycareService } from "@/lib/pricing/daycare-service-choice";
 import { isBuiltinService } from "@/lib/service-registry";
 import { trainingProgramsSchema } from "@/lib/settings/training-programs";
+import { evaluationTotal } from "@/lib/evaluations/pricing";
 import { programFormat, programPrice } from "@/lib/training/program-offer";
 import {
   addOnLinesFrom,
@@ -711,6 +712,23 @@ async function priceTraining(input: PriceRequest): Promise<ServerQuote> {
 }
 
 /**
+ * An evaluation (the client's mock, 2026-10-02): the facility's price per
+ * pet, the second and later at half where several share one — the rule the
+ * wizard's Summary showed (lib/evaluations/pricing.ts).
+ */
+async function priceEvaluation(input: PriceRequest): Promise<ServerQuote> {
+  const domain = SETTING_DOMAINS.evaluation_config;
+  const parsed = domain.schema.safeParse(
+    (await settingValue(input.facilityId, "evaluation_config")) ??
+      domain.fallback,
+  );
+  const config = parsed.success ? parsed.data : domain.fallback;
+  const pets = Math.max(1, input.petRefs?.length ?? 1);
+  const total = evaluationTotal(config.price, pets, config.multiPet !== false);
+  return { ok: true, basePrice: total, total };
+}
+
+/**
  * The price the SERVER is willing to confirm, or why it will not.
  *
  * A refusal is never an error to show a customer — the caller turns it into a
@@ -731,7 +749,9 @@ export async function priceCustomerBooking(
           ? await priceGrooming(input)
           : input.service === "training"
             ? await priceTraining(input)
-            : { ok: false, reason: "cannot_price" };
+            : input.service === "evaluation"
+              ? await priceEvaluation(input)
+              : { ok: false, reason: "cannot_price" };
 
   if (!priced.ok) return priced;
 

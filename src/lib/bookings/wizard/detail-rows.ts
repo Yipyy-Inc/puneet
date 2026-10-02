@@ -72,7 +72,6 @@ const ADD_ONS_SUB = {
   boarding: 2,
   daycare: 2,
   grooming: 1,
-  evaluation: 1,
 } as Record<string, number>;
 
 export function detailRows(
@@ -294,7 +293,7 @@ export function detailRows(
     return rows;
   }
 
-  // An evaluation, a custom service: when, and its extras.
+  // A custom service (and an evaluation, whose Review lists its own): when.
   rows.push(
     {
       key: "date",
@@ -311,6 +310,5 @@ export function detailRows(
       edit: { step: "details", subStepId: 0 },
     },
   );
-  if (facts.service === "evaluation") rows.push(addOns);
   return rows;
 }

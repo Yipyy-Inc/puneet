@@ -119,7 +119,13 @@ describe("the unconfigured facility", () => {
     // has rows, every one of them off, so nothing is charged until somebody
     // says so.
     for (const total of [10, 199, 200, 5000]) {
-      for (const service of ["boarding", "daycare", "grooming", "training"]) {
+      for (const service of [
+        "boarding",
+        "daycare",
+        "grooming",
+        "training",
+        "evaluation",
+      ]) {
         expect(
           findApplicableDepositRule(service, total, NO_DEPOSITS.rules),
         ).toBeNull();
@@ -131,9 +137,11 @@ describe("the unconfigured facility", () => {
     const services = NO_DEPOSITS.rules
       .filter((r) => r.scope === "service")
       .map((r) => r.serviceType);
+    // An evaluation takes a deposit too since 2026-10-02 (its setup page).
     expect(services.sort()).toEqual([
       "boarding",
       "daycare",
+      "evaluation",
       "grooming",
       "training",
     ]);

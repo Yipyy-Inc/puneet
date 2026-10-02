@@ -195,10 +195,18 @@ export const BOARDING_SUB_STEPS: WizardSubStepDef[] = [
   { id: 2, titleKey: "addOnsLabel", descriptionKey: "subAddOnServices" },
 ];
 
+// The client's evaluation mock (2026-10-02): Date & time, then — for a
+// customer only — About your pet. No add-ons: the mock has none, and no
+// facility had an add-on for evaluations when it went (id 1 is retired).
+export const EVALUATION_INTAKE_SUB_STEP_ID = 2;
 export const EVALUATION_SUB_STEPS: WizardSubStepDef[] = [
-  { id: 0, titleKey: "schedule", descriptionKey: "subDateAndSlot" },
-  { id: 1, titleKey: "addOnsLabel", descriptionKey: "subOptionalExtras" },
+  { id: 0, titleKey: "wizEvSubDateTime", descriptionKey: "subDateAndSlot" },
 ];
+const EVALUATION_INTAKE_SUB_STEP: WizardSubStepDef = {
+  id: EVALUATION_INTAKE_SUB_STEP_ID,
+  titleKey: "wizEvSubAboutPet",
+  descriptionKey: "wizEvSubAboutPetHelp",
+};
 
 export const GROOMING_SUB_STEPS: WizardSubStepDef[] = [
   // The client's mock (2026-10-01): Package · Add-ons · Groomer & time.
@@ -238,7 +246,11 @@ export function detailSubSteps(
   }
   if (service === "grooming") return [...GROOMING_SUB_STEPS, ...care];
   if (service === "training") return [...TRAINING_SUB_STEPS, ...care];
-  if (service === "evaluation") return EVALUATION_SUB_STEPS;
+  if (service === "evaluation") {
+    return options.customer
+      ? [...EVALUATION_SUB_STEPS, EVALUATION_INTAKE_SUB_STEP]
+      : EVALUATION_SUB_STEPS;
+  }
   if (service) return CUSTOM_SERVICE_SUB_STEPS;
   return [];
 }

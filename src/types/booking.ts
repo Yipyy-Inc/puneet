@@ -551,6 +551,21 @@ export const newBookingSchema = z.object({
   isEmergency: z.boolean().optional(),
   evaluationEvaluator: z.string().optional(),
   evaluationSpace: z.string().optional(),
+  // ── An evaluation booking (the client's mock, 2026-10-02) ──────────────
+  /** The evaluator chosen — a staff row id; absent is "First available". */
+  evaluatorId: z.string().uuid().optional(),
+  /** The services this evaluation is to unlock ("Request an evaluation"
+   *  on Daycare: daycare). Absent: every service that needs one. */
+  evaluationFor: z.array(z.string().min(1).max(60)).max(20).optional(),
+  /** "About your pet": each pet's answers, by pet ref, and their notes. */
+  evaluationIntake: z
+    .record(z.string(), z.record(z.string().max(40), z.string().max(2000)))
+    .optional(),
+  /** When a customer ticked "I've read and agree" to the evaluation terms. */
+  evaluationTermsAcceptedAt: z.string().optional(),
+  /** The full-price deposit becomes store credit if the pet is approved —
+   *  the promise as it stood when the evaluation was booked. */
+  evaluationCredit: z.boolean().optional(),
   includesEvaluation: z.boolean().optional(),
   evaluationStatus: z
     .enum(["pending", "in_progress", "completed", "skipped"])

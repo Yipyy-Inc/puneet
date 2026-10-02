@@ -8,6 +8,7 @@ import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useShellText } from "@/lib/shell/use-shell-text";
 import {
   DAYCARE_EVALUATION_REQUIRED,
+  EVALUATION_REQUIRED,
   FORM_REQUIRED,
   formRefusalOf,
 } from "@/lib/forms/requirements";
@@ -130,7 +131,8 @@ export function useCustomerBookingRequest(options?: {
       // evaluation" with no idea which service is a dead end.
       if (
         error instanceof LiveWriteError &&
-        error.code === DAYCARE_EVALUATION_REQUIRED
+        (error.code === DAYCARE_EVALUATION_REQUIRED ||
+          error.code === EVALUATION_REQUIRED)
       ) {
         toast.error(t("evaluationNeededTitle"), {
           description: error.message,

@@ -118,8 +118,6 @@ const BASELINE = new Set<string>([
   "src/components/customer/report-cards/report-card-detail.tsx",
   "src/components/customer/report-cards/report-card-share.tsx",
   "src/components/estimates/EstimatePdfDownload.tsx",
-  "src/components/evaluations/EvaluationResultCard.tsx",
-  "src/components/evaluations/StaffEvaluationFormModal.tsx",
   "src/components/facility/staff-hr/onboarding-invite-email.tsx",
 ]);
 

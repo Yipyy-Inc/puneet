@@ -37,10 +37,13 @@ export type DepositRefundPolicy = z.infer<typeof depositRefundPolicySchema>;
 
 // Only booking-based services collect deposits. Retail (POS) and vet
 // transactions are not booking flows, so they are intentionally excluded.
+// An evaluation is a booking too (2026-10-02): its setup page takes "Full
+// price" or "50%" up front, and that rule is an ordinary service rule here.
 export const SERVICE_TYPES_FOR_DEPOSITS = [
   "boarding",
   "daycare",
   "grooming",
   "training",
+  "evaluation",
 ] as const;
 export type DepositServiceType = (typeof SERVICE_TYPES_FOR_DEPOSITS)[number];

@@ -47,6 +47,7 @@ const SERVICE_TEXT: Record<string, string> = {
   daycare: "svcDaycare",
   grooming: "svcGrooming",
   training: "svcTraining",
+  evaluation: "svcEvaluation",
   vet: "svcVet",
   retail: "svcRetail",
 };
@@ -56,6 +57,7 @@ const SERVICE_LABELS: Record<string, string> = {
   daycare: "Daycare",
   grooming: "Grooming",
   training: "Training",
+  evaluation: "Evaluation",
   vet: "Vet",
   retail: "Retail",
 };

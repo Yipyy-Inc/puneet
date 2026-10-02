@@ -28,6 +28,13 @@ import {
   inFacility,
 } from "@/lib/api/facility-context";
 import { staffForStylist } from "@/lib/api/stylist-staff";
+import { checkEvaluationStart } from "@/lib/evaluations/availability-server";
+import {
+  evaluationConfigOf,
+  evaluatorFor,
+  type Evaluator,
+} from "@/lib/evaluations/booking-server";
+import { minutesOf } from "@/lib/bookings/wizard/time-windows";
 import { enrichBookingRows } from "@/lib/api/booking-enrich";
 import {
   parseBookingListParams,
@@ -47,6 +54,7 @@ import { requestAddOnLines } from "@/lib/pricing/add-on-lines";
 import {
   FORM_OVERRIDE_REASON_REQUIRED,
   DAYCARE_EVALUATION_REQUIRED,
+  EVALUATION_REQUIRED,
   FORM_REQUIRED,
   type MissingForm,
 } from "@/lib/forms/requirements";
@@ -374,6 +382,71 @@ export async function POST(request: NextRequest) {
         )
       : null;
 
+  // ── AN EVALUATION: ITS START AND ITS EVALUATOR (2026-10-02) ────────────
+  //
+  // The start is re-checked against everything booked NOW, by the same rule
+  // the wizard showed it with (lib/evaluations/availability.ts) — so a place
+  // somebody took a moment ago is refused, not double-booked, and a customer
+  // cannot book a day the facility does not offer by writing the request by
+  // hand. The evaluator must run evaluations here; staff assign them on the
+  // row, a customer's choice waits in `details` until the booking is
+  // confirmed (the database clears staff on a customer's insert) — and only
+  // where the facility lets clients choose.
+  let evaluator: Evaluator | null = null;
+  if (input.service === "evaluation") {
+    const asCustomer = !(viewer && viewer.memberships.length > 0);
+    const date = input.startDate ?? "";
+    const start = minutesOf(input.checkInTime);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || start === null) {
+      return NextResponse.json(
+        { error: "Pick a time for the evaluation." },
+        { status: 422 },
+      );
+    }
+    const reader = asCustomer
+      ? hasServiceRoleKey()
+        ? createAdminClient()
+        : null
+      : supabase;
+    if (!reader) {
+      return NextResponse.json(
+        { error: "Online evaluations are not available right now." },
+        { status: 503 },
+      );
+    }
+    const config = await evaluationConfigOf(reader, facility.facilityId);
+    const chosen =
+      input.evaluatorId && (!asCustomer || config.customerPicksEvaluator)
+        ? input.evaluatorId
+        : null;
+    if (!asCustomer && chosen) {
+      evaluator = await evaluatorFor(supabase, facility.facilityId, chosen);
+      if (!evaluator) {
+        return NextResponse.json(
+          { error: "That person does not run evaluations here." },
+          { status: 422 },
+        );
+      }
+    }
+    const offered = await checkEvaluationStart(reader, {
+      facilityId: facility.facilityId,
+      date,
+      start,
+      pets: Math.max(1, wanted.length),
+      evaluatorId: chosen,
+      forCustomer: asCustomer,
+    });
+    if (!offered) {
+      return NextResponse.json(
+        {
+          error: "That time was just taken, or is not offered — pick another.",
+          code: "evaluation_slot_taken",
+        },
+        { status: 409 },
+      );
+    }
+  }
+
   // ── THE DEPOSIT IS A PAYMENT, NOT A NOTE ────────────────────────────────
   //
   // The form sent `initialDeposit` and it landed in `details` with a
@@ -407,6 +480,10 @@ export async function POST(request: NextRequest) {
       if (stylist) {
         row.assigned_staff_id = stylist.staffId;
         row.assigned_staff_name ??= stylist.name;
+      }
+      if (evaluator) {
+        row.assigned_staff_id = evaluator.staffId;
+        row.assigned_staff_name = evaluator.name;
       }
       return {
         booking: formOverrideReason
@@ -513,7 +590,10 @@ export async function POST(request: NextRequest) {
     // bookings — a customer — and never for staff, because the field governs
     // the ONLINE channel. The message already names the service, so it is
     // passed through rather than rewritten here.
-    if (error.hint === DAYCARE_EVALUATION_REQUIRED) {
+    if (
+      error.hint === DAYCARE_EVALUATION_REQUIRED ||
+      error.hint === EVALUATION_REQUIRED
+    ) {
       return NextResponse.json(
         { error: error.message, code: error.hint },
         { status: 422 },

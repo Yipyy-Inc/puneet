@@ -123,7 +123,9 @@ export function legacySubStepId(
     daycare: customer ? [0, 2, 3, 4] : [0, 1, 2, 3, 4],
     boarding: customer ? [0, 2, 3, 4] : [0, 1, 2, 3, 4],
     grooming: [0, 1, 2],
-    evaluation: [0, 1],
+    // Its Add-ons screen (1) went with the client's mock (2026-10-02): an
+    // old draft resumes on Date & time.
+    evaluation: [0],
     training: [0],
   };
   const list = (service && lists[service]) || [0];

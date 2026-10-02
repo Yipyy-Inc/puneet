@@ -88,6 +88,7 @@ const SERVICE_TEXT: Record<string, string> = {
   daycare: "svcDaycare",
   grooming: "svcGrooming",
   training: "svcTraining",
+  evaluation: "svcEvaluation",
 };
 
 function chargeOf(

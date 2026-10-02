@@ -65,14 +65,12 @@ import { BookingModal } from "@/components/bookings/modals/BookingModal";
 import { useCreateBookingFromModal } from "@/components/bookings/use-create-booking";
 import type { NewBooking as BookingData } from "@/types/booking";
 import type { Evaluation, Pet } from "@/types/pet";
-import { StaffEvaluationFormModal } from "@/components/evaluations/StaffEvaluationFormModal";
 import { PetEvaluationProfile } from "@/components/evaluations/PetEvaluationProfile";
+import { PetEvaluationsPanel } from "@/components/evaluations/pet/pet-evaluations-panel";
 import { NotesButton } from "@/components/shared/NotesButton";
 import { TagsButton } from "@/components/shared/TagsButton";
 import { ClientInfoStrip } from "@/components/clients/ClientInfoStrip";
-import { useFacilityRole } from "@/hooks/use-facility-role";
 import { usePermission } from "@/hooks/use-facility-rbac";
-import { hasPermission } from "@/lib/role-utils";
 import { PageHeader } from "@/components/ui/page-header";
 
 /* ── Report-card theme visuals ────────────────────────────────────── */
@@ -189,12 +187,11 @@ export default function PetDetailPage({
   const [vaccinationModalOpen, setVaccinationModalOpen] = useState(false);
   const createBooking = useCreateBookingFromModal();
   const { profile: facilityProfile } = useFacilityProfile();
-  const { role, userId } = useFacilityRole();
-  const canUseEvaluationForm = hasPermission(
-    role,
-    "add_pet_notes",
-    userId ?? undefined,
-  );
+  // The Evaluations tab: whoever sees evaluations, or runs them (the
+  // client's mock, 2026-10-02). Starting one asks "Run evaluations" itself.
+  const canViewEvaluations = usePermission("view_evaluations");
+  const canRunEvaluations = usePermission("perform_evaluations");
+  const canUseEvaluationForm = canViewEvaluations || canRunEvaluations;
   // Table 4/5 — editing the pet requires edit rights; the Medical & Diet fields
   // are additionally gated on edit_pet_medical, so a records-only editor can
   // update general info while medical stays read-only. Admin (all-access
@@ -202,9 +199,6 @@ export default function PetDetailPage({
   const canEditPetRecords = usePermission("edit_pet_records");
   const canEditPetMedical = usePermission("edit_pet_medical");
   const canEditPet = canEditPetRecords || canEditPetMedical;
-  const [activeEvaluation, setActiveEvaluation] = useState<Evaluation | null>(
-    null,
-  );
 
   // The client, from Postgres. This was `clients.find(...)` over
   // `src/data/clients.ts`, so every client created since the migration was
@@ -629,11 +623,6 @@ export default function PetDetailPage({
             <PetEvaluationProfile
               evaluations={petEvaluations}
               petName={pet.name}
-              onStartEvaluation={
-                canUseEvaluationForm
-                  ? (ev) => setActiveEvaluation(ev)
-                  : undefined
-              }
             />
 
             <Card>
@@ -1298,22 +1287,11 @@ export default function PetDetailPage({
 
           {canUseEvaluationForm && (
             <TabsContent value="evaluations" className="space-y-4">
+              <PetEvaluationsPanel petRef={pet.id} petName={pet.name} />
               <PetEvaluationProfile
                 evaluations={petEvaluations}
                 petName={pet.name}
-                onStartEvaluation={(ev) => setActiveEvaluation(ev)}
               />
-
-              {activeEvaluation && (
-                <StaffEvaluationFormModal
-                  open={!!activeEvaluation}
-                  onOpenChange={(open) => !open && setActiveEvaluation(null)}
-                  evaluation={activeEvaluation}
-                  petName={pet.name}
-                  ownerName={client.name}
-                  evaluatorName={activeEvaluation.evaluatedBy}
-                />
-              )}
             </TabsContent>
           )}
         </Tabs>

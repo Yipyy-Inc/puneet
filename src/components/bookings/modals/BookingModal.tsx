@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 import {
   saveUnfinishedBookingOnLeave,
   useSaveUnfinishedBooking,
@@ -11,6 +13,9 @@ import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
 import {
   formatCalendarDayLong,
   formatDateShort,
+  formatDecimal,
+  formatDuration,
+  formatWeekdayDate,
   formatList,
   formatMoney,
   formatPercent,
@@ -101,6 +106,15 @@ import type { GroomingSizeTier } from "@/lib/grooming/size-tier";
 import type { CoatType as GroomingCoatType } from "@/types/grooming";
 import { ConfirmStep } from "@/components/bookings/wizard/steps/confirm/ConfirmStep";
 import { useConfirmModel } from "@/components/bookings/wizard/steps/confirm/use-confirm-model";
+import { EvaluationReview } from "@/components/bookings/wizard/steps/confirm/evaluation/EvaluationReview";
+import { EvaluationIntakeStep } from "@/components/bookings/wizard/steps/details/evaluation/EvaluationIntakeStep";
+import { EvaluationTimeStep } from "@/components/bookings/wizard/steps/details/evaluation/EvaluationTimeStep";
+import {
+  NO_EVALUATION_SLOT,
+  useEvaluationBooking,
+} from "@/components/bookings/wizard/steps/details/evaluation/use-evaluation-booking";
+import { evaluationRail } from "@/lib/bookings/wizard/evaluation-flow";
+import { evaluationSchedule, offerModeOf } from "@/lib/evaluations/schedule";
 import {
   confirmButtonKey,
   type PreviewStatus,
@@ -125,7 +139,11 @@ import type { ServiceModule } from "@/types/facility-staff";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
 import { useRedeemPackagePass } from "@/lib/api/customer-packages";
 import { syncRedeemedPassToQuickBooks } from "@/lib/quickbooks/document-sync";
-import { STEPS, detailSubSteps } from "./constants";
+import {
+  EVALUATION_INTAKE_SUB_STEP_ID,
+  STEPS,
+  detailSubSteps,
+} from "./constants";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { useSettings } from "@/hooks/use-settings";
 import { useDaycareAreas } from "@/hooks/use-daycare-areas";
@@ -465,6 +483,7 @@ export function BookingModal({
   // This modal is reached from THREE shells — customer, facility and employee —
   // so its words live in `shell.booking` rather than in any one portal group.
   const t = useShellText("booking");
+  const router = useRouter();
   // The send toast's words, shared with the estimate card and the wizard.
   const estimateText = useStaffText("estimateActions");
   // The kennel-change refusal, in the reader's language.
@@ -490,6 +509,7 @@ export function BookingModal({
     serviceNotifDefaults,
     evaluation: evaluationConfig,
     hoursConfigured,
+    rules: bookingRules,
   } = useSettings();
   // The facility's own surcharges and discounts, from `facility_settings`.
   // These used to come from localStorage, so what a customer was charged
@@ -767,14 +787,18 @@ export function BookingModal({
   const [selectedService, setSelectedService] = useState<string>(
     preSelectedService ?? "",
   );
+  // An evaluation's own answers (the client's mock, 2026-10-02): its start
+  // and evaluator, each pet's "About your pet", the customer's agreement.
+  const evaluationBooking = useEvaluationBooking();
   const handleServiceChange = (service: string) => {
     setSelectedService(service);
     if (service === "evaluation") {
       setServiceType("evaluation");
-    } else if (service === "daycare") {
-      setServiceType("full_day");
+      // A new start each time; who it is for (a locked card's service) stays.
+      evaluationBooking.setSlot(NO_EVALUATION_SLOT);
     } else {
-      setServiceType("");
+      evaluationBooking.reset();
+      setServiceType(service === "daycare" ? "full_day" : "");
     }
     setCurrentSubStepId(0);
     // Apply per-service notification defaults from settings
@@ -1235,9 +1259,12 @@ export function BookingModal({
       }
       if (selectedService === "evaluation") {
         switch (stepId) {
-          case 0:
-            return !!startDate && !!checkInTime && !!checkOutTime;
-          case 1: // Add-ons — always complete (optional)
+          case 0: // Date & time: a start picked on the strip
+            return (
+              !!evaluationBooking.slot.date &&
+              evaluationBooking.slot.start !== null
+            );
+          case EVALUATION_INTAKE_SUB_STEP_ID: // About your pet — optional
             return true;
           default:
             return false;
@@ -1295,6 +1322,7 @@ export function BookingModal({
       trainingFormat,
       trainingClassId,
       trainingTime,
+      evaluationBooking.slot,
     ],
   );
 
@@ -1805,6 +1833,29 @@ export function BookingModal({
       return config?.settings.evaluation.optional ?? false;
     },
     [bookingFlow, configs],
+  );
+
+  // What an evaluation unlocks (its Summary's "Unlocks", the vaccines it
+  // checks): the service a locked card asked it for, else every service
+  // that needs one (the client's mock, 2026-10-02).
+  const evaluationUnlocks = useMemo(
+    () =>
+      evaluationBooking.evaluationFor ?? [
+        ...new Set([
+          ...(["daycare", "boarding", "grooming", "training"] as const).filter(
+            (service) =>
+              requiresEvaluationForService(service) &&
+              !isEvaluationOptionalForService(service),
+          ),
+          ...bookingFlow.servicesRequiringEvaluation,
+        ]),
+      ],
+    [
+      evaluationBooking.evaluationFor,
+      requiresEvaluationForService,
+      isEvaluationOptionalForService,
+      bookingFlow.servicesRequiringEvaluation,
+    ],
   );
 
   // What the total adds for an add-on already on the booking: every live
@@ -2358,6 +2409,15 @@ export function BookingModal({
         return true;
       case "service":
         if (selectedService === "") return false;
+        // One pet per evaluation where the facility says so (Settings ›
+        // Evaluations, "Allow multiple pets in one evaluation" off).
+        if (
+          selectedService === "evaluation" &&
+          evaluationConfig.multiPet === false &&
+          selectedPetIds.length > 1
+        ) {
+          return false;
+        }
         // A customer's pets must pass the service's evaluation rule here;
         // staff decide on Confirm (evaluated on the first day, or why not).
         if (isCustomerMode && evaluationIssues.length > 0) return false;
@@ -2432,6 +2492,7 @@ export function BookingModal({
     subStepDone,
     formsBlocking,
     formsReason,
+    evaluationConfig.multiPet,
   ]);
 
   const applicablePackages = useMemo(() => {
@@ -3025,6 +3086,11 @@ export function BookingModal({
       notificationEmail: notificationEmail,
       notificationSMS: notificationSMS,
       assignedStaff: (() => {
+        // An evaluation is assigned to its evaluator (the server checks
+        // they run evaluations here and sets the staff row).
+        if (selectedService === "evaluation") {
+          return evaluationBooking.slot.evaluatorName ?? undefined;
+        }
         if (!selectedStaffId) return undefined;
         const s = (staffProfiles ?? []).find((m) => m.id === selectedStaffId);
         return s ? `${s.firstName} ${s.lastName}` : undefined;
@@ -3118,6 +3184,41 @@ export function BookingModal({
         !isCustomerMode && formsBlocking && formsReason.trim()
           ? formsReason.trim()
           : undefined,
+      // An evaluation booking (the client's mock, 2026-10-02): the
+      // evaluator, what it unlocks, the owner's answers, the terms they
+      // agreed to, and whether its deposit becomes credit on a pass.
+      ...(selectedService === "evaluation"
+        ? {
+            evaluatorId: evaluationBooking.slot.evaluatorId ?? undefined,
+            evaluationEvaluator:
+              evaluationBooking.slot.evaluatorName ?? undefined,
+            evaluationFor:
+              evaluationUnlocks.length > 0 ? evaluationUnlocks : undefined,
+            evaluationIntake: (() => {
+              const answered = Object.entries(evaluationBooking.intake)
+                .map(([petId, answers]) => [
+                  petId,
+                  Object.fromEntries(
+                    Object.entries(answers).filter(
+                      ([, value]) => typeof value === "string" && value.trim(),
+                    ),
+                  ),
+                ])
+                .filter(([, answers]) => Object.keys(answers).length > 0);
+              return answered.length > 0
+                ? (Object.fromEntries(answered) as Record<
+                    string,
+                    Record<string, string>
+                  >)
+                : undefined;
+            })(),
+            evaluationTermsAcceptedAt:
+              isCustomerMode && evaluationBooking.termsAccepted
+                ? new Date().toISOString()
+                : undefined,
+            evaluationCredit: evaluationDepositFull || undefined,
+          }
+        : {}),
       includesEvaluation: includesEvaluation || undefined,
       evaluationStatus: includesEvaluation ? "pending" : undefined,
       // Booked past the evaluation rule: which pets were short of it, and why.
@@ -3761,6 +3862,7 @@ export function BookingModal({
   const resetForm = () => {
     setCurrentStep(0);
     setCreatedBooking(null);
+    evaluationBooking.reset();
     setPetRoomCards({});
     setPetBoardingServices({});
     setBoardingShare(false);
@@ -3993,6 +4095,8 @@ export function BookingModal({
   const confirmModel = useConfirmModel({
     t,
     locale,
+    vaccinationServices:
+      selectedService === "evaluation" ? evaluationUnlocks : undefined,
     isCustomer: isCustomerMode,
     isEstimate: isEstimateMode,
     onConfirm: displayedSteps[currentStep]?.id === "confirm",
@@ -4045,7 +4149,9 @@ export function BookingModal({
                         ? groomingTime.groomerName
                         : selectedService === "training"
                           ? trainingTime.groomerName
-                          : staffName) ?? undefined,
+                          : selectedService === "evaluation"
+                            ? evaluationBooking.slot.evaluatorName
+                            : staffName) ?? undefined,
                   },
                 }
               : {},
@@ -4219,6 +4325,146 @@ export function BookingModal({
     passRedemption: !!passRedemption,
   });
   const confirmProps = confirmModel.props;
+  // ── The evaluation flow (the client's mock, 2026-10-02) ────────────────
+  const evaluationFlow = selectedService === "evaluation" && !isEstimateMode;
+  const evaluationSched = evaluationSchedule(evaluationConfig);
+  const evaluationMode = offerModeOf(evaluationConfig);
+  const evaluationWhen =
+    evaluationBooking.slot.date && evaluationBooking.slot.start !== null
+      ? `${formatWeekdayDate(evaluationBooking.slot.date, locale)} · ${formatTimeOfDay(
+          hhmmOf(evaluationBooking.slot.start),
+          locale,
+        )}`
+      : null;
+  // ── An evaluation's Summary (the client's mock, 2026-10-02) ──────────
+  const evaluationLength = (minutes: number) =>
+    minutes < 60
+      ? fillWords(t("wizEvLengthMinutes"), { n: minutes })
+      : fillWords(
+          t(
+            isPluralOne(minutes / 60, locale)
+              ? "wizEvLengthHourOne"
+              : "wizEvLengthHourOther",
+          ),
+          { n: formatDecimal(minutes / 60, locale) },
+        );
+  const serviceLabelOf = (service: string) =>
+    (
+      ({
+        daycare: t("wizKindDaycare"),
+        boarding: t("wizKindBoarding"),
+        grooming: t("wizKindGrooming"),
+        training: t("wizKindTraining"),
+      }) as Record<string, string>
+    )[service] ??
+    getModuleBySlug(service)?.name ??
+    service;
+  const evaluationDepositFull =
+    applicableDepositRule?.amountType === "percentage" &&
+    applicableDepositRule.amount >= 100;
+  const evaluationSummary = {
+    rows: [
+      {
+        key: "pets",
+        label: t("wizEvRowPets"),
+        value: formatList(
+          selectedPets.map((pet) => pet.name),
+          locale,
+        ),
+      },
+      {
+        key: "service",
+        label: t("wizEvRowService"),
+        value: t("wizKindEvaluation"),
+      },
+      {
+        key: "unlocks",
+        label: t("wizEvRowUnlocks"),
+        value:
+          evaluationUnlocks.length > 0
+            ? formatList(evaluationUnlocks.map(serviceLabelOf), locale)
+            : "—",
+      },
+      {
+        key: "when",
+        label: t("wizEvRowWhen"),
+        value: evaluationWhen
+          ? evaluationMode === "days"
+            ? fillWords(t("wizEvWhenDropOff"), { when: evaluationWhen })
+            : evaluationWhen
+          : "—",
+      },
+      {
+        key: "length",
+        label: t("wizEvRowLength"),
+        value: evaluationLength(evaluationSched.minutes),
+      },
+      {
+        key: "evaluator",
+        label: t("wizEvRowEvaluator"),
+        value: evaluationBooking.slot.evaluatorName ?? t("wizEvFirstAvailable"),
+      },
+      ...(isCustomerMode
+        ? []
+        : [
+            {
+              key: "client",
+              label: t("wizEvRowClient"),
+              value: selectedClient?.name ?? "—",
+            },
+          ]),
+    ],
+    priceNote:
+      selectedPets.length <= 1
+        ? t("wizEvOnePet")
+        : fillWords(
+            t(
+              evaluationConfig.multiPet !== false
+                ? "wizEvPetsHalf"
+                : "wizEvPets",
+            ),
+            { n: selectedPets.length },
+          ),
+    total: confirmModel.estimate.total,
+    taxes: confirmModel.estimate.included
+      ? []
+      : confirmModel.estimate.taxes
+          .filter((tax) => tax.amount > 0)
+          .map((tax) => ({ name: tax.name, amount: tax.amount })),
+    deposit:
+      confirmModel.depositAmount > 0
+        ? {
+            amount: confirmModel.depositAmount,
+            // What happens to it, and when — said truthfully: a request is
+            // charged once the team confirms it.
+            label: !isCustomerMode
+              ? t(
+                  evaluationDepositFull
+                    ? "wizEvDepositFullStaff"
+                    : "wizEvDepositPartStaff",
+                )
+              : evaluationDepositFull
+                ? t(
+                    confirmModel.requiresApproval
+                      ? "wizEvDepositFullLater"
+                      : "wizEvDepositFullNow",
+                  )
+                : t(
+                    confirmModel.requiresApproval
+                      ? "wizEvDepositPartLater"
+                      : "wizEvDepositPartNow",
+                  ),
+          }
+        : null,
+  };
+  // A customer agrees to the evaluation terms and, where the facility asks,
+  // has the vaccines on file before the request goes.
+  const evaluationReviewBlocked =
+    evaluationFlow &&
+    isCustomerMode &&
+    (!evaluationBooking.termsAccepted ||
+      (evaluationConfig.vaccinesRequired &&
+        confirmProps.vaccinations.some((line) => line.state === "missing")));
   // Staff: who the stay or day is assigned to, and each add-on that needs
   // somebody — kept from the old Confirm, under the details.
   const staffOption = (s: NonNullable<typeof staffProfiles>[number]) => ({
@@ -4387,28 +4633,99 @@ export function BookingModal({
         : id === "details"
           ? t("details")
           : t("stepConfirm");
-  const stepViews: WizardStepView[] = displayedSteps.map((step, index) => {
-    const state =
-      isDone || index < currentStep
-        ? "done"
-        : index === currentStep
-          ? "current"
-          : "todo";
-    const reachable =
-      state === "done" && !isDone && !submitting && !lockedStepIds.has(step.id);
-    return {
-      id: step.id as WizardStepView["id"],
-      title: stepTitle(step.id),
-      summary: stepSummary[step.id] ?? "",
-      state,
-      onSelect: reachable
-        ? () => {
-            setCurrentStep(index);
-            setCurrentSubStepId(0);
-          }
-        : undefined,
-    };
-  });
+  // ── AN EVALUATION'S RAIL IS FLAT (the client's mock, decided 2026-10-02) ─
+  // Every screen a numbered step: Your pets · Service · Date & time · About
+  // your pet · Review & confirm. Step 1 is the shared one; the rest are the
+  // evaluation's own (lib/bookings/wizard/evaluation-flow.ts).
+  const flatRail = evaluationFlow
+    ? evaluationRail({
+        stepIndex: currentStep,
+        subStepId: currentSubSteps[currentSubStep]?.id ?? 0,
+        subStepIds: currentSubSteps.map((sub) => sub.id),
+        done: isDone,
+      })
+    : null;
+  const flatStepViews: WizardStepView[] = (flatRail?.steps ?? []).map(
+    (step) => {
+      const done = step.state === "done";
+      const title =
+        step.id === "client-pet"
+          ? isCustomerMode
+            ? t("wizEvYourPets")
+            : t("stepClientPet")
+          : step.id === "service"
+            ? t("service")
+            : step.id === "details:0"
+              ? t("wizEvSubDateTime")
+              : step.id === `details:${EVALUATION_INTAKE_SUB_STEP_ID}`
+                ? t("wizEvSubAboutPet")
+                : isCustomerMode
+                  ? t("wizEvReviewConfirm")
+                  : t("wizEvReviewBook");
+      const summary =
+        step.id === "client-pet"
+          ? done || !isCustomerMode
+            ? stepSummary["client-pet"]
+            : t("wizEvWhosComing")
+          : step.id === "service"
+            ? done
+              ? t("wizKindEvaluation")
+              : t("wizHeadService")
+            : step.id === "details:0"
+              ? // french-ok: a catalogue key built from an id
+                (evaluationWhen ?? t(`wizEvModeShort_${evaluationMode}`))
+              : step.id === `details:${EVALUATION_INTAKE_SUB_STEP_ID}`
+                ? t("wizEvSubAboutPetHelp")
+                : isCustomerMode && requiresApproval
+                  ? t("wizEvSentForApproval")
+                  : t("wizEvConfirmedInstantly");
+      const locked =
+        step.id === "client-pet" || step.id === "service"
+          ? lockedStepIds.has(step.id)
+          : false;
+      return {
+        id: step.id as WizardStepView["id"],
+        title,
+        summary: summary ?? "",
+        state: step.state,
+        onSelect:
+          done && !isDone && !submitting && !locked
+            ? () => {
+                setCurrentStep(step.target.step);
+                setCurrentSubStepId(step.target.subStepId ?? 0);
+              }
+            : undefined,
+      };
+    },
+  );
+  const sharedStepViews: WizardStepView[] = displayedSteps.map(
+    (step, index) => {
+      const state =
+        isDone || index < currentStep
+          ? "done"
+          : index === currentStep
+            ? "current"
+            : "todo";
+      const reachable =
+        state === "done" &&
+        !isDone &&
+        !submitting &&
+        !lockedStepIds.has(step.id);
+      return {
+        id: step.id as WizardStepView["id"],
+        title: stepTitle(step.id),
+        summary: stepSummary[step.id] ?? "",
+        state,
+        onSelect: reachable
+          ? () => {
+              setCurrentStep(index);
+              setCurrentSubStepId(0);
+            }
+          : undefined,
+      };
+    },
+  );
+  const stepViews = flatRail ? flatStepViews : sharedStepViews;
   const subStepViews: WizardSubStepView[] = currentSubSteps.map(
     (sub, subIndex) => {
       const state =
@@ -4433,38 +4750,100 @@ export function BookingModal({
       };
     },
   );
+  // A flat rail lists every screen itself: nothing nests under Details.
   const railSubSteps =
-    selectedService && currentStep >= detailsIndex && !isDone
+    !flatRail && selectedService && currentStep >= detailsIndex && !isDone
       ? subStepViews
       : [];
   const chipSubSteps =
-    selectedService && currentStep === detailsIndex && !isDone
+    !flatRail && selectedService && currentStep === detailsIndex && !isDone
       ? subStepViews
       : [];
-  const percent = wizardProgress({
-    stepIndex: currentStep,
-    subIndex: currentSubStep,
-    subCount: currentSubSteps.length,
-    done: isDone,
-  });
+  const percent = flatRail
+    ? flatRail.percent
+    : wizardProgress({
+        stepIndex: currentStep,
+        subIndex: currentSubStep,
+        subCount: currentSubSteps.length,
+        done: isDone,
+      });
   const percentLabel = formatPercent(percent, locale);
-  const stepLabel = t("stepOf")
-    .replace("{step}", String(Math.min(currentStep + 1, displayedSteps.length)))
-    .replace("{total}", String(displayedSteps.length));
+  const stepLabel = flatRail
+    ? t("stepOf")
+        .replace("{step}", String(flatRail.number))
+        .replace("{total}", String(flatRail.count))
+    : t("stepOf")
+        .replace(
+          "{step}",
+          String(Math.min(currentStep + 1, displayedSteps.length)),
+        )
+        .replace("{total}", String(displayedSteps.length));
   const wizardTitle = editMode
     ? t("editBooking")
-    : isCustomerMode
-      ? t("wizBookAVisit")
-      : selectedService && currentStep >= detailsIndex
-        ? serviceName
-        : isEstimateMode
-          ? t("newEstimate")
-          : t("newBooking");
+    : evaluationFlow
+      ? isCustomerMode
+        ? t("wizEvBookTitle")
+        : t("wizEvNewTitle")
+      : isCustomerMode
+        ? t("wizBookAVisit")
+        : selectedService && currentStep >= detailsIndex
+          ? serviceName
+          : isEstimateMode
+            ? t("newEstimate")
+            : t("newBooking");
   const wizardSubtitle = editMode
     ? t("updateDatesHelp")
     : isCustomerMode
       ? (customerFacility?.name ?? "")
-      : t("wizCreateForClient");
+      : evaluationFlow
+        ? fillWords(t("wizEvFrontDesk"), { facility: facilityName })
+        : t("wizCreateForClient");
+  // The evaluation mock's own headings for its own screens.
+  const evaluationHint = (() => {
+    switch (evaluationMode) {
+      case "any":
+        return t("wizEvHintAny");
+      case "window":
+        return t("wizEvHintWindow");
+      case "days":
+        return fillWords(t("wizEvHintDays"), {
+          time: formatTimeOfDay(
+            hhmmOf(evaluationSched.openRange.end + evaluationSched.minutes),
+            locale,
+          ),
+        });
+      default:
+        return fillWords(t("wizEvHintSlots"), {
+          length: formatDuration(evaluationSched.minutes, locale),
+        });
+    }
+  })();
+  const evaluationHeader = !evaluationFlow
+    ? null
+    : currentStepId === "client-pet" && isCustomerMode
+      ? { title: t("wizEvHeadPets"), subtitle: t("wizEvHeadPetsHelp") }
+      : currentStepId === "details"
+        ? (currentSubSteps[currentSubStep]?.id ?? 0) ===
+          EVALUATION_INTAKE_SUB_STEP_ID
+          ? {
+              title: fillWords(t("wizEvHeadAbout"), {
+                pet: selectedPets[0]?.name ?? t("wizEvYourPet"),
+              }),
+              subtitle: t("wizEvHeadAboutHelp"),
+            }
+          : { title: t("wizEvHeadTime"), subtitle: evaluationHint }
+        : currentStepId === "confirm"
+          ? {
+              title: isCustomerMode
+                ? t("wizEvReviewConfirm")
+                : t("wizEvReviewBook"),
+              subtitle: !isCustomerMode
+                ? t("wizEvHeadStaff")
+                : requiresApproval
+                  ? t("wizEvHeadApproval")
+                  : t("wizEvHeadInstant"),
+            }
+          : null;
   const header = isDone
     ? {
         title: isCustomerMode ? t("wizRequestSent") : t("wizBookingCreated"),
@@ -4491,38 +4870,83 @@ export function BookingModal({
                 ? t("wizHeadConfirmCustomer")
                 : t("wizHeadConfirm"),
             };
+  const shownHeader = !isDone && evaluationHeader ? evaluationHeader : header;
   const headerChip =
     selectedService && currentStep >= detailsIndex && !isDone
-      ? fillWords(t("wizKindService"), {
-          kind: serviceKind,
-          service: serviceName,
-        })
+      ? evaluationFlow
+        ? t("wizKindEvaluation")
+        : fillWords(t("wizKindService"), {
+            kind: serviceKind,
+            service: serviceName,
+          })
       : null;
   const atLastStep = currentStep === displayedSteps.length - 1;
   const canGoBack =
     (currentStepId === "details" && currentSubStep > 0) ||
     previousOpenStep(currentStep) >= 0;
-  const nextLabel = isDone
-    ? t("wizStartAnother")
-    : !atLastStep
-      ? t("next")
-      : t(
-          confirmButtonKey({
-            isCustomer: isCustomerMode,
-            editMode,
-            estimateMode: isEstimateMode,
-            missingAgreements: waivers.pending.length,
-            requiresApproval: requiresApproval && !passRedemption,
-            hasDeposit: depositAmount > 0,
-          }),
-        );
+  // The evaluation mock's last button: what it does, and the deposit.
+  const evaluationDeposit =
+    depositAmount > 0
+      ? formatMoney(depositAmount, locale, {
+          whole: Number.isInteger(depositAmount),
+        })
+      : null;
+  const evaluationNextLabel = !evaluationFlow
+    ? null
+    : isDone
+      ? isCustomerMode
+        ? t("wizEvBackToPortal")
+        : t("wizEvBookAnother")
+      : !atLastStep
+        ? null
+        : isCustomerMode
+          ? evaluationDeposit
+            ? fillWords(
+                t(
+                  requiresApproval
+                    ? "wizEvSendRequestAmount"
+                    : "wizEvConfirmBookingAmount",
+                ),
+                { amount: evaluationDeposit },
+              )
+            : t(requiresApproval ? "wizEvSendRequest" : "wizEvConfirmBooking")
+          : waivers.pending.length > 0
+            ? null
+            : t("wizEvBookEvaluation");
+  const nextLabel = evaluationNextLabel
+    ? evaluationNextLabel
+    : isDone
+      ? t("wizStartAnother")
+      : !atLastStep
+        ? t("next")
+        : t(
+            confirmButtonKey({
+              isCustomer: isCustomerMode,
+              editMode,
+              estimateMode: isEstimateMode,
+              missingAgreements: waivers.pending.length,
+              requiresApproval: requiresApproval && !passRedemption,
+              hasDeposit: depositAmount > 0,
+            }),
+          );
   const nextDisabled = isDone
     ? false
     : !atLastStep
       ? !canProceed
-      : !canProceed || submitting || estimateBusy || !!calculatePrice.rateGap;
+      : !canProceed ||
+        submitting ||
+        estimateBusy ||
+        !!calculatePrice.rateGap ||
+        evaluationReviewBlocked;
   const onFooterNext = () => {
     if (isDone) {
+      // A customer's evaluation ends where the mock ends it: back to the
+      // portal. Everyone else starts another.
+      if (evaluationFlow && isCustomerMode) {
+        onOpenChange(false);
+        router.push("/customer");
+        return;
+      }
       startAnother();
       return;
     }
@@ -4548,13 +4972,21 @@ export function BookingModal({
     if (hasProgress) setShowCancelConfirm(true);
     else onOpenChange(false);
   };
-  const doneTitle = isCustomerMode
-    ? passRedemption
-      ? t("wizYoureBooked")
-      : t("wizRequestSentTitle")
-    : createdBooking?.ref
-      ? fillWords(t("wizBookingNumberCreated"), { ref: createdBooking.ref })
-      : t("wizBookingCreated");
+  const doneTitle = evaluationFlow
+    ? isCustomerMode
+      ? requiresApproval
+        ? t("wizEvDoneRequest")
+        : t("wizYoureBooked")
+      : createdBooking?.ref
+        ? fillWords(t("wizEvDoneBookedRef"), { ref: createdBooking.ref })
+        : t("wizEvDoneBooked")
+    : isCustomerMode
+      ? passRedemption
+        ? t("wizYoureBooked")
+        : t("wizRequestSentTitle")
+      : createdBooking?.ref
+        ? fillWords(t("wizBookingNumberCreated"), { ref: createdBooking.ref })
+        : t("wizBookingCreated");
   // What was created, as it was when Create was pressed.
   const doneStatusValue = createdBooking?.status ?? confirmModel.status;
   const doneStatus = <StatusChip status={doneStatusValue} />;
@@ -4565,7 +4997,9 @@ export function BookingModal({
       : requiresApproval
         ? bookingRequestMessage ||
           bookingFlow.bookingRequestConfirmationMessage ||
-          fillWords(t("wizDoneReview"), { hours: confirmModel.approvalHours })
+          fillWords(t(evaluationFlow ? "wizEvDoneReview" : "wizDoneReview"), {
+            hours: confirmModel.approvalHours,
+          })
         : t("wizDoneBooked")
     : doneMissing > 0
       ? `${fillWords(
@@ -4618,6 +5052,18 @@ export function BookingModal({
           currentSubSteps[currentSubStep]?.id === FEEDING_SUB_STEP_ID ? (
             <FeedingSchedulePreview step={feedingStep} className="mt-4" />
           ) : null}
+          {/* The evaluation mock's foot card: how this facility offers
+              evaluations, in a line. */}
+          {evaluationFlow && !isDone ? (
+            <p className="border-line bg-card text-meta text-ink-secondary mt-auto rounded-2xl border px-3.5 py-3">
+              <strong className="text-body-ink font-semibold">
+                {/* french-ok: a catalogue key built from an id */}
+                {t(`wizEvMode_${evaluationMode}`)}
+              </strong>{" "}
+              {/* french-ok: a catalogue key built from an id */}·{" "}
+              {t(`wizEvMode_${evaluationMode}_help`)}
+            </p>
+          ) : null}
         </WizardRail>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -4634,8 +5080,8 @@ export function BookingModal({
             subStepsLabel={t("wizDetailsScreens")}
           />
           <WizardHeader
-            title={header.title}
-            subtitle={header.subtitle}
+            title={shownHeader.title}
+            subtitle={shownHeader.subtitle}
             chip={headerChip}
           />
           <div
@@ -4668,6 +5114,14 @@ export function BookingModal({
                     bookingFlow={bookingFlow}
                     selectedPets={selectedPets}
                     clientRef={selectedClient?.id}
+                    onRequestEvaluation={(forService) => {
+                      // The evaluation, for the service whose card was
+                      // locked: its Summary says what it unlocks.
+                      handleServiceChange("evaluation");
+                      evaluationBooking.setEvaluationFor([forService]);
+                      setServiceType("");
+                      goToSubStep(0);
+                    }}
                   />
                 )}
                 {displayedSteps[currentStep]?.id === "client-pet" && (
@@ -5023,7 +5477,43 @@ export function BookingModal({
                       onChange={setTrainingIntake}
                     />
                   )}
+                {/* An evaluation (the client's mock, 2026-10-02): Pick a
+                    date & time, then — a customer — About your pet. */}
                 {displayedSteps[currentStep]?.id === "details" &&
+                  selectedService === "evaluation" &&
+                  currentSubSteps[currentSubStep]?.id === 0 && (
+                    <EvaluationTimeStep
+                      isCustomer={isCustomerMode}
+                      pets={Math.max(1, effectiveSelectedPets.length)}
+                      value={evaluationBooking.slot}
+                      onChange={(next) => {
+                        evaluationBooking.setSlot(next);
+                        if (next.date && next.start !== null) {
+                          setStartDate(next.date);
+                          setEndDate(next.date);
+                          setCheckInTime(hhmmOf(next.start));
+                          setCheckOutTime(
+                            hhmmOf(
+                              next.end ?? next.start + evaluationSched.minutes,
+                            ),
+                          );
+                        }
+                      }}
+                    />
+                  )}
+                {displayedSteps[currentStep]?.id === "details" &&
+                  selectedService === "evaluation" &&
+                  currentSubSteps[currentSubStep]?.id ===
+                    EVALUATION_INTAKE_SUB_STEP_ID && (
+                    <EvaluationIntakeStep
+                      pets={effectiveSelectedPets}
+                      enabled={evaluationConfig.intakeQuestions}
+                      value={evaluationBooking.intake}
+                      onChange={evaluationBooking.setIntakeFor}
+                    />
+                  )}
+                {displayedSteps[currentStep]?.id === "details" &&
+                  selectedService !== "evaluation" &&
                   !(
                     (selectedService === "boarding" ||
                       selectedService === "daycare") &&
@@ -5037,7 +5527,6 @@ export function BookingModal({
                     <DetailsStep
                       selectedService={selectedService}
                       currentSubStep={currentSubSteps[currentSubStep]?.id ?? 0}
-                      isSubStepComplete={isSubStepComplete}
                       startDate={startDate}
                       setStartDate={setStartDate}
                       endDate={endDate}
@@ -5046,8 +5535,6 @@ export function BookingModal({
                       setCheckInTime={setCheckInTime}
                       checkOutTime={checkOutTime}
                       setCheckOutTime={setCheckOutTime}
-                      extraServices={extraServices}
-                      setExtraServices={setExtraServices}
                       selectedPets={effectiveSelectedPets}
                       feedingStep={feedingStep}
                       medicationStep={medicationStep}
@@ -5182,12 +5669,26 @@ export function BookingModal({
 
                 {displayedSteps[currentStep]?.id === "confirm" &&
                   !(isEstimateMode && estimateCreated) &&
-                  !(isCustomerMode && bookingRequested) && (
+                  !(isCustomerMode && bookingRequested) &&
+                  (evaluationFlow ? (
+                    <EvaluationReview
+                      confirm={confirmProps}
+                      vaccinesRequired={evaluationConfig.vaccinesRequired}
+                      vaccinations={confirmProps.vaccinations}
+                      terms={{
+                        accepted: evaluationBooking.termsAccepted,
+                        onAccept: evaluationBooking.setTermsAccepted,
+                        responseHours: confirmModel.approvalHours,
+                        cancelHours: bookingRules.cancelPolicyHours ?? null,
+                      }}
+                      summary={evaluationSummary}
+                    />
+                  ) : (
                     <ConfirmStep
                       {...confirmProps}
                       staffRows={confirmStaffRows}
                     />
-                  )}
+                  ))}
               </>
             )}
           </div>

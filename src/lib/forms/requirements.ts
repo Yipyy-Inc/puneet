@@ -23,6 +23,9 @@ export const FORM_OVERRIDE_REASON_REQUIRED = "form_override_reason_required";
  * dead end rather than a refusal.
  */
 export const DAYCARE_EVALUATION_REQUIRED = "daycare_evaluation_required";
+/** Any service on the facility's "needs an evaluation first" list
+ *  (20261002194536) — refused for a customer the same way. */
+export const EVALUATION_REQUIRED = "evaluation_required";
 
 export type FormRefusalCode =
   | typeof FORM_REQUIRED

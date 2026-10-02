@@ -243,13 +243,6 @@ export const SETTINGS_NAV: SettingsGroup[] = [
         access: "manage_facility_settings",
       },
       {
-        id: "evaluations",
-        segment: "evaluations",
-        label: "Evaluations",
-        icon: ClipboardCheck,
-        access: "manage_facility_settings",
-      },
-      {
         id: "vaccination-requirements",
         segment: "vaccination-requirements",
         label: "Vaccination requirements",
@@ -309,6 +302,15 @@ export const SETTINGS_NAV: SettingsGroup[] = [
         label: "Training",
         icon: GraduationCap,
         access: "manage_services",
+      },
+      // Moved from Bookings on 2026-10-02: the client's setup page sits under
+      // "Settings › Services" — how evaluations are offered, like any service.
+      {
+        id: "evaluations",
+        segment: "evaluations",
+        label: "Evaluations",
+        icon: ClipboardCheck,
+        access: "manage_facility_settings",
       },
       {
         id: "retail",

@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { Plus, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -59,6 +59,19 @@ export interface SavedView {
    * tab.
    */
   count?: number;
+  /**
+   * A glyph before the label, in the label's own ink (§5b1) — for a page's
+   * own sections, where each is a different kind of list (Operations ›
+   * Evaluations: Today, Report cards to review, All, Setup). One per meaning,
+   * from the icon map.
+   */
+  icon?: LucideIcon;
+  /**
+   * "error" puts the count in the error ink, for a count that is work
+   * waiting — "Report cards to review 2". Only above zero: an empty queue is
+   * not a problem.
+   */
+  countTone?: "error";
 }
 
 interface SavedViewsProps {
@@ -108,12 +121,18 @@ export function SavedViews({
                   : "text-ink-secondary hover:text-primary text-[15px] font-semibold",
               )}
             >
+              {view.icon ? (
+                <view.icon className="size-4 shrink-0" aria-hidden />
+              ) : null}
               {view.label}
               {view.count !== undefined && (
                 <span
                   className={cn(
                     "text-ink-tertiary text-[13.5px] tabular-nums",
                     isActive && "font-semibold",
+                    view.countTone === "error" &&
+                      view.count > 0 &&
+                      "text-destructive font-semibold",
                   )}
                 >
                   {view.count.toLocaleString()}

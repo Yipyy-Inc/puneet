@@ -9,6 +9,7 @@ import { invoices } from "@/data/payments";
 import { facilityConfig } from "@/data/facility-config";
 import type { Pet } from "@/types/pet";
 import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { useSettings } from "@/hooks/use-settings";
 
 interface PetComplianceChecklistProps {
   pet: Pet;
@@ -24,6 +25,7 @@ export function PetComplianceChecklist({
   compact = false,
 }: PetComplianceChecklistProps) {
   const { t, fill } = useCustomerText("pets");
+  const { bookingFlow } = useSettings();
   // Check vaccination compliance
   const vaccinationStatus = useMemo(() => {
     const petVaccinations = vaccinationRecords.filter(
@@ -108,16 +110,19 @@ export function PetComplianceChecklist({
       (e) => e.status === "passed" && e.isExpired !== true,
     );
 
-    // For now, we'll assume evaluation is required for daycare/boarding
-    // In a real app, this would come from facility config
-    const evaluationRequired = true; // TODO: Get from facility config
+    // The facility's own rule (Settings › Services › Evaluations, 2026-10-02):
+    // some service needs an evaluation first. The pet's result is the one a
+    // sent report card recorded on it.
+    const evaluationRequired =
+      bookingFlow.evaluationRequired ||
+      bookingFlow.servicesRequiringEvaluation.length > 0;
 
     return {
       valid: !evaluationRequired || hasValidEvaluation,
       required: evaluationRequired,
       hasEvaluation: !!hasValidEvaluation,
     };
-  }, [pet.evaluations]);
+  }, [pet.evaluations, bookingFlow]);
 
   // Check overdue invoices
   const invoicesStatus = useMemo(() => {

@@ -14,6 +14,7 @@ import { requireForms } from "@/lib/forms/require-forms";
 import { assignKennelsOnConfirm } from "@/lib/boarding/assign-kennel-on-confirm";
 import { applyBookingServiceCharges } from "@/lib/payments/booking-service-charges";
 import { applyBookingCareCharges } from "@/lib/payments/booking-care-charges";
+import { applyEvaluatorPreference } from "@/lib/evaluations/booking-server";
 import {
   OPEN_REQUEST_STATUSES,
   approvalRefusal,
@@ -251,6 +252,12 @@ export async function POST(
     await applyBookingCareCharges(
       days.map((day) => day.row.id),
       "initial",
+    );
+    // An evaluation takes the evaluator its customer chose, now that it is
+    // confirmed (the database cleared it on the customer's insert).
+    await applyEvaluatorPreference(
+      supabase as unknown as SupabaseClient,
+      days.map((day) => day.row.id),
     );
   }
 

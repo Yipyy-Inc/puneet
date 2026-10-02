@@ -80,6 +80,14 @@ function keysFor(n: StaffNotification): { title: string; detail?: string } {
     case "estimate_accepted":
     case "estimate_declined":
       return { title: `kind_${n.kind}` };
+    case "evaluation_card_ready":
+    case "evaluation_card_reminder":
+      return { title: `kind_${n.kind}`, detail: "kind_evaluation_detail" };
+    case "evaluation_card_returned":
+      return {
+        title: "kind_evaluation_card_returned",
+        detail: "kind_evaluation_returned_detail",
+      };
   }
 }
 

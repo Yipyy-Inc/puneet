@@ -49,9 +49,14 @@ describe("each service's sub-steps", () => {
     expect(
       ids(detailSubSteps("boarding", { customer: true, care: ON })),
     ).toEqual([0, 1, 2, 3, 4]);
+    // The evaluation mock (2026-10-02): Date & time; a customer is asked
+    // about their pet too (id 2). No add-ons, no care steps.
     expect(
       ids(detailSubSteps("evaluation", { customer: false, care: ON })),
-    ).toEqual([0, 1]);
+    ).toEqual([0]);
+    expect(
+      ids(detailSubSteps("evaluation", { customer: true, care: ON })),
+    ).toEqual([0, 2]);
     expect(ids(detailSubSteps("", { customer: false, care: ON }))).toEqual([]);
   });
 });

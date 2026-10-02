@@ -241,11 +241,51 @@ export const evaluationConfigSchema = z.object({
     ),
     slotMode: z.enum(["fixed", "window"]),
     fixedStartTimes: z.array(z.string()),
+    /**
+     * How evaluations are offered — the setup page's STEP 1 (the client's
+     * mock, 2026-10-02). Absent on a config saved before it: `slotMode` says
+     * (fixed → "slots", window → "window"). `lib/evaluations/schedule.ts`.
+     */
+    offerMode: z.enum(["any", "window", "days", "slots"]).optional(),
+    /**
+     * "Any day, any time": when an evaluation may start. "Certain days only":
+     * the drop-off window. "HH:MM"; absent means 08:00–18:00.
+     */
+    openRange: z.object({ start: z.string(), end: z.string() }).optional(),
   }),
   taxSettings: z.object({
     taxable: z.boolean(),
     taxRate: z.number().optional(),
   }),
+  // ── The setup page's STEP 3 (2026-10-02) ────────────────────────────────
+  // Every key defaults, so a config saved before them still parses — a
+  // stored row that fails its schema is silently replaced by the fallback.
+  /** Clients pick their evaluator; off, the booking is "First available". */
+  customerPicksEvaluator: z.boolean().default(true),
+  /** Several pets in one evaluation, the second and later at half price. */
+  multiPet: z.boolean().default(true),
+  /**
+   * The vaccines the services it unlocks require, on file before booking.
+   * Off unless the facility turns it on: a facility that configured nothing
+   * requires nothing (tests/unit/facility-starts-empty.test.ts).
+   */
+  vaccinesRequired: z.boolean().default(false),
+  /** The questions a client answers when booking online ("About your pet"). */
+  intakeQuestions: z
+    .object({
+      energy: z.boolean().default(true),
+      others: z.boolean().default(true),
+      history: z.boolean().default(true),
+      triggers: z.boolean().default(true),
+      vet: z.boolean().default(false),
+    })
+    .default({
+      energy: true,
+      others: true,
+      history: true,
+      triggers: true,
+      vet: false,
+    }),
 });
 export type EvaluationConfig = z.infer<typeof evaluationConfigSchema>;
 
@@ -453,55 +493,30 @@ export type NetworkPolicy = z.infer<typeof networkPolicySchema>;
 // Evaluation Form Template (configurable by facility)
 // ============================================================================
 
-export const evalFieldTypeEnum = z.enum([
-  "yes_no",
-  "scale",
-  "single_select",
-  "multi_select",
-  "text",
-  "number",
-]);
-export type EvalFieldType = z.infer<typeof evalFieldTypeEnum>;
-
-export const evalQuestionSchema = z.object({
-  id: z.string(),
-  label: z.string(),
-  type: evalFieldTypeEnum,
-  required: z.boolean(),
-  options: z.array(z.string()).optional(),
-  scaleLabels: z
-    .object({
-      low: z.string().optional(),
-      mid: z.string().optional(),
-      high: z.string().optional(),
-    })
-    .optional(),
-  placeholder: z.string().optional(),
-  helpText: z.string().optional(),
-  allowNotes: z.boolean().optional(),
+/**
+ * One of the facility's own evaluation questions ("Evaluation questions",
+ * Operations › Evaluations › Setup — the client's mock, 2026-10-02). Yipyy's
+ * core questions are code (src/lib/evaluations/questions.ts); these are added
+ * to any of the four steps.
+ */
+export const evaluationCustomQuestionSchema = z.object({
+  id: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+  section: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]),
+  label: z.string().trim().min(1).max(200),
+  type: z.enum(["yn", "lmh", "choice", "text"]),
+  /** A single choice's options, in the facility's words. */
+  options: z.array(z.string().trim().min(1).max(80)).max(12).default([]),
+  /** "Show on report card" — under "More about them". */
+  onCard: z.boolean().default(true),
+  required: z.boolean().default(false),
 });
-export type EvalQuestion = z.infer<typeof evalQuestionSchema>;
-
-export const evalSectionSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  description: z.string().optional(),
-  questions: z.array(evalQuestionSchema),
-  /** Core sections ship with the template and can be edited but not deleted. */
-  core: z.boolean().optional(),
-});
-export type EvalSection = z.infer<typeof evalSectionSchema>;
+export type EvaluationCustomQuestion = z.infer<
+  typeof evaluationCustomQuestionSchema
+>;
 
 export const evaluationFormTemplateSchema = z.object({
-  sections: z.array(evalSectionSchema),
-  behaviorCodes: z.array(
-    z.object({
-      id: z.string(),
-      label: z.string(),
-      color: z.string(),
-    }),
-  ),
-  internalNotesEnabled: z.boolean(),
+  /** The facility's own questions, in the order they were added. */
+  customQuestions: z.array(evaluationCustomQuestionSchema).max(40).default([]),
 });
 export type EvaluationFormTemplate = z.infer<
   typeof evaluationFormTemplateSchema
@@ -526,21 +541,22 @@ export type FacilityBookingFlowConfig = z.infer<
 >;
 
 export const evaluationReportCardConfigSchema = z.object({
-  enabled: z.boolean(),
-  headerMessage: z.string(),
-  passMessage: z.string(),
-  failMessage: z.string(),
-  footerNote: z.string(),
-  showEvaluatorName: z.boolean(),
-  showEvaluationDate: z.boolean(),
-  showTemperament: z.boolean(),
-  showPlayStyle: z.boolean(),
-  showPlayGroup: z.boolean(),
-  showBehaviorTags: z.boolean(),
-  showStaffNotes: z.boolean(),
-  showApprovedServices: z.boolean(),
-  notifyViaEmail: z.boolean(),
-  notifyViaSMS: z.boolean(),
+  // ── Setup › Report card delivery (the client's mock, 2026-10-02) ──────
+  // The database reads the same keys with the same defaults
+  // (private.evaluation_card_settings, 20261002195001) to decide who may
+  // send a card and whether finishing sends it.
+  deliveryMode: z.enum(["review", "auto", "autoPass"]).default("review"),
+  reviewerRoles: z
+    .array(z.enum(["reception", "supervisor", "manager"]))
+    .default(["reception", "supervisor"]),
+  evaluatorSelfSend: z.boolean().default(false),
+  includePhoto: z.boolean().default(true),
+  bookFirstVisitButton: z.boolean().default(true),
+  hideInternal: z.boolean().default(true),
+  theme: z.enum(["green", "blue", "plum", "fall", "ink"]).default("green"),
+  /** The channels a sent card is told on, besides the customer portal. */
+  notifyViaEmail: z.boolean().default(true),
+  notifyViaSMS: z.boolean().default(false),
 });
 export type EvaluationReportCardConfig = z.infer<
   typeof evaluationReportCardConfigSchema

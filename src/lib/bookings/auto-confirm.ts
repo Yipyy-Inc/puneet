@@ -13,6 +13,11 @@ import {
 } from "@/lib/settings/deposits";
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { assignKennelsOnConfirm } from "@/lib/boarding/assign-kennel-on-confirm";
+import {
+  applyEvaluatorPreference,
+  evaluationVaccinesOnFile,
+} from "@/lib/evaluations/booking-server";
+import { evaluationConfigSchema } from "@/types/facility";
 
 // ============================================================================
 // A customer's booking confirmed on the spot, when the facility says so.
@@ -209,12 +214,19 @@ export async function autoConfirmCustomerBookings(
       string,
       ReturnType<typeof depositConfigSchema.parse>["rules"]
     >();
+    // An evaluation confirms instantly only "if the slot is free and
+    // vaccines are on file" (Settings › Evaluations, 2026-10-02).
+    const vaccinesFirst = new Map<string, boolean>();
     for (const facilityId of new Set(candidates.map((c) => c.facility_id))) {
       const { data: rows } = await admin
         .from("facility_settings")
         .select("domain, value")
         .eq("facility_id", facilityId)
-        .in("domain", ["booking_approval", "deposit_rules"]);
+        .in("domain", [
+          "booking_approval",
+          "deposit_rules",
+          "evaluation_config",
+        ]);
 
       const byDomain = new Map(
         ((rows ?? []) as Array<{ domain: string; value: unknown }>).map((r) => [
@@ -231,6 +243,13 @@ export async function autoConfirmCustomerBookings(
         byDomain.get("deposit_rules"),
       );
       deposits.set(facilityId, parsed.success ? parsed.data.rules : []);
+      const evaluation = evaluationConfigSchema.safeParse(
+        byDomain.get("evaluation_config"),
+      );
+      vaccinesFirst.set(
+        facilityId,
+        evaluation.success && evaluation.data.vaccinesRequired,
+      );
     }
 
     let confirmed = 0;
@@ -307,6 +326,22 @@ export async function autoConfirmCustomerBookings(
       });
       if (!priced.ok) continue;
 
+      // An evaluation waits for staff when a pet is short of the vaccines
+      // the services it unlocks ask for; the slot was re-checked when the
+      // request was made (POST /api/bookings).
+      if (row.service === "evaluation" && vaccinesFirst.get(row.facility_id)) {
+        const unlocks = row.details?.["evaluationFor"];
+        const onFile = await evaluationVaccinesOnFile(admin, {
+          facilityId: row.facility_id,
+          bookingId: row.id,
+          day: isoDay(row.start_at) ?? "",
+          unlocks: Array.isArray(unlocks)
+            ? unlocks.filter((s): s is string => typeof s === "string")
+            : [],
+        });
+        if (!onFile) continue;
+      }
+
       // The deposit is of the service AND its own add-ons, as when both were
       // one figure: the add-ons are bill lines now (2026-09-30), already on
       // this booking, and `priced.total` is the service alone.
@@ -350,6 +385,10 @@ export async function autoConfirmCustomerBookings(
         // free leaves it where confirmed requests always stood: on the
         // kennel board, to be placed by hand. See assign-kennel-on-confirm.ts.
         await assignKennelsOnConfirm(admin, [row.id], { serviceRole: true });
+        // A confirmed evaluation takes the evaluator its customer chose.
+        if (row.service === "evaluation") {
+          await applyEvaluatorPreference(admin, [row.id]);
+        }
       }
     }
     return confirmed;

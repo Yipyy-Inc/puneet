@@ -32,13 +32,17 @@ export function vaccinationLines(input: {
   pets: readonly Pet[];
   records: readonly VaccinationRecord[];
   rules: readonly VaccinationRule[];
-  service: string;
+  /** The service booked — or, for an evaluation, the services it unlocks:
+   *  a rule for any of them applies (2026-10-02). */
+  service: string | readonly string[];
   /** The booking's first day, YYYY-MM-DD. */
   firstDay: string;
   /** Its last day, YYYY-MM-DD; the same as the first for a single day. */
   lastDay: string;
 }): PetVaccinationLine[] {
-  const service = input.service.toLowerCase();
+  const services = (
+    typeof input.service === "string" ? [input.service] : input.service
+  ).map((service) => service.toLowerCase());
   const lines: PetVaccinationLine[] = [];
   for (const pet of input.pets) {
     const rules = input.rules.filter(
@@ -46,7 +50,9 @@ export function vaccinationLines(input: {
         rule.required &&
         rule.species.toLowerCase() === (pet.type ?? "").toLowerCase() &&
         (rule.applicableServices.length === 0 ||
-          rule.applicableServices.some((s) => s.toLowerCase() === service)),
+          rule.applicableServices.some((s) =>
+            services.includes(s.toLowerCase()),
+          )),
     );
     if (rules.length === 0) continue;
     const own = input.records.filter((record) => record.petId === pet.id);

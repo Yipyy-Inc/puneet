@@ -93,6 +93,7 @@ export type PermissionKey =
   | "view_occupancy_calendar"
   | "view_estimates"
   | "view_evaluations"
+  | "perform_evaluations"
   | "create_bookings"
   | "edit_bookings"
   | "cancel_bookings"
@@ -622,6 +623,11 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
       { key: "view_occupancy_calendar", label: "View occupancy calendar" },
       { key: "view_estimates", label: "View estimates" },
       { key: "view_evaluations", label: "View evaluations" },
+      {
+        key: "perform_evaluations",
+        label: "Run evaluations",
+        hint: "Start and finish an evaluation; offered as an evaluator",
+      },
       { key: "create_bookings", label: "Create bookings" },
       { key: "edit_bookings", label: "Edit bookings" },
       { key: "cancel_bookings", label: "Cancel bookings" },
@@ -1022,6 +1028,7 @@ export const ROLE_PRESETS: Record<
         "view_occupancy_calendar",
         "view_estimates",
         "view_evaluations",
+        "perform_evaluations",
         "create_bookings",
         "edit_bookings",
         "cancel_bookings",
@@ -1181,6 +1188,7 @@ export const ROLE_PRESETS: Record<
         "view_occupancy_calendar",
         "view_estimates",
         "view_evaluations",
+        "perform_evaluations",
         "view_petcams",
         "view_grooming_queue",
         "grooming_view_all_calendars",
@@ -1437,6 +1445,10 @@ export const ROLE_PRESETS: Record<
         "view_pet_records",
         "add_pet_notes",
         "view_bookings",
+        // The people who meet a new dog in the yard run its evaluation
+        // (the client's mocks, 2026-10-02): the page, and the form.
+        "view_evaluations",
+        "perform_evaluations",
         // Nav defaults (4.3): Daily Care, Occupancy, Clients, Inbox for daycare.
         "boarding_daily_care_log",
         "view_occupancy_calendar",
@@ -1478,6 +1490,9 @@ export const ROLE_PRESETS: Record<
         "add_pet_notes",
         "view_pet_medical",
         "view_bookings",
+        // Evaluations, as boarding's attendants run them too (2026-10-02).
+        "view_evaluations",
+        "perform_evaluations",
         // Nav defaults (4.3): occupancy board + client list + inbox for care.
         "view_occupancy_calendar",
         "view_client_list",

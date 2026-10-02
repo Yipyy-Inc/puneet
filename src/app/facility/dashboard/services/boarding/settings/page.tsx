@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -35,6 +36,7 @@ import type {
   ModuleConfig,
 } from "@/types/facility";
 import { useSettingsHref } from "@/lib/settings/use-settings-href";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 const DEFAULT_EARLY_CHECKOUT: EarlyCheckoutPolicyConfig = {
   enabled: false,
@@ -51,11 +53,11 @@ const POLICY_LABEL: Record<EarlyCheckoutPolicy, string> = {
 
 export default function BoardingSettingsPage() {
   const settingsPath = useSettingsHref();
+  const et = useSettingsText().section("evaluations");
   const { boarding, updateBoarding } = useSettings();
   const [formData, setFormData] = useState<ModuleConfig>(boarding);
   const [isEditingBasic, setIsEditingBasic] = useState(false);
   const [isEditingMedia, setIsEditingMedia] = useState(false);
-  const [isEditingEvaluation, setIsEditingEvaluation] = useState(false);
   const [isEditingEarlyCheckout, setIsEditingEarlyCheckout] = useState(false);
 
   const earlyCheckout: EarlyCheckoutPolicyConfig =
@@ -92,7 +94,6 @@ export default function BoardingSettingsPage() {
     updateBoarding(boarding);
     if (section === "basic") setIsEditingBasic(false);
     if (section === "media") setIsEditingMedia(false);
-    if (section === "evaluation") setIsEditingEvaluation(false);
     if (section === "earlyCheckout") setIsEditingEarlyCheckout(false);
   };
 
@@ -100,7 +101,6 @@ export default function BoardingSettingsPage() {
     toast.success("Settings saved successfully");
     if (section === "basic") setIsEditingBasic(false);
     if (section === "media") setIsEditingMedia(false);
-    if (section === "evaluation") setIsEditingEvaluation(false);
     if (section === "earlyCheckout") setIsEditingEarlyCheckout(false);
   };
 
@@ -272,100 +272,23 @@ export default function BoardingSettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Evaluation Settings */}
+        {/* Whether boarding needs an evaluation first lives on the evaluation
+            setup page since 2026-10-02 — one rule (lib/evaluations/
+            requirement.ts). This card was a second editor of it. The id stays:
+            links still land on it. */}
         <Card id="evaluation">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Evaluation Settings</CardTitle>
-                <CardDescription>
-                  Configure evaluation requirements for boarding
-                </CardDescription>
-              </div>
-              {isEditingEvaluation ? (
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleCancel("evaluation")}
-                  >
-                    <X className="mr-2 size-4" />
-                    Cancel
-                  </Button>
-                  <Button size="sm" onClick={() => handleSave("evaluation")}>
-                    <Save className="mr-2 size-4" />
-                    Save
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditingEvaluation(true)}
-                >
-                  <Edit className="mr-2 size-4" />
-                  Edit
-                </Button>
-              )}
-            </div>
+            <CardTitle>{et("moduleCardTitle")}</CardTitle>
+            <CardDescription>
+              {et("moduleCardText")}{" "}
+              <Link
+                href={settingsPath("evaluations")}
+                className="text-primary font-semibold"
+              >
+                {et("moduleCardLink")}
+              </Link>
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Enable Evaluation</Label>
-                <p className="text-muted-foreground text-sm">
-                  Require evaluation for boarding bookings
-                </p>
-              </div>
-              <Switch
-                checked={formData.settings.evaluation.enabled}
-                onCheckedChange={(checked) =>
-                  updateNested("settings", "evaluation", {
-                    ...formData.settings.evaluation,
-                    enabled: checked,
-                  })
-                }
-                disabled={!isEditingEvaluation}
-              />
-            </div>
-            {formData.settings.evaluation.enabled && (
-              <>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Optional Evaluation</Label>
-                    <p className="text-muted-foreground text-sm">
-                      Make evaluation optional for clients
-                    </p>
-                  </div>
-                  <Switch
-                    checked={formData.settings.evaluation.optional || false}
-                    onCheckedChange={(checked) =>
-                      updateNested("settings", "evaluation", {
-                        ...formData.settings.evaluation,
-                        optional: checked,
-                      })
-                    }
-                    disabled={!isEditingEvaluation}
-                  />
-                </div>
-                <div className="bg-muted mt-4 rounded-lg p-3">
-                  <p className="text-muted-foreground text-sm">
-                    Evaluation details (name, price, duration, etc.) are
-                    configured globally in{" "}
-                    <a
-                      href={settingsPath("evaluations")}
-                      className="text-primary hover:underline"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Settings → Evaluations
-                    </a>
-                  </p>
-                </div>
-              </>
-            )}
-          </CardContent>
         </Card>
 
         {/* Daily Care Schedule */}

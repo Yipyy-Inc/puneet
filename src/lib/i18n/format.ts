@@ -379,6 +379,29 @@ export function formatTime(
 }
 
 /**
+ * `formatTime` on a FACILITY's clock rather than the viewer's — for an
+ * appointment read by staff who may not be in the building's zone. An
+ * evaluation at 9:00 in Montreal reads 9:00 AM in Tunis too, which is the
+ * time the dog arrives (the evaluations module, 2026-10-02). The zone is part
+ * of the cache key, as in `formatDateTimeInZone`.
+ */
+export function formatTimeInZone(
+  value: Date | string | number,
+  locale: AppLocale,
+  timeZone: string,
+): string {
+  const d = asDate(value);
+  if (unformattable(d)) return NO_DATE;
+  const out = dateFmt(locale, `timeIn:${timeZone}`, {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone,
+  }).format(d);
+  if (locale === "fr") return out;
+  return out.replace(/\ba\.m\./i, "AM").replace(/\bp\.m\./i, "PM");
+}
+
+/**
  * `9:00 AM` · `09 h 00` — from an "HH:MM" FIELD, with no date around it.
  *
  * Opening hours, a feeding time, a dose time and an arrival window are all

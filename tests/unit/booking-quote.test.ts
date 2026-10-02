@@ -258,6 +258,30 @@ describe("evaluation, custom services, passes and estimates", () => {
     expect(quote.basePrice).toBe(25);
   });
 
+  test("an evaluation is per pet, the second at half (2026-10-02)", () => {
+    const pets = [
+      { ...input({}).selectedPets[0]!, id: 1, name: "Moka" },
+      { ...input({}).selectedPets[0]!, id: 2, name: "Pixel" },
+    ];
+    const shared = assembleQuote(
+      input({
+        selectedService: "evaluation",
+        selectedPets: pets,
+        evaluation: { price: 45, internalName: null },
+      }),
+    );
+    expect(shared.basePrice).toBe(67.5);
+    expect(shared.lines.map((line) => line.amount)).toEqual([45, 22.5]);
+    const separate = assembleQuote(
+      input({
+        selectedService: "evaluation",
+        selectedPets: pets,
+        evaluation: { price: 45, internalName: null, multiPet: false },
+      }),
+    );
+    expect(separate.basePrice).toBe(90);
+  });
+
   test("an evaluation on the first day adds its fee per pet not yet evaluated", () => {
     const quote = assembleQuote(
       input({

@@ -22410,3 +22410,67 @@ the user, but focus and `scrollIntoView` scroll it. The whole form rose out of v
   frame hides overflow has the same flaw. A search on 2026-10-02 found only file and colour inputs
   opened from buttons (not focused by a click), but nothing stops the next one — position the
   label (`relative`), or use `ChoicePill`.
+
+## 2026-10-02 — Evaluations are the client's two mocks: booking, setup, the evaluator and the report card
+
+The client sent two more mocks (`docs/Yipyy_Evaluation_Booking.html`, `docs/Yipyy%2BEvaluations.html`,
+kept as the reference, untracked): booking an evaluation in the wizard (both portals), its settings
+page, and Operations › Evaluations — Today, the review queue, every evaluation, Setup, the
+evaluator's four-step form beside a live report card, and the reviewer. Layout is the mocks'; the
+look is the design system's. What a reader needs before touching it:
+
+- **One rule for "services that need an evaluation first".** Five places could each demand one
+  (`booking_flow.servicesRequiringEvaluation`, `booking_flow.evaluationRequired`, each module's
+  "Enable Evaluation"…). Settings › Services › Evaluations starts its chips from what is enforced
+  now (`lib/evaluations/requirement.ts`) and saving makes the others agree; `create_booking` refuses
+  a CUSTOMER a listed service without a passing, current evaluation approving it (hint
+  `evaluation_required`, `private.pet_passed_evaluation_for`). Staff are not refused.
+- **When an evaluation can start** is one pure rule (`lib/evaluations/availability.ts`) for the
+  wizard, the settings preview, the customer route and `POST /api/bookings`, which re-checks the
+  start against everything booked now (409 `evaluation_slot_taken`).
+- **An evaluation is a row** (`public.evaluations`, 20261002195001), written only through definer
+  functions: start, save (autosaved), finish, send, send back, discard. Staff with "View
+  evaluations" or "Run evaluations" (`perform_evaluations`, new) read it; a customer never does —
+  they read a SENT card through `evaluation_card_for_owner()`, which leaves out the internal note,
+  resource guarding and the facility's staff-only questions. `tests/e2e/evaluation-card-exposure`
+  (gate) and `supabase/tests/evaluations.sql` hold that line.
+- **Sending is what unlocks** (the user's decision): the result is written to
+  `pets.details.evaluations` (the record the wizard's lock and the gate read), through a narrow
+  exemption in `enforce_pet_integrity` (`yipyy.evaluation_result`), and a FULL-PRICE deposit's
+  share for each approved pet becomes store credit, reason `evaluation`, once per evaluation.
+- **Delivery and reviewers** are Setup's (`evaluation_report_card`): review first (default),
+  send automatically, or auto-send clean passes. Owners and admins always review; reception and
+  supervisor by default; the evaluator where self-send is on. The database applies the same rule
+  (`private.may_send_evaluation`). Reviewers get a notice when a card is ready and, once, after two
+  hours unreviewed (the messaging tick).
+- **The owner is told by email and text** where Setup has them on and the client has the address,
+  with a link to `/customer/evaluations/[id]`; the card is also on their report cards.
+- **The AI note** (`/api/ai/evaluation-summary`, Haiku 4.5) is staff-only and fed facts built from
+  ids (`lib/evaluations/ai-note.ts`) — guarding and the internal note are not in them. Without a
+  key, or on any failure, a plain note from the same facts comes back flagged `fallback`.
+- **Migrations** (local first, applied to production with the push): an evaluator is a permission;
+  a service needs its evaluation for a customer; an evaluation is a row (bucket
+  `evaluation-photos`, the store-credit reason, `purge_e2e_evaluations()` for the suite).
+- **Deleted**: the browser-only evaluator form, its send dialog and result card, the form and
+  report-card builders, the old evaluation settings, the wizard's EvaluationDetails, and three
+  never-imported components. `evaluations/templates` redirects to `?tab=setup`.
+- **`src/types/database.ts` was SPLICED**, not regenerated: the evaluation table and functions
+  were copied in from `supabase gen types --local`. The generator's output has drifted from the
+  committed file in unrelated ways (`NonNullable<Json>`, tables the file never had), so a full
+  regeneration ripples across the codebase and is its own task.
+
+**Still open.**
+
+- Two customers can take the last place at the same moment: the start is re-checked on write, but
+  nothing in the database locks it.
+- An evaluator's own weekly hours: `staff_availability` where it exists, else the facility's
+  hours; there is no evaluator-only schedule.
+- Validity (expiry after inactivity) is stored and inert; a pass never expires by itself.
+- The mock's "After training" and "New client · from estimate" chips: no booking records either.
+- Credit is given when the card is SENT, from what has been paid by then: a deposit paid after
+  the card went out is not credited, and a refund after the credit is not netted.
+- A result recorded on a pet before evaluations were rows shows on the pet's profile only, not in
+  All evaluations.
+- Discard (evaluator dialog footer, §5j confirmation) throws away only an evaluation still being
+  answered. A wrong pet caught after Finish has to be sent back first, then discarded.
+- The report card's date is shown on the reader's clock; the module's times are the facility's.

@@ -1,131 +1,142 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
 import { recordAiUsage } from "@/lib/ai-usage-recorder";
-import { getCurrentUser } from "@/lib/supabase/server";
 import { getFacilityContext } from "@/lib/api/facility-context";
+import {
+  cleanNote,
+  fallbackNote,
+  noteFacts,
+  noteSystemPrompt,
+  type NoteInput,
+} from "@/lib/evaluations/ai-note";
+import { evaluationDetail } from "@/lib/evaluations/detail-server";
+import { NOTE_TONES, RESULTS } from "@/lib/evaluations/questions";
+import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
+
+// ============================================================================
+// POST /api/ai/evaluation-summary — "Write with AI" on the evaluator's note to
+// the owner (the client's evaluation mock, 2026-10-02): the answers so far,
+// the strengths, what the team will help with and a few words from the
+// evaluator, turned into two to four kind sentences in the owner's language.
+//
+// This route SPENDS MONEY, so it is staff only: the caller must be able to
+// read the evaluation (RLS) and either run evaluations or review its card.
+// The answers come from the dialog — they may not be saved yet — but the
+// pet, the owner and their language come from the evaluation's own rows.
+//
+// No key, or a failed call: a plain note from the same facts, flagged
+// `fallback` so the dialog can say it was not written by AI.
+// ============================================================================
 
 const MODEL = "claude-haiku-4-5-20251001";
 
-interface EvaluationInput {
-  petName: string;
-  petBreed: string;
-  petAge?: string;
-  facilityName: string;
-  evaluatorName: string;
-  evaluationDate: string;
-  result: "pass" | "fail";
-  resultType?: string;
-  resultLabel?: string;
-  denialReason?: string;
-  denialNotes?: string;
-  temperament: {
-    dogFriendly: boolean;
-    humanFriendly: boolean;
-    energy: "low" | "medium" | "high";
-    anxiety: "low" | "medium" | "high";
-    reactivity: "low" | "medium" | "high";
-  };
-  playStyle?: string;
-  playGroup?: string;
-  behaviorTags: string[];
-  staffNotes: string;
-  evaluatorNotes?: string;
-  approvedServices: string[];
-  answers: Record<string, unknown>;
-}
-
-const FALLBACK_SUMMARY =
-  "Unable to generate summary at this time. Please try again or write the summary manually.";
+const bodySchema = z.object({
+  evaluationId: z.string().uuid(),
+  tone: z.enum(NOTE_TONES),
+  points: z.string().max(500).default(""),
+  answers: z.record(z.string().max(64), z.string().max(500)).default({}),
+  strengths: z.array(z.string().max(60)).max(20).default([]),
+  watchFor: z.array(z.string().max(60)).max(20).default([]),
+  result: z.enum(RESULTS).nullable().default(null),
+});
 
 export async function POST(req: NextRequest) {
-  // This route SPENDS MONEY — it calls Anthropic on every request. It had no
-  // auth check, and nothing gated it upstream: proxy.ts establishes the Clerk
-  // context but authorises nothing, and the portal gates live in layouts,
-  // which an /api/* request never renders.
   const user = await getCurrentUser().catch(() => null);
   if (!user) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
-
-  const input: EvaluationInput = await req.json();
-
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey || apiKey === "your-api-key-here") {
-    return NextResponse.json({ summary: FALLBACK_SUMMARY });
+  const parsed = bodySchema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "That note could not be written." },
+      { status: 422 },
+    );
   }
 
+  const supabase = await createServerClient();
+  const detail = await evaluationDetail(supabase, parsed.data.evaluationId);
+  if (!detail) {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
+  if (!detail.viewer.mayRun && !detail.viewer.mayReview) {
+    return NextResponse.json(
+      { error: "Writing report cards is not part of your role here." },
+      { status: 403 },
+    );
+  }
+  const { data: language } = await supabase
+    .from("clients")
+    .select("preferred_language")
+    .eq("id", detail.client.id)
+    .maybeSingle();
+
+  const input: NoteInput = {
+    locale: (
+      language as { preferred_language: string | null } | null
+    )?.preferred_language?.startsWith("fr")
+      ? "fr"
+      : "en",
+    petName: detail.pet.name,
+    petSex: detail.pet.sex,
+    breed: detail.pet.breed,
+    ownerName: detail.client.name,
+    result: parsed.data.result,
+    answers: parsed.data.answers,
+    strengths: parsed.data.strengths,
+    watchFor: parsed.data.watchFor,
+    points: parsed.data.points,
+    tone: parsed.data.tone,
+  };
+  const fallback = () =>
+    NextResponse.json({ note: fallbackNote(input), fallback: true });
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey || apiKey === "your-api-key-here") return fallback();
+
   const client = new Anthropic({ apiKey });
-
-  const prompt = `You are a professional pet care facility staff writer. Based on the following evaluation data for a pet, write a warm, professional summary that will be sent to the pet's owner (the "pet parent").
-
-**Pet Details:**
-- Name: ${input.petName}
-- Breed: ${input.petBreed}
-${input.petAge ? `- Age: ${input.petAge}` : ""}
-
-**Evaluation Result:** ${input.resultLabel || (input.result === "pass" ? "PASSED" : "DID NOT PASS")}
-**Evaluated by:** ${input.evaluatorName} at ${input.facilityName}
-**Date:** ${input.evaluationDate}
-
-**Temperament Observations:**
-- Dog-friendly: ${input.temperament.dogFriendly ? "Yes" : "No"}
-- Human-friendly: ${input.temperament.humanFriendly ? "Yes" : "No"}
-- Energy level: ${input.temperament.energy}
-- Anxiety level: ${input.temperament.anxiety}
-- Reactivity: ${input.temperament.reactivity}
-
-**Play Style:** ${input.playStyle || "Not assessed"}
-**Recommended Play Group:** ${input.playGroup || "Not assigned"}
-**Behavior Tags:** ${input.behaviorTags.join(", ") || "None"}
-**Staff Notes:** ${input.staffNotes || "No notes"}
-**Denial/Re-evaluation Reason:** ${input.denialReason || "None"}
-**Denial/Re-evaluation Notes:** ${input.denialNotes || "None"}
-**Internal Evaluator Notes:** ${input.evaluatorNotes || "None"}
-**Services Approved For:** ${input.approvedServices.join(", ") || "None"}
-
-**Additional Answers:** ${JSON.stringify(input.answers)}
-
-Write the summary in these sections:
-1. **Opening** (1-2 sentences): A warm greeting addressing the pet by name. Set a positive, professional tone.
-2. **Temperament Summary** (2-3 sentences): Describe the pet's personality based on the temperament data. Use friendly language — translate "dog-friendly: true, energy: high" into something like "Buddy showed wonderful social skills with other dogs and brought high energy to every interaction."
-3. **Play & Social Profile** (1-2 sentences): Describe their play style and which group they'd fit best with.
-4. **Key Observations** (2-3 sentences): Expand on the staff notes, denial/re-evaluation reason, and behavior tags into natural prose. Highlight positive traits where appropriate. If the pet didn't pass or needs re-evaluation, frame concerns diplomatically and constructively.
-5. **Next Steps** (1-2 sentences): What the owner can expect next. If passed, mention the services unlocked. If approved with restrictions, clearly mention that staff will follow the noted restrictions. If not passed or re-evaluation is needed, suggest what might help (more socialization, training, health follow-up, or another evaluation).
-
-Keep the total under 200 words. Be warm, professional, and reassuring. Avoid clinical language. Write as if you're a caring staff member who genuinely enjoyed meeting the pet. Do NOT use emojis. Do NOT use markdown formatting — output plain text with section labels on their own lines.`;
-
   try {
     const message = await client.messages.create({
       model: MODEL,
-      max_tokens: 500,
-      messages: [{ role: "user", content: prompt }],
+      // Two to four sentences: room to finish one, never a page.
+      max_tokens: 400,
+      system: noteSystemPrompt(input),
+      messages: [
+        {
+          role: "user",
+          content: `Facts from the evaluation:\n${noteFacts(input)
+            .map((fact) => `- ${fact}`)
+            .join("\n")}`,
+        },
+      ],
     });
 
-    const text =
-      message.content[0].type === "text" ? message.content[0].text : "";
-
-    const usage = message.usage;
     recordAiUsage({
-      // From the SESSION, not the body. No caller ever sent the old optional
-      // `facilityId`, so every generation was filed against facility 0 /
-      // "Platform" — and a caller could have filed spend against any tenant.
+      // From the SESSION, not the body: spend is filed against the facility
+      // the caller is working in, never one a request names.
       facilityId: (await getFacilityContext())?.legacyRef ?? undefined,
       type: "evaluation_summary",
       model: MODEL,
-      inputTokens: usage?.input_tokens ?? 0,
-      outputTokens: usage?.output_tokens ?? 0,
+      inputTokens: message.usage?.input_tokens ?? 0,
+      outputTokens: message.usage?.output_tokens ?? 0,
     });
 
-    return NextResponse.json({
-      summary: text,
-      usage: {
-        inputTokens: usage?.input_tokens ?? 0,
-        outputTokens: usage?.output_tokens ?? 0,
-      },
-    });
+    if (message.stop_reason === "refusal") return fallback();
+    const text = message.content
+      .flatMap((block) => (block.type === "text" ? [block.text] : []))
+      .join(" ");
+    const note = cleanNote(text);
+    if (!note) return fallback();
+    return NextResponse.json({ note, fallback: false });
   } catch (error) {
-    console.error("AI summary error:", error);
-    return NextResponse.json({ summary: FALLBACK_SUMMARY });
+    if (error instanceof Anthropic.RateLimitError) {
+      console.warn("[ai] evaluation note: rate limited");
+    } else if (error instanceof Anthropic.APIError) {
+      console.error(`[ai] evaluation note: API error ${error.status}`);
+    } else {
+      console.error("[ai] evaluation note:", error);
+    }
+    return fallback();
   }
 }

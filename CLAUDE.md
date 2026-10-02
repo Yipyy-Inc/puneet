@@ -372,9 +372,9 @@ still absolute for **new** code: white, or a solid.
     costs no Supabase usage) — not the whole suite unless it is asked for: on
     2026-09-26 the suites were 99% of a day's Supabase requests and log
     ingestion reached 16.8 of 20 GB (AGENTS.md). CI itself runs only
-    the 41-spec gate on a push (the authorisation boundary and money) and
+    the 42-spec gate on a push (the authorisation boundary and money) and
     the full suite WEEKLY and on demand (nightly until 2026-09-26) —
-    because 156 specs is ~45 minutes and GitHub holds one pending run per
+    because 157 specs is ~45 minutes and GitHub holds one pending run per
     branch: with two people pushing, every queued run was cancelled by the
     next push and nothing finished. `bun run check:doc-counts` derives both
     numbers from package.json and fails if either drifts.

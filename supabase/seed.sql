@@ -7,8 +7,8 @@
 -- Editing this file directly guarantees it will be silently overwritten and
 -- that the database will disagree with the UI about who can do what.
 --
--- 168 permission keys across 19 groups
--- 930 role-preset grants across 13 roles
+-- 169 permission keys across 19 groups
+-- 938 role-preset grants across 13 roles
 -- ============================================================================
 
 insert into public.permissions (key, category, is_personal, description) values
@@ -48,6 +48,7 @@ insert into public.permissions (key, category, is_personal, description) values
   ('view_occupancy_calendar', 'bookings', false, 'View occupancy calendar'),
   ('view_estimates', 'bookings', false, 'View estimates'),
   ('view_evaluations', 'bookings', false, 'View evaluations'),
+  ('perform_evaluations', 'bookings', false, 'Run evaluations'),
   ('create_bookings', 'bookings', false, 'Create bookings'),
   ('edit_bookings', 'bookings', false, 'Edit bookings'),
   ('cancel_bookings', 'bookings', false, 'Cancel bookings'),
@@ -188,7 +189,7 @@ on conflict (key) do update
 -- Anything the TypeScript no longer declares should not survive here. The
 -- cascade on permission_key clears dependent grants at all three layers.
 delete from public.permissions
- where key not in ('view_dashboard', 'view_own_schedule', 'view_team_schedule', 'view_own_documents', 'view_onboarding', 'view_training_materials', 'manage_own_tasks', 'view_own_profile', 'edit_own_profile', 'clock_in_out', 'request_time_off', 'request_shift_swap', 'submit_availability', 'view_own_performance', 'view_own_writeups', 'message_manager', 'view_client_list', 'view_clients', 'view_client_contact_info', 'view_client_address', 'view_client_financial', 'create_clients', 'edit_clients', 'delete_clients', 'merge_clients', 'export_clients', 'view_pet_records', 'edit_pet_records', 'add_pet_notes', 'view_pet_medical', 'edit_pet_medical', 'view_client_documents', 'view_bookings', 'view_occupancy_calendar', 'view_estimates', 'view_evaluations', 'create_bookings', 'edit_bookings', 'cancel_bookings', 'reschedule_bookings', 'view_booking_financials', 'view_all_calendars', 'manage_booking_calendar', 'manage_waitlist', 'override_booking_capacity', 'view_grooming_queue', 'grooming_view_own_calendar', 'grooming_view_all_calendars', 'perform_grooming', 'add_grooming_notes', 'grooming_upload_photos', 'grooming_manage_styles', 'grooming_edit_pricing', 'boarding_view_dashboard', 'boarding_daily_care_log', 'boarding_assign_kennels', 'boarding_log_feeding', 'boarding_log_medication', 'boarding_manage_belongings', 'boarding_send_updates', 'daycare_view_dashboard', 'daycare_check_in_out', 'daycare_log_activity', 'daycare_manage_groups', 'daycare_incident_report', 'daycare_send_updates', 'view_training_queue', 'training_view_own_calendar', 'run_training_sessions', 'add_training_notes', 'training_manage_programs', 'training_log_progress', 'training_issue_certificates', 'retail_pos_access', 'retail_process_sale', 'retail_process_return', 'retail_apply_discount', 'retail_manage_inventory', 'retail_manage_products', 'retail_manage_suppliers', 'retail_view_reports', 'scheduling_view_all', 'scheduling_create_shifts', 'scheduling_edit_shifts', 'scheduling_publish', 'scheduling_approve_time_off', 'scheduling_approve_swaps', 'scheduling_manage_availability', 'scheduling_view_labor_cost', 'calling_view', 'calling_make_calls', 'calling_view_recordings', 'calling_view_voicemail', 'calling_manage_routing', 'messages_view_inbox', 'messages_send', 'messages_view_all_threads', 'messages_manage_templates', 'view_services', 'manage_services', 'manage_rates', 'take_payment', 'financial_take_payment', 'process_refund', 'apply_discount', 'financial_view_amounts', 'financial_view_revenue', 'view_revenue', 'financial_reports', 'view_financial_reports', 'export_financials', 'financial_manage_invoices', 'financial_manage_gift_cards', 'financial_manage_payouts', 'financial_view_labor_cost', 'open_close_register', 'marketing_view', 'marketing_create_campaigns', 'marketing_manage_automations', 'marketing_view_analytics', 'marketing_manage_reviews', 'marketing_manage_loyalty', 'marketing_manage_referrals', 'check_in_out', 'log_feedings', 'log_medications', 'log_potty_breaks', 'log_play_sessions', 'log_incidents', 'log_cleaning', 'ops_incidents_view', 'ops_incidents_manage', 'ops_smart_insights', 'ops_view_reports', 'ops_manage_tasks', 'ops_manage_checklists', 'view_petcams', 'view_staff', 'view_staff_permissions', 'manage_staff', 'manage_roles', 'view_payroll', 'edit_payroll', 'manage_onboarding', 'manage_writeups', 'view_staff_performance', 'view_inventory', 'manage_supplies', 'communicate_clients', 'send_marketing', 'manage_facility_settings', 'manage_locations', 'manage_integrations', 'settings_general', 'settings_subscription', 'settings_billing', 'settings_manage_forms', 'view_waivers', 'view_intake_forms', 'settings_manage_notifications', 'settings_manage_taxes', 'settings_audit_log', 'settings_data_export', 'hq_view', 'hq_manage_locations', 'hq_view_consolidated_reports', 'hq_transfer_resources', 'hq_manage_settings');
+ where key not in ('view_dashboard', 'view_own_schedule', 'view_team_schedule', 'view_own_documents', 'view_onboarding', 'view_training_materials', 'manage_own_tasks', 'view_own_profile', 'edit_own_profile', 'clock_in_out', 'request_time_off', 'request_shift_swap', 'submit_availability', 'view_own_performance', 'view_own_writeups', 'message_manager', 'view_client_list', 'view_clients', 'view_client_contact_info', 'view_client_address', 'view_client_financial', 'create_clients', 'edit_clients', 'delete_clients', 'merge_clients', 'export_clients', 'view_pet_records', 'edit_pet_records', 'add_pet_notes', 'view_pet_medical', 'edit_pet_medical', 'view_client_documents', 'view_bookings', 'view_occupancy_calendar', 'view_estimates', 'view_evaluations', 'perform_evaluations', 'create_bookings', 'edit_bookings', 'cancel_bookings', 'reschedule_bookings', 'view_booking_financials', 'view_all_calendars', 'manage_booking_calendar', 'manage_waitlist', 'override_booking_capacity', 'view_grooming_queue', 'grooming_view_own_calendar', 'grooming_view_all_calendars', 'perform_grooming', 'add_grooming_notes', 'grooming_upload_photos', 'grooming_manage_styles', 'grooming_edit_pricing', 'boarding_view_dashboard', 'boarding_daily_care_log', 'boarding_assign_kennels', 'boarding_log_feeding', 'boarding_log_medication', 'boarding_manage_belongings', 'boarding_send_updates', 'daycare_view_dashboard', 'daycare_check_in_out', 'daycare_log_activity', 'daycare_manage_groups', 'daycare_incident_report', 'daycare_send_updates', 'view_training_queue', 'training_view_own_calendar', 'run_training_sessions', 'add_training_notes', 'training_manage_programs', 'training_log_progress', 'training_issue_certificates', 'retail_pos_access', 'retail_process_sale', 'retail_process_return', 'retail_apply_discount', 'retail_manage_inventory', 'retail_manage_products', 'retail_manage_suppliers', 'retail_view_reports', 'scheduling_view_all', 'scheduling_create_shifts', 'scheduling_edit_shifts', 'scheduling_publish', 'scheduling_approve_time_off', 'scheduling_approve_swaps', 'scheduling_manage_availability', 'scheduling_view_labor_cost', 'calling_view', 'calling_make_calls', 'calling_view_recordings', 'calling_view_voicemail', 'calling_manage_routing', 'messages_view_inbox', 'messages_send', 'messages_view_all_threads', 'messages_manage_templates', 'view_services', 'manage_services', 'manage_rates', 'take_payment', 'financial_take_payment', 'process_refund', 'apply_discount', 'financial_view_amounts', 'financial_view_revenue', 'view_revenue', 'financial_reports', 'view_financial_reports', 'export_financials', 'financial_manage_invoices', 'financial_manage_gift_cards', 'financial_manage_payouts', 'financial_view_labor_cost', 'open_close_register', 'marketing_view', 'marketing_create_campaigns', 'marketing_manage_automations', 'marketing_view_analytics', 'marketing_manage_reviews', 'marketing_manage_loyalty', 'marketing_manage_referrals', 'check_in_out', 'log_feedings', 'log_medications', 'log_potty_breaks', 'log_play_sessions', 'log_incidents', 'log_cleaning', 'ops_incidents_view', 'ops_incidents_manage', 'ops_smart_insights', 'ops_view_reports', 'ops_manage_tasks', 'ops_manage_checklists', 'view_petcams', 'view_staff', 'view_staff_permissions', 'manage_staff', 'manage_roles', 'view_payroll', 'edit_payroll', 'manage_onboarding', 'manage_writeups', 'view_staff_performance', 'view_inventory', 'manage_supplies', 'communicate_clients', 'send_marketing', 'manage_facility_settings', 'manage_locations', 'manage_integrations', 'settings_general', 'settings_subscription', 'settings_billing', 'settings_manage_forms', 'view_waivers', 'view_intake_forms', 'settings_manage_notifications', 'settings_manage_taxes', 'settings_audit_log', 'settings_data_export', 'hq_view', 'hq_manage_locations', 'hq_view_consolidated_reports', 'hq_transfer_resources', 'hq_manage_settings');
 
 insert into public.role_preset_permissions (role, permission_key, scope) values
   ('owner', 'view_dashboard', 'anytime'),
@@ -227,6 +228,7 @@ insert into public.role_preset_permissions (role, permission_key, scope) values
   ('owner', 'view_occupancy_calendar', 'anytime'),
   ('owner', 'view_estimates', 'anytime'),
   ('owner', 'view_evaluations', 'anytime'),
+  ('owner', 'perform_evaluations', 'anytime'),
   ('owner', 'create_bookings', 'anytime'),
   ('owner', 'edit_bookings', 'anytime'),
   ('owner', 'cancel_bookings', 'anytime'),
@@ -395,6 +397,7 @@ insert into public.role_preset_permissions (role, permission_key, scope) values
   ('admin', 'view_occupancy_calendar', 'anytime'),
   ('admin', 'view_estimates', 'anytime'),
   ('admin', 'view_evaluations', 'anytime'),
+  ('admin', 'perform_evaluations', 'anytime'),
   ('admin', 'create_bookings', 'anytime'),
   ('admin', 'edit_bookings', 'anytime'),
   ('admin', 'cancel_bookings', 'anytime'),
@@ -562,6 +565,7 @@ insert into public.role_preset_permissions (role, permission_key, scope) values
   ('manager', 'view_occupancy_calendar', 'anytime'),
   ('manager', 'view_estimates', 'anytime'),
   ('manager', 'view_evaluations', 'anytime'),
+  ('manager', 'perform_evaluations', 'anytime'),
   ('manager', 'create_bookings', 'anytime'),
   ('manager', 'edit_bookings', 'anytime'),
   ('manager', 'cancel_bookings', 'anytime'),
@@ -703,6 +707,7 @@ insert into public.role_preset_permissions (role, permission_key, scope) values
   ('supervisor', 'view_occupancy_calendar', 'operating_hours'),
   ('supervisor', 'view_estimates', 'operating_hours'),
   ('supervisor', 'view_evaluations', 'operating_hours'),
+  ('supervisor', 'perform_evaluations', 'operating_hours'),
   ('supervisor', 'view_petcams', 'operating_hours'),
   ('supervisor', 'view_grooming_queue', 'operating_hours'),
   ('supervisor', 'grooming_view_all_calendars', 'operating_hours'),
@@ -952,6 +957,8 @@ insert into public.role_preset_permissions (role, permission_key, scope) values
   ('daycare_attendant', 'view_pet_records', 'assigned_shifts'),
   ('daycare_attendant', 'add_pet_notes', 'assigned_shifts'),
   ('daycare_attendant', 'view_bookings', 'assigned_shifts'),
+  ('daycare_attendant', 'view_evaluations', 'assigned_shifts'),
+  ('daycare_attendant', 'perform_evaluations', 'assigned_shifts'),
   ('daycare_attendant', 'boarding_daily_care_log', 'assigned_shifts'),
   ('daycare_attendant', 'view_occupancy_calendar', 'assigned_shifts'),
   ('daycare_attendant', 'view_client_list', 'assigned_shifts'),
@@ -994,6 +1001,8 @@ insert into public.role_preset_permissions (role, permission_key, scope) values
   ('boarding_attendant', 'add_pet_notes', 'anytime'),
   ('boarding_attendant', 'view_pet_medical', 'anytime'),
   ('boarding_attendant', 'view_bookings', 'anytime'),
+  ('boarding_attendant', 'view_evaluations', 'anytime'),
+  ('boarding_attendant', 'perform_evaluations', 'anytime'),
   ('boarding_attendant', 'view_occupancy_calendar', 'anytime'),
   ('boarding_attendant', 'view_client_list', 'anytime'),
   ('boarding_attendant', 'messages_view_inbox', 'anytime'),

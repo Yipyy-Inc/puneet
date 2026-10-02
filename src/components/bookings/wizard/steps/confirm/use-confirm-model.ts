@@ -57,6 +57,9 @@ import type { ConfirmStepProps } from "./ConfirmStep";
 type Translate = (key: string) => string;
 
 export interface ConfirmModelInput {
+  /** An evaluation: the services it unlocks, whose vaccines it checks
+   *  (Settings › Evaluations, "Vaccines required before booking"). */
+  vaccinationServices?: readonly string[];
   t: Translate;
   locale: AppLocale;
   isCustomer: boolean;
@@ -153,7 +156,7 @@ export function useConfirmModel(input: ConfirmModelInput): ConfirmModel {
           pets: input.pets,
           records: records ?? NO_RECORDS,
           rules: vaccinationRules,
-          service: input.service,
+          service: input.vaccinationServices ?? input.service,
           firstDay: input.firstDay,
           lastDay: input.lastDay,
         })
@@ -161,7 +164,7 @@ export function useConfirmModel(input: ConfirmModelInput): ConfirmModel {
           pets: input.pets,
           records: records ?? NO_RECORDS,
           rules: vaccinationRules,
-          service: input.service,
+          service: input.vaccinationServices ?? input.service,
           firstDay: today,
           lastDay: today,
         });

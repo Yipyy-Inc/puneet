@@ -843,12 +843,13 @@ never auto-dismiss. Prefer an undo toast over a confirmation dialog wherever the
 
 ## 5i. Overlays
 
-| Kind    | Spec                                                               | Reach for it when                                      |
-| ------- | ------------------------------------------------------------------ | ------------------------------------------------------ |
-| Modal   | centred · 560/720/960px · radius 24px · `--sh-3`                   | a decision, or a short form                            |
-| Drawer  | right edge · 480px · full height · radius 24px on the left corners | a record read or edited while keeping the list in view |
-| Popover | anchored · max 320px · radius 16px · `--sh-3`                      | a preview or a short pick — never a form               |
-| Sheet   | bottom edge · mobile only · radius 24px top corners                | the mobile drawer. Never on desktop                    |
+| Kind         | Spec                                                                                              | Reach for it when                                                                    |
+| ------------ | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Modal        | centred · 560/720/960px · radius 24px · `--sh-3`                                                  | a decision, or a short form                                                          |
+| Modal · wide | centred · the screen less 48px, up to 1280px · 640–900px tall · radius 24px · a sheet below 640px | a flow beside its own preview: the booking wizard, an evaluation and its report card |
+| Drawer       | right edge · 480px · full height · radius 24px on the left corners                                | a record read or edited while keeping the list in view                               |
+| Popover      | anchored · max 320px · radius 16px · `--sh-3`                                                     | a preview or a short pick — never a form                                             |
+| Sheet        | bottom edge · mobile only · radius 24px top corners                                               | the mobile drawer. Never on desktop                                                  |
 
 **Never stack two modals.** A drawer may open a modal; a modal must never open a drawer. Escape
 closes the topmost layer only.
@@ -870,7 +871,10 @@ step rail beside the step from 1024px), and a bottom sheet below 640px with 24px
 STACK — the discard confirmation, agreement signing, the grooming waitlist and the forms override
 each opened over the wizard, against the rule above — and those are inline panels and checklist
 rows now, so the width is the only exception taken. If a second flow asks for this width, the
-Modal row grows a size rather than logging another exception.
+Modal row grows a size rather than logging another exception. **It did, the same day:** the evaluator's form and
+the report card review (Operations › Evaluations, the client's second mock) set a form beside the
+card it builds, so the row grew **Modal · wide**, and all three use the one frame
+(`components/ui/wide-dialog.ts`).
 
 ## 5j. Destructive actions
 

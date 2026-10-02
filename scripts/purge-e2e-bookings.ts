@@ -92,6 +92,29 @@ console.log(
     : `Purged ${cardsDeleted} e2e report card(s).`,
 );
 
+// ── Evaluations ─────────────────────────────────────────────────────────────
+//
+// The same reason as the report cards: the evaluation specs SEND a card, and a
+// sent card can be neither changed nor thrown away by anyone. Their notes to
+// the owner start "E2E:", which is all the function matches (2026-10-02).
+const { data: evaluationData, error: evaluationError } = await db.rpc(
+  "purge_e2e_evaluations",
+);
+
+if (evaluationError) {
+  console.error(`Could not purge evaluations: ${evaluationError.message}`);
+  process.exit(1);
+}
+
+const evaluationsDeleted =
+  typeof evaluationData === "number" ? evaluationData : 0;
+
+console.log(
+  evaluationsDeleted === 0
+    ? "Nothing to purge: no e2e evaluations left."
+    : `Purged ${evaluationsDeleted} e2e evaluation(s).`,
+);
+
 // ── Forms ───────────────────────────────────────────────────────────────────
 //
 // Same reasoning as the report cards above: this is the command CI already runs

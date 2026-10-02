@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -12,9 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
 
 import { Save, Edit, X } from "lucide-react";
 import { toast } from "sonner";
@@ -23,33 +22,18 @@ import { MaxPetsPerStaffCard } from "@/components/smart-insights/MaxPetsPerStaff
 import { DropOffHoursCard } from "@/components/facility/services/drop-off-hours-card";
 import type { ModuleConfig } from "@/types/facility";
 import { useSettingsHref } from "@/lib/settings/use-settings-href";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 export default function DaycareSettingsPage() {
   const settingsPath = useSettingsHref();
+  const et = useSettingsText().section("evaluations");
   const { daycare, updateDaycare } = useSettings();
   const [formData, setFormData] = useState<ModuleConfig>(daycare);
   const [isEditingBasic, setIsEditingBasic] = useState(false);
   const [isEditingMedia, setIsEditingMedia] = useState(false);
-  const [isEditingEvaluation, setIsEditingEvaluation] = useState(false);
 
   const updateFormData = (updates: Partial<ModuleConfig>) => {
     const newData = { ...formData, ...updates };
-    setFormData(newData);
-    updateDaycare(newData);
-  };
-
-  const updateNested = <T extends keyof ModuleConfig>(
-    key: T,
-    nestedKey: string,
-    value: unknown,
-  ) => {
-    const newData = {
-      ...formData,
-      [key]: {
-        ...(formData[key] as Record<string, unknown>),
-        [nestedKey]: value,
-      },
-    };
     setFormData(newData);
     updateDaycare(newData);
   };
@@ -59,14 +43,12 @@ export default function DaycareSettingsPage() {
     updateDaycare(daycare);
     if (section === "basic") setIsEditingBasic(false);
     if (section === "media") setIsEditingMedia(false);
-    if (section === "evaluation") setIsEditingEvaluation(false);
   };
 
   const handleSave = (section: string) => {
     toast.success("Settings saved successfully");
     if (section === "basic") setIsEditingBasic(false);
     if (section === "media") setIsEditingMedia(false);
-    if (section === "evaluation") setIsEditingEvaluation(false);
   };
 
   return (
@@ -237,100 +219,22 @@ export default function DaycareSettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Evaluation Settings */}
+        {/* Whether daycare needs an evaluation first lives on the evaluation
+            setup page since 2026-10-02 — one rule (lib/evaluations/
+            requirement.ts). This card was a second editor of it. */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Evaluation Settings</CardTitle>
-                <CardDescription>
-                  Configure evaluation requirements for daycare
-                </CardDescription>
-              </div>
-              {isEditingEvaluation ? (
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleCancel("evaluation")}
-                  >
-                    <X className="mr-2 size-4" />
-                    Cancel
-                  </Button>
-                  <Button size="sm" onClick={() => handleSave("evaluation")}>
-                    <Save className="mr-2 size-4" />
-                    Save
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditingEvaluation(true)}
-                >
-                  <Edit className="mr-2 size-4" />
-                  Edit
-                </Button>
-              )}
-            </div>
+            <CardTitle>{et("moduleCardTitle")}</CardTitle>
+            <CardDescription>
+              {et("moduleCardText")}{" "}
+              <Link
+                href={settingsPath("evaluations")}
+                className="text-primary font-semibold"
+              >
+                {et("moduleCardLink")}
+              </Link>
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Enable Evaluation</Label>
-                <p className="text-muted-foreground text-sm">
-                  Require evaluation for daycare bookings
-                </p>
-              </div>
-              <Switch
-                checked={formData.settings.evaluation.enabled}
-                onCheckedChange={(checked) =>
-                  updateNested("settings", "evaluation", {
-                    ...formData.settings.evaluation,
-                    enabled: checked,
-                  })
-                }
-                disabled={!isEditingEvaluation}
-              />
-            </div>
-            {formData.settings.evaluation.enabled && (
-              <>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Optional Evaluation</Label>
-                    <p className="text-muted-foreground text-sm">
-                      Make evaluation optional for clients
-                    </p>
-                  </div>
-                  <Switch
-                    checked={formData.settings.evaluation.optional || false}
-                    onCheckedChange={(checked) =>
-                      updateNested("settings", "evaluation", {
-                        ...formData.settings.evaluation,
-                        optional: checked,
-                      })
-                    }
-                    disabled={!isEditingEvaluation}
-                  />
-                </div>
-                <div className="bg-muted mt-4 rounded-lg p-3">
-                  <p className="text-muted-foreground text-sm">
-                    Evaluation details (name, price, duration, etc.) are
-                    configured globally in{" "}
-                    <a
-                      href={settingsPath("evaluations")}
-                      className="text-primary hover:underline"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Settings → Evaluations
-                    </a>
-                  </p>
-                </div>
-              </>
-            )}
-          </CardContent>
         </Card>
 
         {/* What the booking wizard offers for drop-off and pick-up, per

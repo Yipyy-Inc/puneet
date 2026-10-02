@@ -165,6 +165,10 @@ const SAME_IN_BOTH = new Set([
   "loyalty.description", // Description / Description
   "loyalty.points", // Points / Points
   "loyalty.kindBadge", // Badge / Badge
+  // An evaluation's Summary (2026-10-02): the same word, and the unit.
+  "booking.wizEvLengthMinutes", // {n} min / {n} min
+  "booking.wizEvRowService", // Service / Service
+  "booking.wizEvRowClient", // Client / Client
 ]);
 
 describe("the shell namespace", () => {

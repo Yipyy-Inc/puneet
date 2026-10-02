@@ -1,4 +1,3 @@
-import type { ExtraService } from "@/types/booking";
 import type { MedicationStepState } from "@/components/booking/medications/use-medication-step";
 import {
   FEEDING_SUB_STEP_ID,
@@ -8,7 +7,6 @@ import type { FeedingStepState } from "@/components/booking/feeding/use-feeding-
 import type { Pet } from "@/types/pet";
 
 import { CustomServiceDetails } from "../service-details/CustomServiceDetails";
-import { EvaluationDetails } from "../service-details/EvaluationDetails";
 import { CareStepPanel } from "./care-step-panel";
 
 // ============================================================================
@@ -16,20 +14,20 @@ import { CareStepPanel } from "./care-step-panel";
 //
 //   the care steps   Feeding (3) and Medication (4), for every service the
 //                    facility turns them on for
-//   an evaluation    its date, slot and extras
 //   a custom service its date and time
 //
 // Boarding, daycare, grooming and training draw their own screens in the
 // wizard — schedule, room type, add-ons, package, groomer or trainer and
 // time, program, class, goals — from the client's mock. Their old detail
 // screens (BoardingDetails, DaycareDetails, GroomingDetails and the training
-// series step) were reachable from here only, and are gone.
+// series step) were reachable from here only, and are gone. So is the
+// evaluation's (EvaluationDetails, 2026-10-02): its Date & time and About
+// your pet are the client's evaluation mock, drawn in the wizard too.
 // ============================================================================
 
 interface DetailsStepProps {
   selectedService: string;
   currentSubStep: number;
-  isSubStepComplete?: (stepIndex: number) => boolean;
   startDate: string;
   setStartDate: (value: string) => void;
   endDate: string;
@@ -38,8 +36,6 @@ interface DetailsStepProps {
   setCheckInTime: (value: string) => void;
   checkOutTime: string;
   setCheckOutTime: (value: string) => void;
-  extraServices: ExtraService[];
-  setExtraServices: (value: ExtraService[]) => void;
   selectedPets: Pet[];
   feedingStep: FeedingStepState;
   medicationStep: MedicationStepState;
@@ -52,7 +48,6 @@ interface DetailsStepProps {
 export function DetailsStep({
   selectedService,
   currentSubStep,
-  isSubStepComplete,
   startDate,
   setStartDate,
   endDate,
@@ -61,8 +56,6 @@ export function DetailsStep({
   setCheckInTime,
   checkOutTime,
   setCheckOutTime,
-  extraServices,
-  setExtraServices,
   selectedPets,
   feedingStep,
   medicationStep,
@@ -80,24 +73,6 @@ export function DetailsStep({
         feedingStep={feedingStep}
         medicationStep={medicationStep}
         stepLabel={careStepLabel}
-      />
-    );
-  }
-
-  if (selectedService === "evaluation") {
-    return (
-      <EvaluationDetails
-        currentSubStep={currentSubStep}
-        isSubStepComplete={isSubStepComplete}
-        startDate={startDate}
-        setStartDate={setStartDate}
-        checkInTime={checkInTime}
-        setCheckInTime={setCheckInTime}
-        checkOutTime={checkOutTime}
-        setCheckOutTime={setCheckOutTime}
-        extraServices={extraServices}
-        setExtraServices={setExtraServices}
-        selectedPets={selectedPets}
       />
     );
   }

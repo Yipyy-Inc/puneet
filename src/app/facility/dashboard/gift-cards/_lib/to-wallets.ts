@@ -52,6 +52,9 @@ const TYPE_BY_REASON: Record<string, WalletTransaction["type"]> = {
   gift_card: "gift_card_redeem",
   added: "adjustment",
   adjustment: "adjustment",
+  // An evaluation deposit credited on approval (2026-10-02): money put on
+  // the wallet, as a refund puts it there.
+  evaluation: "refund_in",
 };
 
 /** Newest first, the order a history is read in. */

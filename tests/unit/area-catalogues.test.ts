@@ -221,6 +221,14 @@ const SAME_IN_BOTH = new Set([
   // An included add-on's line: the facility's own name for it, a symbol and
   // a count — nothing a translator could move.
   "staff.boardingServices.includedLine", // {name} × {quantity}
+  // Operations › Evaluations (2026-10-02) — each the same word in French,
+  // or only a value.
+  "staff.evaluations.colDate", // Date / Date
+  "staff.evaluations.form_notes", // Notes / Notes
+  "staff.evaluations.questionWording", // Question / Question
+  "staff.evaluations.kind_outcome", // 4 options / 4 options
+  "staff.evaluations.kind_services", // Services / Services
+  "staff.notificationCentre.kind_evaluation_returned_detail", // {comment}
 ]);
 
 /** `{name}` placeholders in a string, sorted, duplicates kept. */

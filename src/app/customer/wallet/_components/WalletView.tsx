@@ -91,6 +91,14 @@ const REASON_CONFIG: Record<
     bg: "bg-gray-100 dark:bg-gray-900/30",
     labelKey: "txAdjustment",
   },
+  // A full-price evaluation deposit, credited when the pet was approved
+  // (2026-10-02).
+  evaluation: {
+    icon: Plus,
+    color: "text-green-600",
+    bg: "bg-green-100 dark:bg-green-900/30",
+    labelKey: "txEvaluation",
+  },
 };
 
 // Where the wallet can be spent, by CATALOGUE KEY — four are services and

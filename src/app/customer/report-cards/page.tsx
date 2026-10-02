@@ -38,6 +38,7 @@ import {
 } from "@/components/customer/report-cards/report-card-shared";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/page-header";
+import { EvaluationCardsList } from "@/components/customer/evaluations/evaluation-cards-list";
 import { useCustomerText } from "@/lib/customer/use-customer-text";
 import { serviceTypeLabel } from "@/lib/i18n/labels";
 
@@ -259,6 +260,9 @@ export default function CustomerReportCardsPage() {
           title={t("reportCards")}
           description={fill("timelineOfStaysAt", { facility: facilityName })}
         />
+
+        {/* Evaluation report cards (2026-10-02), above the stays' cards. */}
+        <EvaluationCardsList />
 
         {/* Filters */}
         <div className="border-primary/20 bg-card overflow-hidden rounded-2xl border shadow-sm">

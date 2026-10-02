@@ -88,6 +88,18 @@ const WORDS: Record<
     subject: `Estimate ${value(p, "number")} declined`,
     line: `${value(p, "client", "A customer")} declined estimate ${value(p, "number")}.`,
   }),
+  evaluation_card_ready: (p) => ({
+    subject: `Report card ready for review: ${value(p, "pet", "a pet")}`,
+    line: `${value(p, "staff", "An evaluator")} finished ${value(p, "pet", "a pet")}'s evaluation. Review the report card and send it to ${value(p, "client", "the owner")}.`,
+  }),
+  evaluation_card_reminder: (p) => ({
+    subject: `A report card is still waiting for review`,
+    line: `${value(p, "pet", "A pet")}'s evaluation report card has waited more than 2 hours for review.`,
+  }),
+  evaluation_card_returned: (p) => ({
+    subject: `A report card was sent back to you`,
+    line: `${value(p, "staff", "A reviewer")} sent ${value(p, "pet", "a pet")}'s report card back: ${value(p, "comment", "see the evaluation")}.`,
+  }),
 };
 
 export function staffNotificationEmail(input: {

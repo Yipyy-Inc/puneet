@@ -2,7 +2,15 @@
 
 import { useMemo, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Check, ClipboardCheck, FileSignature, Info, Lock } from "lucide-react";
+import {
+  Check,
+  ClipboardCheck,
+  FileSignature,
+  Flag,
+  Info,
+  Lock,
+  PawPrint,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -64,6 +72,7 @@ export function ServiceStep({
   selectedPets,
   clientRef,
   belowCards,
+  onRequestEvaluation,
 }: {
   isCustomerMode: boolean;
   selectedService: string;
@@ -75,6 +84,9 @@ export function ServiceStep({
   clientRef: number | undefined;
   /** Staff's evaluation decision while it still lives on this step. */
   belowCards?: ReactNode;
+  /** "Request an evaluation" on a locked card: the evaluation, for that
+   *  service (its Summary's "Unlocks", 2026-10-02). */
+  onRequestEvaluation?: (forService: string) => void;
 }) {
   const t = useShellText("booking");
   const locale = useShellLocale();
@@ -128,11 +140,17 @@ export function ServiceStep({
   const visible = ranked.filter((service) => {
     if (service.id === "evaluation") return true;
     if (bookingFlow.hiddenServices.includes(service.id)) return false;
+    // "Hide services until evaluation completed" (Booking rules): a
+    // customer does not see a service that needs an evaluation until their
+    // pets have passed one for it. Since 2026-10-02 it follows the one rule
+    // of which services need one (lib/evaluations/requirement.ts), not the
+    // retired "every service" switch.
     if (
       isCustomerMode &&
-      bookingFlow.evaluationRequired &&
       bookingFlow.hideServicesUntilEvaluationCompleted &&
-      (selectedPets.length === 0 || !petsAllEvaluated(selectedPets))
+      serviceNeedsEvaluation(service.id, configs[service.id], bookingFlow) &&
+      (selectedPets.length === 0 ||
+        selectedPets.some((pet) => !petUnlockedForService(pet, service.id)))
     ) {
       return false;
     }
@@ -156,9 +174,12 @@ export function ServiceStep({
       amount === null ? null : fill(t("priceFrom"), { amount: money(amount) });
     switch (serviceId) {
       case "evaluation": {
+        // "$45 per pet" (the client's mock, 2026-10-02).
         const amount = evaluationConfig.price;
         if (amount === undefined) return null;
-        return amount === 0 ? t("priceFree") : money(amount);
+        return amount === 0
+          ? t("priceFree")
+          : fill(t("wizEvPerPet"), { amount: money(amount) });
       }
       case "boarding":
         return prices.boarding
@@ -272,7 +293,21 @@ export function ServiceStep({
                 )}
               </div>
               <div className="flex min-w-0 flex-1 flex-col gap-1 py-1 pr-7">
-                <p className="text-micro text-ink-tertiary uppercase">{kind}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-micro text-ink-tertiary uppercase">
+                    {kind}
+                  </p>
+                  {/* "Start here" (the evaluation mock): the visit a pet
+                      without a pass begins with. */}
+                  {isEvaluation &&
+                  selectedPets.length > 0 &&
+                  !petsAllEvaluated(selectedPets) ? (
+                    <Badge variant="default">
+                      <Flag aria-hidden />
+                      {t("wizEvStartHere")}
+                    </Badge>
+                  ) : null}
+                </div>
                 <p className="text-section text-body-ink">{name}</p>
                 {line ? (
                   <p className="text-meta text-ink-secondary text-pretty">
@@ -283,6 +318,17 @@ export function ServiceStep({
                   <p className="text-body-strong text-body-ink mt-0.5 tabular-nums">
                     {price}
                   </p>
+                ) : null}
+                {isEvaluation &&
+                evaluationConfig.multiPet === false &&
+                selectedPets.length > 1 ? (
+                  <Badge
+                    variant="pending"
+                    className="mt-0.5 h-auto min-h-[26px] self-start py-1 whitespace-normal"
+                  >
+                    <PawPrint aria-hidden />
+                    {t("wizEvOnePetAtATime")}
+                  </Badge>
                 ) : null}
                 {!isEvaluation &&
                 config?.status.disabled &&
@@ -338,7 +384,8 @@ export function ServiceStep({
                     className="mt-1.5 self-start"
                     onClick={(event) => {
                       event.stopPropagation();
-                      onSelect("evaluation");
+                      if (onRequestEvaluation) onRequestEvaluation(service.id);
+                      else onSelect("evaluation");
                     }}
                   >
                     {evaluationChosen ? (

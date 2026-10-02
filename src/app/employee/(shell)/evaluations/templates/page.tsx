@@ -1,13 +1,7 @@
-import { RequirePermission } from "@/components/employee/AccessRestricted";
-import { EvaluationTemplates } from "@/app/facility/dashboard/evaluations/_components/evaluation-templates";
+import { redirect } from "next/navigation";
 
-// The same builders, in the employee shell, behind the same key the
-// evaluations list uses — so the move out of settings takes the screen away
-// from nobody who could already reach it.
+// The evaluation form and its report card are set up on the Evaluations page
+// itself now, under Setup (the client's mock, 2026-10-02).
 export default function EmployeeEvaluationTemplatesPage() {
-  return (
-    <RequirePermission permKey="view_evaluations">
-      <EvaluationTemplates />
-    </RequirePermission>
-  );
+  redirect("/employee/evaluations?tab=setup");
 }

@@ -196,6 +196,35 @@ export const NOTIFICATION_KINDS = {
     mandatory: false,
     urgent: false,
   },
+  /**
+   * An evaluator finished and the report card waits for review (the client's
+   * evaluation mock, 2026-10-02: "They get a notification as soon as a card
+   * is ready"). Addressed to the reviewers Setup names, and only them.
+   */
+  evaluation_card_ready: {
+    category: "bookings",
+    permission: "view_evaluations",
+    mandatory: false,
+    urgent: false,
+  },
+  /** "Unreviewed after 2 hours → reminder." Once, to the same reviewers. */
+  evaluation_card_reminder: {
+    category: "bookings",
+    permission: "view_evaluations",
+    mandatory: false,
+    urgent: false,
+  },
+  /**
+   * A reviewer sent a card back with a comment. Addressed to its evaluator,
+   * whose card it is whatever their role's defaults say — so it is always
+   * delivered in-app.
+   */
+  evaluation_card_returned: {
+    category: "bookings",
+    permission: null,
+    mandatory: true,
+    urgent: false,
+  },
 } as const satisfies Record<string, NotificationKindSpec>;
 export type NotificationKind = keyof typeof NOTIFICATION_KINDS;
 
