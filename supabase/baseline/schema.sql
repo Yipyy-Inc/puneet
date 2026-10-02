@@ -433,6 +433,70 @@ $$;
 ALTER FUNCTION "private"."agreements_of_link"("p_link" "public"."waiver_signing_links") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "private"."apply_evaluation_to_pet"("p_evaluation_id" "uuid") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_e      public.evaluations;
+  v_pass   boolean;
+  v_ref    bigint;
+  v_record jsonb;
+begin
+  select * into v_e from public.evaluations e where e.id = p_evaluation_id;
+  if v_e.id is null or v_e.result is null then
+    return;
+  end if;
+  v_pass := v_e.result in ('approved', 'approved_with_restrictions');
+  select p.ref into v_ref from public.pets p where p.id = v_e.pet_id;
+
+  v_record := jsonb_build_object(
+      'id', v_e.id::text,
+      'petId', v_ref,
+      'status', case when v_pass then 'passed' else 'failed' end,
+      'evaluatedAt', to_char(coalesce(v_e.completed_at, now()) at time zone 'UTC',
+                             'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+      'evaluatedBy', v_e.evaluator_name,
+      'resultType', v_e.result,
+      'isExpired', false,
+      'approvedServices', jsonb_build_object(
+        'daycare', v_pass and 'daycare' = any(v_e.approved_services),
+        'boarding', v_pass and 'boarding' = any(v_e.approved_services),
+        'customApproved', case
+          when v_pass then to_jsonb(array(
+            select s from unnest(v_e.approved_services) s
+             where s not in ('daycare', 'boarding')))
+          else '[]'::jsonb
+        end))
+    || case
+         when v_e.evaluator_staff_id is not null
+           then jsonb_build_object('evaluatedById', v_e.evaluator_staff_id::text)
+         else '{}'::jsonb
+       end;
+
+  perform set_config('yipyy.evaluation_result', 'on', true);
+  update public.pets p
+     set details = jsonb_set(
+           coalesce(p.details, '{}'::jsonb),
+           '{evaluations}',
+           coalesce((
+             select jsonb_agg(x)
+               from jsonb_array_elements(
+                      case jsonb_typeof(p.details->'evaluations')
+                        when 'array' then p.details->'evaluations'
+                        else '[]'::jsonb
+                      end) x
+              where x->>'id' is distinct from v_e.id::text
+           ), '[]'::jsonb) || jsonb_build_array(v_record))
+   where p.id = v_e.pet_id;
+  perform set_config('yipyy.evaluation_result', '', true);
+end;
+$$;
+
+
+ALTER FUNCTION "private"."apply_evaluation_to_pet"("p_evaluation_id" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "private"."area_pets_in_use"("p_room_id" "uuid", "p_range" "tstzrange", "p_exclude_booking" "uuid" DEFAULT NULL::"uuid") RETURNS integer
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -2401,6 +2465,48 @@ $$;
 ALTER FUNCTION "private"."daycare_location_price_facility"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "private"."deliver_evaluation_card"("p_evaluation_id" "uuid", "p_by_name" "text", "p_auto" boolean, "p_channels" "text"[]) RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_facility uuid;
+  v_settings jsonb;
+  v_theme    text;
+begin
+  select e.facility_id into v_facility
+    from public.evaluations e where e.id = p_evaluation_id;
+  v_settings := private.evaluation_card_settings(v_facility);
+  v_theme := v_settings->>'theme';
+  if v_theme is null or v_theme not in ('green', 'blue', 'plum', 'fall', 'ink') then
+    v_theme := 'green';
+  end if;
+
+  update public.evaluations e
+     set card_status   = 'sent',
+         sent_at       = now(),
+         sent_by_name  = case when p_auto then null else p_by_name end,
+         auto_sent     = p_auto,
+         sent_channels = array['portal'] || array(
+                           select c from unnest(coalesce(p_channels, '{}')) c
+                            where c in ('email', 'sms')
+                            group by c order by c),
+         card_options  = jsonb_build_object(
+                           'theme', v_theme,
+                           'includePhoto', coalesce((v_settings->>'includePhoto')::boolean, true),
+                           'bookFirstVisitButton', coalesce((v_settings->>'bookFirstVisitButton')::boolean, true),
+                           'hideInternal', coalesce((v_settings->>'hideInternal')::boolean, true))
+   where e.id = p_evaluation_id;
+
+  perform private.apply_evaluation_to_pet(p_evaluation_id);
+  perform private.grant_evaluation_credit(p_evaluation_id);
+end;
+$$;
+
+
+ALTER FUNCTION "private"."deliver_evaluation_card"("p_evaluation_id" "uuid", "p_by_name" "text", "p_auto" boolean, "p_channels" "text"[]) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "private"."deposit_for_booking"("b" "public"."bookings") RETURNS numeric
     LANGUAGE "plpgsql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -3153,6 +3259,11 @@ begin
     return new;
   end if;
 
+  -- 2026-10-02: a sent evaluation report card writing its result.
+  if coalesce(current_setting('yipyy.evaluation_result', true), '') = 'on' then
+    return new;
+  end if;
+
   select c.facility_id into v_facility_id
     from public.clients c
    where c.id = new.client_id;
@@ -3187,7 +3298,7 @@ $$;
 ALTER FUNCTION "private"."enforce_pet_integrity"() OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "private"."enforce_pet_integrity"() IS 'Column-level rules for pets. Keeps the facility''s assessment out of the owner''s reach.';
+COMMENT ON FUNCTION "private"."enforce_pet_integrity"() IS 'Column-level rules for pets. Keeps the facility''s assessment out of the owner''s reach. A sent evaluation report card records its result through yipyy.evaluation_result (20261002220000).';
 
 
 
@@ -3456,6 +3567,190 @@ $$;
 ALTER FUNCTION "private"."estimate_before_update"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "private"."evaluation_caller"("p_facility_id" "uuid") RETURNS TABLE("staff_id" "uuid", "name" "text")
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select s.id,
+         coalesce(
+           nullif(btrim(coalesce(s.first_name, '') || ' ' || coalesce(s.last_name, '')), ''),
+           (select coalesce(nullif(btrim(p.full_name), ''), nullif(btrim(p.email), ''))
+              from public.profiles p
+             where p.id = (select auth.jwt()->>'sub')),
+           'Staff')
+    from (select 1) one
+    left join lateral (
+      select st.id, st.first_name, st.last_name
+        from public.staff st
+        join public.facility_memberships m on m.id = st.membership_id
+       where m.profile_id = (select auth.jwt()->>'sub')
+         and m.facility_id = p_facility_id
+         and st.facility_id = p_facility_id
+       order by st.created_at
+       limit 1
+    ) s on true;
+$$;
+
+
+ALTER FUNCTION "private"."evaluation_caller"("p_facility_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."evaluation_card_settings"("p_facility_id" "uuid") RETURNS "jsonb"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select jsonb_build_object(
+           'deliveryMode', 'review',
+           'reviewerRoles', jsonb_build_array('reception', 'supervisor'),
+           'evaluatorSelfSend', false,
+           'includePhoto', true,
+           'bookFirstVisitButton', true,
+           'hideInternal', true,
+           'theme', 'green',
+           'notifyViaEmail', true,
+           'notifyViaSMS', false)
+      || coalesce((
+           select jsonb_strip_nulls(f.value)
+             from public.facility_settings f
+            where f.facility_id = p_facility_id
+              and f.domain = 'evaluation_report_card'
+              and jsonb_typeof(f.value) = 'object'), '{}'::jsonb);
+$$;
+
+
+ALTER FUNCTION "private"."evaluation_card_settings"("p_facility_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."evaluation_derive"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_facility uuid;
+  v_service  text;
+begin
+  select p.facility_id, p.client_id
+    into new.facility_id, new.client_id
+    from public.pets p
+   where p.id = new.pet_id;
+  if new.facility_id is null then
+    raise exception 'That pet does not exist.' using errcode = '23503';
+  end if;
+  if new.booking_id is not null then
+    select b.facility_id, b.service into v_facility, v_service
+      from public.bookings b
+     where b.id = new.booking_id;
+    if v_facility is distinct from new.facility_id
+       or v_service is distinct from 'evaluation' then
+      raise exception 'That booking is not an evaluation at this pet''s facility.'
+        using errcode = '23503';
+    end if;
+    if not exists (
+      select 1 from public.booking_pets bp
+       where bp.booking_id = new.booking_id and bp.pet_id = new.pet_id
+    ) then
+      raise exception 'That pet is not on this booking.' using errcode = '23503';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "private"."evaluation_derive"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."evaluation_photo_may"("p_evaluation_id" "uuid", "p_action" "text") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select exists (
+    select 1 from public.evaluations e
+     where e.id = p_evaluation_id
+       and case p_action
+             when 'read' then
+               private.is_platform_admin()
+               or private.has_permission(e.facility_id, 'view_evaluations')
+               or private.has_permission(e.facility_id, 'perform_evaluations')
+               or (
+                 e.card_status = 'sent'
+                 and coalesce((e.card_options->>'includePhoto')::boolean, true)
+                 and e.pet_id in (select private.own_pet_ids())
+               )
+             when 'attach' then
+               e.card_status <> 'sent'
+               and (private.has_permission(e.facility_id, 'perform_evaluations')
+                    or private.is_platform_admin())
+             when 'remove' then
+               e.card_status <> 'sent'
+               and (private.has_permission(e.facility_id, 'perform_evaluations')
+                    or private.is_platform_admin())
+             else false
+           end
+  );
+$$;
+
+
+ALTER FUNCTION "private"."evaluation_photo_may"("p_evaluation_id" "uuid", "p_action" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."evaluation_photo_object_may"("p_name" "text", "p_action" "text") RETURNS boolean
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_folders    text[] := storage.foldername(p_name);
+  v_evaluation uuid;
+begin
+  if coalesce(array_length(v_folders, 1), 0) <> 2 then
+    return false;
+  end if;
+  begin
+    v_evaluation := v_folders[2]::uuid;
+  exception when invalid_text_representation then
+    return false;
+  end;
+  return exists (
+    select 1 from public.evaluations e
+     where e.id = v_evaluation and e.facility_id::text = v_folders[1]
+  ) and private.evaluation_photo_may(v_evaluation, p_action);
+end;
+$$;
+
+
+ALTER FUNCTION "private"."evaluation_photo_object_may"("p_name" "text", "p_action" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."evaluation_text_array"("p_value" "jsonb", "p_field" "text", "p_max_items" integer, "p_max_length" integer) RETURNS "text"[]
+    LANGUAGE "plpgsql" IMMUTABLE
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_out text[];
+begin
+  if p_value is null or jsonb_typeof(p_value) = 'null' then
+    return '{}';
+  end if;
+  if jsonb_typeof(p_value) <> 'array'
+     or jsonb_array_length(p_value) > p_max_items
+     or exists (
+       select 1 from jsonb_array_elements(p_value) v
+        where jsonb_typeof(v) <> 'string'
+           or length(v #>> '{}') not between 1 and p_max_length
+     ) then
+    raise exception '% must be a list of at most % short words.', p_field, p_max_items
+      using errcode = '22023', hint = 'evaluation_invalid';
+  end if;
+  select coalesce(array_agg(distinct v), '{}') into v_out
+    from jsonb_array_elements_text(p_value) v;
+  return v_out;
+end;
+$$;
+
+
+ALTER FUNCTION "private"."evaluation_text_array"("p_value" "jsonb", "p_field" "text", "p_max_items" integer, "p_max_length" integer) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "private"."facility_of_client"("p_client_id" "uuid") RETURNS "uuid"
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -3590,6 +3885,74 @@ $$;
 
 
 ALTER FUNCTION "private"."gift_card_ledger_is_append_only"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."grant_evaluation_credit"("p_evaluation_id" "uuid") RETURNS numeric
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_e        public.evaluations;
+  v_booking  public.bookings;
+  v_pets     uuid[];
+  v_count    integer;
+  v_index    integer;
+  v_share    numeric(10,2);
+  v_amount   numeric(10,2);
+  v_pet_name text;
+begin
+  select * into v_e from public.evaluations e where e.id = p_evaluation_id;
+  if v_e.id is null or v_e.booking_id is null
+     or v_e.result is null
+     or v_e.result not in ('approved', 'approved_with_restrictions') then
+    return 0;
+  end if;
+  if exists (
+    select 1 from public.store_credit_entries s where s.evaluation_id = v_e.id
+  ) then
+    return 0;
+  end if;
+
+  select * into v_booking from public.bookings b where b.id = v_e.booking_id;
+  if v_booking.id is null
+     or v_booking.service <> 'evaluation'
+     or coalesce(v_booking.details->>'evaluationCredit', '') <> 'true'
+     or v_booking.amount_paid <= 0 then
+    return 0;
+  end if;
+
+  select array_agg(bp.pet_id order by p.ref, p.id) into v_pets
+    from public.booking_pets bp
+    join public.pets p on p.id = bp.pet_id
+   where bp.booking_id = v_booking.id;
+  v_count := coalesce(array_length(v_pets, 1), 0);
+  v_index := array_position(v_pets, v_e.pet_id);
+  if v_count = 0 or v_index is null then
+    return 0;
+  end if;
+
+  v_share := round(v_booking.amount_paid / v_count, 2);
+  v_amount := case
+    when v_index = v_count then v_booking.amount_paid - v_share * (v_count - 1)
+    else v_share
+  end;
+  if v_amount <= 0 then
+    return 0;
+  end if;
+
+  select p.name into v_pet_name from public.pets p where p.id = v_e.pet_id;
+  insert into public.store_credit_entries
+    (facility_id, client_id, amount, reason, note, booking_id, evaluation_id)
+  values
+    (v_e.facility_id, v_booking.client_id, v_amount, 'evaluation',
+     'Evaluation deposit — ' || coalesce(v_pet_name, 'pet') || ' was approved',
+     v_booking.id, v_e.id);
+  return v_amount;
+end;
+$$;
+
+
+ALTER FUNCTION "private"."grant_evaluation_credit"("p_evaluation_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "private"."grooming_add_on_same_facility"() RETURNS "trigger"
@@ -4693,6 +5056,50 @@ $$;
 ALTER FUNCTION "private"."loyalty_ledger_is_append_only"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "private"."may_send_evaluation"("p_facility_id" "uuid", "p_evaluator_staff_id" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  with settings as (
+    select private.evaluation_card_settings(p_facility_id) as v
+  )
+  select private.is_platform_admin()
+      or exists (
+        select 1
+          from public.facility_memberships m
+          left join public.staff s
+            on s.membership_id = m.id and s.facility_id = m.facility_id
+          cross join settings
+         where m.profile_id = (select auth.jwt()->>'sub')
+           and m.facility_id = p_facility_id
+           and m.is_active
+           and (private.has_permission(p_facility_id, 'view_evaluations')
+                or private.has_permission(p_facility_id, 'perform_evaluations'))
+           and (
+             m.role in ('owner', 'admin')
+             or exists (
+               select 1
+                 from jsonb_array_elements_text(
+                        case jsonb_typeof(settings.v->'reviewerRoles')
+                          when 'array' then settings.v->'reviewerRoles'
+                          else '[]'::jsonb
+                        end) r(role)
+                where r.role = m.role::text
+                   or r.role = any(coalesce(s.additional_roles::text[], '{}'))
+             )
+             or (
+               coalesce((settings.v->>'evaluatorSelfSend')::boolean, false)
+               and s.id is not null
+               and s.id = p_evaluator_staff_id
+             )
+           )
+      );
+$$;
+
+
+ALTER FUNCTION "private"."may_send_evaluation"("p_facility_id" "uuid", "p_evaluator_staff_id" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "private"."may_send_report_card"("p_facility_id" "uuid", "p_service_type" "text") RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -5419,6 +5826,44 @@ ALTER FUNCTION "private"."pet_passed_daycare_evaluation"("p_pet_id" "uuid") OWNE
 
 COMMENT ON FUNCTION "private"."pet_passed_daycare_evaluation"("p_pet_id" "uuid") IS 'True when the pet holds a passed, unexpired evaluation that does not deny daycare. Reads pets.details->evaluations, which only the facility writes.';
 
+
+
+CREATE OR REPLACE FUNCTION "private"."pet_passed_evaluation_for"("p_pet_id" "uuid", "p_service" "text") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  with latest as (
+    select e
+      from public.pets p,
+           jsonb_array_elements(
+             case jsonb_typeof(p.details->'evaluations')
+               when 'array' then p.details->'evaluations'
+               else '[]'::jsonb
+             end) e
+     where p.id = p_pet_id
+     order by e->>'evaluatedAt' desc nulls last
+     limit 1
+  )
+  select coalesce((
+    select (e->>'status') = 'passed'
+       and coalesce(e->>'isExpired', 'false') <> 'true'
+       and case
+             -- daycare and boarding carry their own yes or no
+             when p_service in ('daycare', 'boarding')
+                  and jsonb_typeof(e->'approvedServices'->p_service) = 'boolean'
+               then (e->'approvedServices'->>p_service)::boolean
+             -- every other service is listed when approved
+             when jsonb_typeof(e->'approvedServices'->'customApproved') = 'array'
+               then (e->'approvedServices'->'customApproved') ? p_service
+             -- a pass that names no services lets the pet into all of them
+             else true
+           end
+      from latest
+  ), false);
+$$;
+
+
+ALTER FUNCTION "private"."pet_passed_evaluation_for"("p_pet_id" "uuid", "p_service" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "private"."pet_vaccination_facility"() RETURNS "trigger"
@@ -6384,6 +6829,33 @@ $$;
 ALTER FUNCTION "private"."service_add_on_same_facility"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "private"."service_needs_evaluation"("p_facility_id" "uuid", "p_service" "text") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select coalesce((
+    select coalesce((f.value->>'evaluationRequired')::boolean, false)
+        or coalesce(f.value->'servicesRequiringEvaluation', '[]'::jsonb) ? p_service
+      from public.facility_settings f
+     where f.facility_id = p_facility_id
+       and f.domain = 'booking_flow'
+  ), false)
+  or coalesce((
+    -- A module's own "Enable Evaluation" (enabled and not optional), until
+    -- the facility saves the setup page, which makes it agree with the list.
+    select coalesce((m.value->'settings'->'evaluation'->>'enabled')::boolean, false)
+       and not coalesce((m.value->'settings'->'evaluation'->>'optional')::boolean, false)
+      from public.facility_settings m
+     where m.facility_id = p_facility_id
+       and m.domain = p_service || '_config'
+       and p_service in ('daycare', 'boarding', 'grooming', 'training')
+  ), false);
+$$;
+
+
+ALTER FUNCTION "private"."service_needs_evaluation"("p_facility_id" "uuid", "p_service" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "private"."set_updated_at"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
@@ -6457,6 +6929,41 @@ ALTER FUNCTION "private"."staff_commission_rate"("p_staff_id" "uuid", "p_service
 
 COMMENT ON FUNCTION "private"."staff_commission_rate"("p_staff_id" "uuid", "p_service" "text") IS 'The percentage this member of staff earns on this service: a per-module override, else generalServiceCommission, else 0. A malformed value reads as absent rather than as an error — payroll must not stop a booking being saved.';
 
+
+
+CREATE OR REPLACE FUNCTION "private"."staff_holds"("p_staff_id" "uuid", "p_permission" "text") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select case
+    when st.membership_id is not null then
+      coalesce(
+        private.resolve_permission(st.membership_id, p_permission),
+        'none'::public.access_scope
+      ) <> 'none'::public.access_scope
+    else exists (
+      select 1
+        from unnest(array[st.primary_role] || st.additional_roles) as held(role)
+       where coalesce(
+               (select frp.scope
+                  from public.facility_role_permissions frp
+                 where frp.facility_id = st.facility_id
+                   and frp.role = held.role
+                   and frp.permission_key = p_permission),
+               (select rpp.scope
+                  from public.role_preset_permissions rpp
+                 where rpp.role = held.role
+                   and rpp.permission_key = p_permission),
+               'none'::public.access_scope
+             ) <> 'none'::public.access_scope
+    )
+  end
+    from public.staff st
+   where st.id = p_staff_id;
+$$;
+
+
+ALTER FUNCTION "private"."staff_holds"("p_staff_id" "uuid", "p_permission" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "private"."staff_legacy_id_default"() RETURNS "trigger"
@@ -9723,6 +10230,26 @@ begin
     end if;
   end if;
 
+  -- ── THE EVALUATION A SERVICE NEEDS FIRST (2026-10-02) ──────────────────
+  --
+  -- "Services that need an evaluation first" — the facility's one rule since
+  -- the evaluation setup page (Settings › Services › Evaluations). A customer
+  -- books such a service only for pets whose latest evaluation passed, is
+  -- current, and does not leave this service out. Staff decide at the desk
+  -- (the wizard's Confirm asks, and keeps the reason), as for daycare above.
+  if p_booking->>'service' is not null
+     and p_booking->>'service' <> 'evaluation'
+     and not private.has_permission((p_booking->>'facility_id')::uuid, 'create_bookings')
+     and private.service_needs_evaluation(
+           (p_booking->>'facility_id')::uuid, p_booking->>'service')
+     and exists (
+       select 1 from unnest(p_pet_ids) pid
+        where not private.pet_passed_evaluation_for(pid, p_booking->>'service'))
+  then
+    raise exception 'Book an evaluation before booking %.', p_booking->>'service'
+      using errcode = '22023', hint = 'evaluation_required';
+  end if;
+
   insert into public.bookings (
     facility_id, location_id, client_id, service, service_type,
     status, start_at, end_at,
@@ -10149,6 +10676,39 @@ $$;
 
 
 ALTER FUNCTION "public"."decline_training_makeup"("p_makeup_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."discard_evaluation"("p_evaluation_id" "uuid") RETURNS "text"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_e public.evaluations;
+begin
+  if (select auth.jwt()->>'sub') is null then
+    raise exception 'Sign in to run an evaluation.' using errcode = '42501';
+  end if;
+  select * into v_e from public.evaluations e where e.id = p_evaluation_id for update;
+  if v_e.id is null then
+    raise exception 'That evaluation does not exist.'
+      using errcode = 'P0002', hint = 'evaluation_not_found';
+  end if;
+  if not (private.has_permission(v_e.facility_id, 'perform_evaluations')
+          or private.is_platform_admin()) then
+    raise exception 'Running evaluations is not part of your role here.'
+      using errcode = '42501';
+  end if;
+  if v_e.status <> 'in_progress' then
+    raise exception 'A finished evaluation is not thrown away.'
+      using errcode = '55000', hint = 'evaluation_state';
+  end if;
+  delete from public.evaluations e where e.id = v_e.id;
+  return v_e.photo_path;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."discard_evaluation"("p_evaluation_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."disconnect_payment_connection"("p_facility_id" "uuid", "p_reason" "text", "p_processor" "text" DEFAULT 'clover'::"text") RETURNS TABLE("connection_revoked" boolean, "credentials_removed" boolean)
@@ -10804,6 +11364,131 @@ COMMENT ON FUNCTION "public"."ensure_review_templates"("p_facility_id" "uuid") I
 
 
 
+CREATE OR REPLACE FUNCTION "public"."evaluation_card_for_owner"("p_evaluation_id" "uuid") RETURNS "jsonb"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select jsonb_build_object(
+           'id', e.id,
+           'facility', jsonb_build_object(
+             'id', f.id, 'name', f.name, 'logoUrl', f.logo_url,
+             'email', f.email, 'phone', f.phone),
+           'pet', jsonb_build_object(
+             'id', p.id, 'ref', p.ref, 'name', p.name, 'breed', p.breed,
+             'species', p.species, 'imageUrl', p.image_url, 'sex', p.sex),
+           'ownerName', c.name,
+           'evaluatorName', e.evaluator_name,
+           'result', e.result,
+           'answers', coalesce((
+             select jsonb_object_agg(a.key, a.value)
+               from jsonb_each(e.answers) a
+              where a.key in ('dog', 'human', 'energy', 'anx', 'react', 'play', 'group', 'result')
+                 or (a.key = 'guard' and not card.hide)
+                 or a.key in (
+                   select q->>'id' from jsonb_array_elements(e.custom_questions) q
+                    where coalesce((q->>'onCard')::boolean, false))
+           ), '{}'::jsonb),
+           'customQuestions', coalesce((
+             select jsonb_agg(jsonb_build_object(
+                      'id', q->>'id', 'label', q->>'label', 'type', q->>'type'))
+               from jsonb_array_elements(e.custom_questions) q
+              where coalesce((q->>'onCard')::boolean, false)
+           ), '[]'::jsonb),
+           'strengths', to_jsonb(e.strengths),
+           'watchFor', to_jsonb(case
+             when card.hide then array(
+               select t from unnest(e.watch_for) t where t <> 'guarder')
+             else e.watch_for
+           end),
+           'ownerNote', e.owner_note,
+           'internalNote', case when card.hide then '' else e.internal_note end,
+           'approvedServices', to_jsonb(case
+             when e.result in ('approved', 'approved_with_restrictions')
+               then e.approved_services
+             else '{}'::text[]
+           end),
+           'hasPhoto', e.photo_path is not null
+                       and coalesce((e.card_options->>'includePhoto')::boolean, true),
+           -- The owner's own session signs it: the storage policy lets them read
+           -- this file once the card is sent with its photo.
+           'photoPath', case
+             when coalesce((e.card_options->>'includePhoto')::boolean, true)
+               then e.photo_path
+           end,
+           'theme', coalesce(e.card_options->>'theme', 'green'),
+           'bookFirstVisitButton', coalesce((e.card_options->>'bookFirstVisitButton')::boolean, true),
+           'hideInternal', card.hide,
+           'completedAt', e.completed_at,
+           'sentAt', e.sent_at,
+           'openedAt', e.opened_at)
+    from public.evaluations e
+    join public.pets p on p.id = e.pet_id
+    join public.clients c on c.id = p.client_id
+    join public.facilities f on f.id = e.facility_id
+    cross join lateral (
+      select coalesce((e.card_options->>'hideInternal')::boolean, true) as hide
+    ) card
+   where e.id = p_evaluation_id
+     and e.card_status = 'sent'
+     and p.client_id in (select private.own_client_ids());
+$$;
+
+
+ALTER FUNCTION "public"."evaluation_card_for_owner"("p_evaluation_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."evaluation_reviewers"("p_facility_id" "uuid") RETURNS TABLE("membership_id" "uuid", "profile_id" "text")
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  with settings as (
+    select private.evaluation_card_settings(p_facility_id) as v
+  )
+  select m.id, m.profile_id
+    from public.facility_memberships m
+    left join public.staff s
+      on s.membership_id = m.id and s.facility_id = m.facility_id
+    cross join settings
+   where m.facility_id = p_facility_id
+     and m.is_active
+     and (
+       m.role in ('owner', 'admin')
+       or exists (
+         select 1
+           from jsonb_array_elements_text(
+                  case jsonb_typeof(settings.v->'reviewerRoles')
+                    when 'array' then settings.v->'reviewerRoles'
+                    else '[]'::jsonb
+                  end) r(role)
+          where r.role = m.role::text
+             or r.role = any(coalesce(s.additional_roles::text[], '{}'))
+       )
+     )
+   group by m.id, m.profile_id;
+$$;
+
+
+ALTER FUNCTION "public"."evaluation_reviewers"("p_facility_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."evaluation_viewer"("p_facility_id" "uuid") RETURNS TABLE("may_run" boolean, "may_review" boolean, "may_self_send" boolean, "staff_id" "uuid")
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select
+    private.has_permission(p_facility_id, 'perform_evaluations')
+      or private.is_platform_admin(),
+    private.may_send_evaluation(p_facility_id, null),
+    coalesce((private.evaluation_card_settings(p_facility_id)->>'evaluatorSelfSend')::boolean, false)
+      and (private.has_permission(p_facility_id, 'view_evaluations')
+           or private.has_permission(p_facility_id, 'perform_evaluations')),
+    (select c.staff_id from private.evaluation_caller(p_facility_id) c);
+$$;
+
+
+ALTER FUNCTION "public"."evaluation_viewer"("p_facility_id" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."facility_branding_by_slug"("p_slug" "text") RETURNS TABLE("facility_id" "uuid", "name" "text", "slug" "text", "logo_url" "text", "wordmark_url" "text", "primary_color" "text", "accent_color" "text", "tagline" "text", "allow_customer_signup" boolean)
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -10823,6 +11508,35 @@ ALTER FUNCTION "public"."facility_branding_by_slug"("p_slug" "text") OWNER TO "p
 
 COMMENT ON FUNCTION "public"."facility_branding_by_slug"("p_slug" "text") IS 'The public branding for one facility, by exact slug. DELIBERATELY anon-callable and allowlisted in V7 of rpc-session-required.sql: a branded sign-in page renders for a visitor who is by definition not signed in, so src/lib/api/facility-branding.ts calls this with the publishable key and no session. An exact-slug lookup rather than a directory, and it omits support_email/support_phone on purpose. Revoking anon here blanks every facility''s front door.';
 
+
+
+CREATE OR REPLACE FUNCTION "public"."facility_evaluators"("p_facility_id" "uuid") RETURNS TABLE("staff_id" "uuid", "membership_id" "uuid", "first_name" "text", "last_name" "text", "job_title" "text", "primary_role" "text")
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select st.id, st.membership_id, st.first_name, st.last_name, st.job_title,
+         st.primary_role::text
+    from public.staff st
+   where st.facility_id = p_facility_id
+     and st.status = 'active'
+     and private.staff_holds(st.id, 'perform_evaluations')
+     and (
+       (select auth.role()) = 'service_role'
+       or exists (
+         select 1
+           from public.facility_memberships m
+          where m.profile_id = (select auth.jwt()->>'sub')
+            and m.facility_id = p_facility_id
+            and m.is_active
+       )
+       -- A platform admin looking after the facility.
+       or private.has_permission(p_facility_id, 'view_evaluations')
+     )
+   order by st.created_at, st.id;
+$$;
+
+
+ALTER FUNCTION "public"."facility_evaluators"("p_facility_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."facility_has_module"("p_facility_id" "uuid", "p_module_id" "text") RETURNS boolean
@@ -11675,6 +12389,88 @@ $$;
 
 
 ALTER FUNCTION "public"."facility_takings"("p_facility_id" "uuid", "p_from" timestamp with time zone, "p_to" timestamp with time zone, "p_time_zone" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."finish_evaluation"("p_evaluation_id" "uuid", "p_channels" "text"[] DEFAULT '{}'::"text"[]) RETURNS "text"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_e        public.evaluations;
+  v_custom   jsonb;
+  v_missing  integer;
+  v_mode     text;
+begin
+  if (select auth.jwt()->>'sub') is null then
+    raise exception 'Sign in to run an evaluation.' using errcode = '42501';
+  end if;
+
+  select * into v_e from public.evaluations e where e.id = p_evaluation_id for update;
+  if v_e.id is null then
+    raise exception 'That evaluation does not exist.'
+      using errcode = 'P0002', hint = 'evaluation_not_found';
+  end if;
+  if not (private.has_permission(v_e.facility_id, 'perform_evaluations')
+          or private.is_platform_admin()) then
+    raise exception 'Running evaluations is not part of your role here.'
+      using errcode = '42501';
+  end if;
+  if v_e.status <> 'in_progress' then
+    raise exception 'That evaluation is already finished.'
+      using errcode = '55000', hint = 'evaluation_state';
+  end if;
+
+  select case jsonb_typeof(f.value->'customQuestions')
+           when 'array' then f.value->'customQuestions'
+           else '[]'::jsonb
+         end
+    into v_custom
+    from public.facility_settings f
+   where f.facility_id = v_e.facility_id
+     and f.domain = 'evaluation_form_template';
+  v_custom := coalesce(v_custom, '[]'::jsonb);
+
+  select count(*) into v_missing
+    from (
+      select k from unnest(array['dog', 'human', 'energy', 'anx', 'react',
+                                 'play', 'group', 'leash', 'guard', 'result']) k
+      union all
+      select q->>'id' from jsonb_array_elements(v_custom) q
+       where coalesce((q->>'required')::boolean, false)
+    ) required(k)
+   where nullif(btrim(coalesce(v_e.answers->>required.k, '')), '') is null;
+  if v_missing > 0 or v_e.result is null then
+    raise exception 'Answer all the required questions first (% left).', v_missing
+      using errcode = '23514', hint = 'evaluation_incomplete';
+  end if;
+
+  update public.evaluations e
+     set status            = 'completed',
+         card_status       = 'in_review',
+         completed_at      = now(),
+         submitted_at      = now(),
+         reminded_at       = null,
+         returned_comment  = null,
+         custom_questions  = v_custom,
+         -- A verdict that is not a pass approves nothing.
+         approved_services = case
+           when e.result in ('approved', 'approved_with_restrictions')
+             then e.approved_services
+           else '{}'
+         end
+   where e.id = v_e.id;
+
+  v_mode := private.evaluation_card_settings(v_e.facility_id)->>'deliveryMode';
+  if v_mode = 'auto' or (v_mode = 'autoPass' and v_e.result = 'approved') then
+    perform private.deliver_evaluation_card(v_e.id, null, true, p_channels);
+    return 'sent';
+  end if;
+  return 'in_review';
+end;
+$$;
+
+
+ALTER FUNCTION "public"."finish_evaluation"("p_evaluation_id" "uuid", "p_channels" "text"[]) OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."facility_tasks" (
@@ -12597,6 +13393,22 @@ $$;
 ALTER FUNCTION "public"."mark_all_my_notifications_read"("p_facility_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."mark_evaluation_card_opened"("p_evaluation_id" "uuid") RETURNS "void"
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  update public.evaluations e
+     set opened_at = now()
+   where e.id = p_evaluation_id
+     and e.card_status = 'sent'
+     and e.opened_at is null
+     and e.pet_id in (select private.own_pet_ids());
+$$;
+
+
+ALTER FUNCTION "public"."mark_evaluation_card_opened"("p_evaluation_id" "uuid") OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."report_cards" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "facility_id" "uuid" NOT NULL,
@@ -12866,6 +13678,25 @@ $$;
 
 
 ALTER FUNCTION "public"."my_client_at"("p_facility_slug" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."my_evaluation_cards"("p_facility_id" "uuid" DEFAULT NULL::"uuid") RETURNS TABLE("id" "uuid", "facility_id" "uuid", "pet_id" "uuid", "pet_name" "text", "result" "text", "completed_at" timestamp with time zone, "sent_at" timestamp with time zone, "opened_at" timestamp with time zone)
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select e.id, e.facility_id, e.pet_id, p.name, e.result,
+         e.completed_at, e.sent_at, e.opened_at
+    from public.evaluations e
+    join public.pets p on p.id = e.pet_id
+   where e.card_status = 'sent'
+     and p.client_id in (select private.own_client_ids())
+     and (p_facility_id is null or e.facility_id = p_facility_id)
+   order by e.sent_at desc
+   limit 200;
+$$;
+
+
+ALTER FUNCTION "public"."my_evaluation_cards"("p_facility_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."my_notification_preferences"("p_facility_id" "uuid") RETURNS TABLE("membership_id" "uuid", "role" "text", "in_app" "jsonb", "email" "jsonb")
@@ -14637,6 +15468,46 @@ ALTER FUNCTION "public"."purge_e2e_bookings"() OWNER TO "postgres";
 
 COMMENT ON FUNCTION "public"."purge_e2e_bookings"() IS 'Delete cancelled e2e bookings that hold no money. Takes no argument on purpose — it can only ever match ''%[e2e %''. Run by scripts/purge-e2e-bookings.ts after a suite run.';
 
+
+
+CREATE OR REPLACE FUNCTION "public"."purge_e2e_evaluations"() RETURNS integer
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_row   record;
+  v_count integer := 0;
+begin
+  for v_row in
+    select e.id, e.pet_id from public.evaluations e where e.owner_note like 'E2E:%'
+  loop
+    perform set_config('yipyy.evaluation_result', 'on', true);
+    update public.pets p
+       set details = jsonb_set(p.details, '{evaluations}', coalesce((
+             select jsonb_agg(x)
+               from jsonb_array_elements(p.details->'evaluations') x
+              where x->>'id' is distinct from v_row.id::text
+           ), '[]'::jsonb))
+     where p.id = v_row.pet_id
+       and jsonb_typeof(p.details->'evaluations') = 'array';
+    perform set_config('yipyy.evaluation_result', '', true);
+
+    insert into public.store_credit_entries
+      (facility_id, client_id, amount, reason, note, author_name)
+    select s.facility_id, s.client_id, -s.amount, 'adjustment',
+           '[e2e store-credit] evaluation purge correction', 'e2e:purge'
+      from public.store_credit_entries s
+     where s.evaluation_id = v_row.id;
+
+    delete from public.evaluations e where e.id = v_row.id;
+    v_count := v_count + 1;
+  end loop;
+  return v_count;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."purge_e2e_evaluations"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."purge_e2e_forms"() RETURNS integer
@@ -16991,6 +17862,49 @@ COMMENT ON FUNCTION "public"."respond_to_estimate"("p_estimate_id" "uuid", "p_ac
 
 
 
+CREATE OR REPLACE FUNCTION "public"."return_evaluation_card"("p_evaluation_id" "uuid", "p_comment" "text") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_e public.evaluations;
+begin
+  if (select auth.jwt()->>'sub') is null then
+    raise exception 'Sign in to review a report card.' using errcode = '42501';
+  end if;
+  if nullif(btrim(coalesce(p_comment, '')), '') is null or length(p_comment) > 1000 then
+    raise exception 'Say what the evaluator should change.'
+      using errcode = '22023', hint = 'evaluation_invalid';
+  end if;
+
+  select * into v_e from public.evaluations e where e.id = p_evaluation_id for update;
+  if v_e.id is null then
+    raise exception 'That evaluation does not exist.'
+      using errcode = 'P0002', hint = 'evaluation_not_found';
+  end if;
+  if not private.may_send_evaluation(v_e.facility_id, v_e.evaluator_staff_id) then
+    raise exception 'Reviewing report cards is not part of your role here.'
+      using errcode = '42501';
+  end if;
+  if v_e.card_status <> 'in_review' then
+    raise exception 'That report card is not waiting for review.'
+      using errcode = '55000', hint = 'evaluation_state';
+  end if;
+
+  update public.evaluations e
+     set status           = 'in_progress',
+         card_status      = 'draft',
+         returned_comment = btrim(p_comment),
+         submitted_at     = null,
+         reminded_at      = null
+   where e.id = v_e.id;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."return_evaluation_card"("p_evaluation_id" "uuid", "p_comment" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."reverse_package_pass"("p_ref" bigint, "p_note" "text" DEFAULT ''::"text") RETURNS integer
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
@@ -17436,6 +18350,174 @@ COMMENT ON FUNCTION "public"."save_checkout_cut_off"("p_facility_id" "uuid", "p_
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."evaluations" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "facility_id" "uuid" NOT NULL,
+    "pet_id" "uuid" NOT NULL,
+    "client_id" "uuid" NOT NULL,
+    "booking_id" "uuid",
+    "evaluator_staff_id" "uuid",
+    "evaluator_name" "text" DEFAULT ''::"text" NOT NULL,
+    "status" "text" DEFAULT 'in_progress'::"text" NOT NULL,
+    "answers" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
+    "strengths" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "watch_for" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "owner_note" "text" DEFAULT ''::"text" NOT NULL,
+    "internal_note" "text" DEFAULT ''::"text" NOT NULL,
+    "result" "text",
+    "approved_services" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "custom_questions" "jsonb" DEFAULT '[]'::"jsonb" NOT NULL,
+    "photo_path" "text",
+    "card_status" "text" DEFAULT 'draft'::"text" NOT NULL,
+    "card_options" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
+    "returned_comment" "text",
+    "started_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "completed_at" timestamp with time zone,
+    "submitted_at" timestamp with time zone,
+    "reminded_at" timestamp with time zone,
+    "sent_at" timestamp with time zone,
+    "sent_by_name" "text",
+    "auto_sent" boolean DEFAULT false NOT NULL,
+    "sent_channels" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "opened_at" timestamp with time zone,
+    "created_by" "text" DEFAULT ("auth"."jwt"() ->> 'sub'::"text"),
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "evaluations_answers_check" CHECK (("jsonb_typeof"("answers") = 'object'::"text")),
+    CONSTRAINT "evaluations_card_options_check" CHECK (("jsonb_typeof"("card_options") = 'object'::"text")),
+    CONSTRAINT "evaluations_card_status_check" CHECK (("card_status" = ANY (ARRAY['draft'::"text", 'in_review'::"text", 'sent'::"text"]))),
+    CONSTRAINT "evaluations_custom_questions_check" CHECK (("jsonb_typeof"("custom_questions") = 'array'::"text")),
+    CONSTRAINT "evaluations_evaluator_name_check" CHECK (("length"("evaluator_name") <= 200)),
+    CONSTRAINT "evaluations_internal_note_check" CHECK (("length"("internal_note") <= 4000)),
+    CONSTRAINT "evaluations_owner_note_check" CHECK (("length"("owner_note") <= 4000)),
+    CONSTRAINT "evaluations_photo_is_its_own" CHECK ((("photo_path" IS NULL) OR (("split_part"("photo_path", '/'::"text", 1) = ("facility_id")::"text") AND ("split_part"("photo_path", '/'::"text", 2) = ("id")::"text")))),
+    CONSTRAINT "evaluations_photo_path_check" CHECK ((("photo_path" IS NULL) OR (("length"("photo_path") >= 1) AND ("length"("photo_path") <= 500)))),
+    CONSTRAINT "evaluations_result_check" CHECK (("result" = ANY (ARRAY['approved'::"text", 'approved_with_restrictions'::"text", 'needs_re_evaluation'::"text", 'not_approved'::"text"]))),
+    CONSTRAINT "evaluations_returned_comment_check" CHECK ((("returned_comment" IS NULL) OR ("length"("returned_comment") <= 1000))),
+    CONSTRAINT "evaluations_review_is_completed" CHECK ((("card_status" = 'draft'::"text") OR ("status" = 'completed'::"text"))),
+    CONSTRAINT "evaluations_sent_is_completed" CHECK ((("card_status" <> 'sent'::"text") OR (("status" = 'completed'::"text") AND ("sent_at" IS NOT NULL)))),
+    CONSTRAINT "evaluations_status_check" CHECK (("status" = ANY (ARRAY['in_progress'::"text", 'completed'::"text"])))
+);
+
+
+ALTER TABLE "public"."evaluations" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."evaluations" IS 'One evaluation visit of one pet: the evaluator''s answers, the result and the owner''s report card (the client''s evaluation mocks, 2026-10-02). Written only through the functions in 20261002220000; read by staff with view_evaluations or perform_evaluations. A customer reads a SENT card through public.evaluation_card_for_owner().';
+
+
+
+CREATE OR REPLACE FUNCTION "public"."save_evaluation"("p_evaluation_id" "uuid", "p_patch" "jsonb") RETURNS "public"."evaluations"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $_$
+declare
+  v_e      public.evaluations;
+  v_result text;
+  v_key    text;
+begin
+  if (select auth.jwt()->>'sub') is null then
+    raise exception 'Sign in to run an evaluation.' using errcode = '42501';
+  end if;
+  if p_patch is null or jsonb_typeof(p_patch) <> 'object' then
+    raise exception 'Nothing to save.' using errcode = '22023', hint = 'evaluation_invalid';
+  end if;
+
+  select * into v_e from public.evaluations e where e.id = p_evaluation_id for update;
+  if v_e.id is null then
+    raise exception 'That evaluation does not exist.'
+      using errcode = 'P0002', hint = 'evaluation_not_found';
+  end if;
+  if v_e.card_status = 'sent' then
+    raise exception 'That report card was sent; it can no longer change.'
+      using errcode = '55000', hint = 'evaluation_state';
+  end if;
+
+  if v_e.card_status = 'in_review' then
+    if not private.may_send_evaluation(v_e.facility_id, v_e.evaluator_staff_id) then
+      raise exception 'Reviewing report cards is not part of your role here.'
+        using errcode = '42501';
+    end if;
+    for v_key in select jsonb_object_keys(p_patch) loop
+      if v_key <> 'ownerNote' then
+        raise exception 'Only the note to the owner changes in review.'
+          using errcode = '55000', hint = 'evaluation_state';
+      end if;
+    end loop;
+    if jsonb_typeof(p_patch->'ownerNote') <> 'string' then
+      raise exception 'The note to the owner is text.'
+        using errcode = '22023', hint = 'evaluation_invalid';
+    end if;
+    update public.evaluations e
+       set owner_note = p_patch->>'ownerNote'
+     where e.id = v_e.id
+    returning * into v_e;
+    return v_e;
+  end if;
+
+  if not (private.has_permission(v_e.facility_id, 'perform_evaluations')
+          or private.is_platform_admin()) then
+    raise exception 'Running evaluations is not part of your role here.'
+      using errcode = '42501';
+  end if;
+
+  if p_patch ? 'answers' then
+    if jsonb_typeof(p_patch->'answers') <> 'object'
+       or (select count(*) from jsonb_object_keys(p_patch->'answers')) > 80
+       or exists (
+         select 1 from jsonb_each(p_patch->'answers') a
+          where a.key !~ '^[A-Za-z0-9_-]{1,64}$'
+             or jsonb_typeof(a.value) <> 'string'
+             or length(a.value #>> '{}') > 500
+       ) then
+      raise exception 'The answers are not in a shape this form writes.'
+        using errcode = '22023', hint = 'evaluation_invalid';
+    end if;
+    v_result := nullif(btrim(coalesce(p_patch->'answers'->>'result', '')), '');
+    if v_result is not null and v_result not in (
+      'approved', 'approved_with_restrictions', 'needs_re_evaluation', 'not_approved'
+    ) then
+      raise exception 'That is not an outcome.'
+        using errcode = '22023', hint = 'evaluation_invalid';
+    end if;
+  end if;
+
+  if p_patch ? 'ownerNote' and jsonb_typeof(p_patch->'ownerNote') <> 'string'
+     or p_patch ? 'internalNote' and jsonb_typeof(p_patch->'internalNote') <> 'string'
+     or p_patch ? 'photoPath' and jsonb_typeof(p_patch->'photoPath') not in ('string', 'null') then
+    raise exception 'The notes are text.' using errcode = '22023', hint = 'evaluation_invalid';
+  end if;
+
+  update public.evaluations e
+     set answers           = case when p_patch ? 'answers'
+                               then p_patch->'answers' else e.answers end,
+         result            = case when p_patch ? 'answers'
+                               then v_result else e.result end,
+         strengths         = case when p_patch ? 'strengths'
+                               then private.evaluation_text_array(p_patch->'strengths', 'Strengths', 20, 60)
+                               else e.strengths end,
+         watch_for         = case when p_patch ? 'watchFor'
+                               then private.evaluation_text_array(p_patch->'watchFor', 'Watch-for', 20, 60)
+                               else e.watch_for end,
+         approved_services = case when p_patch ? 'approvedServices'
+                               then private.evaluation_text_array(p_patch->'approvedServices', 'Approved for', 20, 80)
+                               else e.approved_services end,
+         owner_note        = case when p_patch ? 'ownerNote'
+                               then p_patch->>'ownerNote' else e.owner_note end,
+         internal_note     = case when p_patch ? 'internalNote'
+                               then p_patch->>'internalNote' else e.internal_note end,
+         photo_path        = case when p_patch ? 'photoPath'
+                               then nullif(p_patch->>'photoPath', '') else e.photo_path end
+   where e.id = v_e.id
+  returning * into v_e;
+  return v_e;
+end;
+$_$;
+
+
+ALTER FUNCTION "public"."save_evaluation"("p_evaluation_id" "uuid", "p_patch" "jsonb") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."save_my_notification_preferences"("p_facility_id" "uuid", "p_in_app" "jsonb", "p_email" "jsonb") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
@@ -17553,6 +18635,48 @@ $$;
 
 
 ALTER FUNCTION "public"."save_yipyy_go_draft"("p_booking_id" "uuid", "p_pet_id" "uuid", "p_answers" "jsonb", "p_add_on_requests" "jsonb") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."send_evaluation_card"("p_evaluation_id" "uuid", "p_owner_note" "text" DEFAULT NULL::"text", "p_channels" "text"[] DEFAULT '{}'::"text"[]) RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_e      public.evaluations;
+  v_caller record;
+begin
+  if (select auth.jwt()->>'sub') is null then
+    raise exception 'Sign in to send a report card.' using errcode = '42501';
+  end if;
+
+  select * into v_e from public.evaluations e where e.id = p_evaluation_id for update;
+  if v_e.id is null then
+    raise exception 'That evaluation does not exist.'
+      using errcode = 'P0002', hint = 'evaluation_not_found';
+  end if;
+  if not private.may_send_evaluation(v_e.facility_id, v_e.evaluator_staff_id) then
+    raise exception 'Reviewing report cards is not part of your role here.'
+      using errcode = '42501';
+  end if;
+  if v_e.card_status <> 'in_review' then
+    raise exception 'That report card is not waiting for review.'
+      using errcode = '55000', hint = 'evaluation_state';
+  end if;
+  if p_owner_note is not null then
+    if length(p_owner_note) > 4000 then
+      raise exception 'The note to the owner is too long.'
+        using errcode = '22023', hint = 'evaluation_invalid';
+    end if;
+    update public.evaluations e set owner_note = p_owner_note where e.id = v_e.id;
+  end if;
+
+  select * into v_caller from private.evaluation_caller(v_e.facility_id);
+  perform private.deliver_evaluation_card(v_e.id, v_caller.name, false, p_channels);
+end;
+$$;
+
+
+ALTER FUNCTION "public"."send_evaluation_card"("p_evaluation_id" "uuid", "p_owner_note" "text", "p_channels" "text"[]) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."set_booking_add_ons"("p_booking_id" "uuid", "p_lines" "jsonb", "p_only_if_missing" boolean DEFAULT false) RETURNS integer
@@ -18301,6 +19425,73 @@ $$;
 
 
 ALTER FUNCTION "public"."split_boarding_stay"("p_booking_ref" bigint, "p_from" "date", "p_room_id" "text", "p_override_reason" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."start_evaluation"("p_pet_id" "uuid", "p_booking_id" "uuid" DEFAULT NULL::"uuid") RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_facility uuid;
+  v_status   public.booking_status;
+  v_service  text;
+  v_id       uuid;
+  v_caller   record;
+begin
+  if (select auth.jwt()->>'sub') is null then
+    raise exception 'Sign in to run an evaluation.' using errcode = '42501';
+  end if;
+
+  select p.facility_id into v_facility from public.pets p where p.id = p_pet_id;
+  if v_facility is null then
+    raise exception 'That pet does not exist.'
+      using errcode = 'P0002', hint = 'evaluation_not_found';
+  end if;
+  if not (private.has_permission(v_facility, 'perform_evaluations')
+          or private.is_platform_admin()) then
+    raise exception 'Running evaluations is not part of your role here.'
+      using errcode = '42501';
+  end if;
+
+  if p_booking_id is not null then
+    select b.status, b.service into v_status, v_service
+      from public.bookings b
+     where b.id = p_booking_id and b.facility_id = v_facility;
+    if v_service is distinct from 'evaluation' then
+      raise exception 'That booking is not an evaluation.'
+        using errcode = 'P0002', hint = 'evaluation_not_found';
+    end if;
+    if v_status in ('cancelled', 'declined', 'no_show') then
+      raise exception 'That evaluation was cancelled.'
+        using errcode = '55000', hint = 'evaluation_state';
+    end if;
+    select e.id into v_id from public.evaluations e
+     where e.booking_id = p_booking_id and e.pet_id = p_pet_id;
+    if v_id is not null then
+      return v_id;
+    end if;
+  end if;
+
+  select * into v_caller from private.evaluation_caller(v_facility);
+
+  insert into public.evaluations
+    (facility_id, pet_id, client_id, booking_id, evaluator_staff_id, evaluator_name)
+  select v_facility, p.id, p.client_id, p_booking_id, v_caller.staff_id, v_caller.name
+    from public.pets p
+   where p.id = p_pet_id
+  on conflict on constraint evaluations_one_per_pet_per_booking do nothing
+  returning id into v_id;
+
+  if v_id is null then
+    select e.id into v_id from public.evaluations e
+     where e.booking_id = p_booking_id and e.pet_id = p_pet_id;
+  end if;
+  return v_id;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."start_evaluation"("p_pet_id" "uuid", "p_booking_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."status_page_maintenance"() RETURNS TABLE("id" "uuid", "title" "text", "body" "text", "published_at" timestamp with time zone)
@@ -20075,13 +21266,16 @@ CREATE TABLE IF NOT EXISTS "public"."store_credit_entries" (
     "author_name" "text" DEFAULT 'Staff'::"text" NOT NULL,
     "created_by" "text",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "evaluation_id" "uuid",
     CONSTRAINT "store_credit_entries_amount_check" CHECK (("amount" <> (0)::numeric)),
-    CONSTRAINT "store_credit_entries_reason_check" CHECK (("reason" = ANY (ARRAY['added'::"text", 'redeemed'::"text", 'expired'::"text", 'refund'::"text", 'adjustment'::"text", 'gift_card'::"text"]))),
+    CONSTRAINT "store_credit_entries_reason_check" CHECK (("reason" = ANY (ARRAY['added'::"text", 'redeemed'::"text", 'expired'::"text", 'refund'::"text", 'adjustment'::"text", 'gift_card'::"text", 'evaluation'::"text"]))),
+    CONSTRAINT "store_credit_evaluation_is_named" CHECK ((("reason" = 'evaluation'::"text") = ("evaluation_id" IS NOT NULL))),
     CONSTRAINT "store_credit_sign_matches_reason" CHECK (
 CASE "reason"
     WHEN 'added'::"text" THEN ("amount" > (0)::numeric)
     WHEN 'refund'::"text" THEN ("amount" > (0)::numeric)
     WHEN 'gift_card'::"text" THEN ("amount" > (0)::numeric)
+    WHEN 'evaluation'::"text" THEN ("amount" > (0)::numeric)
     WHEN 'redeemed'::"text" THEN ("amount" < (0)::numeric)
     WHEN 'expired'::"text" THEN ("amount" < (0)::numeric)
     WHEN 'adjustment'::"text" THEN true
@@ -20099,7 +21293,7 @@ COMMENT ON TABLE "public"."store_credit_entries" IS 'Append-only store-credit le
 
 
 
-COMMENT ON CONSTRAINT "store_credit_sign_matches_reason" ON "public"."store_credit_entries" IS 'The sign and the reason have to agree. `gift_card` is positive: it is value moved off a gift card onto the account, not credit granted.';
+COMMENT ON COLUMN "public"."store_credit_entries"."evaluation_id" IS 'The evaluation whose approval turned its share of a full-price evaluation deposit into credit (reason ''evaluation''). An identifier, not a foreign key: this ledger is append-only, and a cascade from it is an UPDATE it refuses. Unique, so an evaluation is credited once.';
 
 
 
@@ -24961,6 +26155,16 @@ ALTER TABLE ONLY "public"."estimates"
 
 
 
+ALTER TABLE ONLY "public"."evaluations"
+    ADD CONSTRAINT "evaluations_one_per_pet_per_booking" UNIQUE ("booking_id", "pet_id");
+
+
+
+ALTER TABLE ONLY "public"."evaluations"
+    ADD CONSTRAINT "evaluations_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."facilities"
     ADD CONSTRAINT "facilities_legacy_id_key" UNIQUE ("legacy_id");
 
@@ -26408,6 +27612,30 @@ CREATE INDEX "estimates_facility_created_idx" ON "public"."estimates" USING "btr
 
 
 
+CREATE INDEX "evaluations_booking_idx" ON "public"."evaluations" USING "btree" ("booking_id") WHERE ("booking_id" IS NOT NULL);
+
+
+
+CREATE INDEX "evaluations_client_idx" ON "public"."evaluations" USING "btree" ("client_id");
+
+
+
+CREATE INDEX "evaluations_evaluator_idx" ON "public"."evaluations" USING "btree" ("evaluator_staff_id") WHERE ("evaluator_staff_id" IS NOT NULL);
+
+
+
+CREATE INDEX "evaluations_facility_sent_idx" ON "public"."evaluations" USING "btree" ("facility_id", "sent_at" DESC) WHERE ("card_status" = 'sent'::"text");
+
+
+
+CREATE INDEX "evaluations_facility_status_idx" ON "public"."evaluations" USING "btree" ("facility_id", "card_status", "submitted_at");
+
+
+
+CREATE INDEX "evaluations_pet_idx" ON "public"."evaluations" USING "btree" ("pet_id", "completed_at" DESC);
+
+
+
 CREATE INDEX "facilities_org_id_idx" ON "public"."facilities" USING "btree" ("org_id");
 
 
@@ -27292,6 +28520,10 @@ CREATE INDEX "store_credit_entries_client_idx" ON "public"."store_credit_entries
 
 
 
+CREATE UNIQUE INDEX "store_credit_entries_evaluation_once" ON "public"."store_credit_entries" USING "btree" ("evaluation_id") WHERE ("evaluation_id" IS NOT NULL);
+
+
+
 CREATE INDEX "store_credit_entries_payment_id_idx" ON "public"."store_credit_entries" USING "btree" ("payment_id");
 
 
@@ -27746,6 +28978,14 @@ CREATE OR REPLACE TRIGGER "estimates_before_insert" BEFORE INSERT ON "public"."e
 
 
 CREATE OR REPLACE TRIGGER "estimates_before_update" BEFORE UPDATE ON "public"."estimates" FOR EACH ROW EXECUTE FUNCTION "private"."estimate_before_update"();
+
+
+
+CREATE OR REPLACE TRIGGER "evaluations_derive" BEFORE INSERT ON "public"."evaluations" FOR EACH ROW EXECUTE FUNCTION "private"."evaluation_derive"();
+
+
+
+CREATE OR REPLACE TRIGGER "evaluations_set_updated_at" BEFORE UPDATE ON "public"."evaluations" FOR EACH ROW EXECUTE FUNCTION "private"."set_updated_at"();
 
 
 
@@ -28956,6 +30196,31 @@ ALTER TABLE ONLY "public"."estimates"
 
 ALTER TABLE ONLY "public"."estimates"
     ADD CONSTRAINT "estimates_facility_id_fkey" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."evaluations"
+    ADD CONSTRAINT "evaluations_booking_id_fkey" FOREIGN KEY ("booking_id") REFERENCES "public"."bookings"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."evaluations"
+    ADD CONSTRAINT "evaluations_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "public"."clients"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."evaluations"
+    ADD CONSTRAINT "evaluations_evaluator_staff_id_fkey" FOREIGN KEY ("evaluator_staff_id") REFERENCES "public"."staff"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."evaluations"
+    ADD CONSTRAINT "evaluations_facility_id_fkey" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."evaluations"
+    ADD CONSTRAINT "evaluations_pet_id_fkey" FOREIGN KEY ("pet_id") REFERENCES "public"."pets"("id") ON DELETE CASCADE;
 
 
 
@@ -31337,6 +32602,13 @@ CREATE POLICY "estimates_update" ON "public"."estimates" FOR UPDATE TO "authenti
 
 
 
+ALTER TABLE "public"."evaluations" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "evaluations_read" ON "public"."evaluations" FOR SELECT TO "authenticated" USING (("private"."is_platform_admin"() OR "private"."has_permission"("facility_id", 'view_evaluations'::"text") OR "private"."has_permission"("facility_id", 'perform_evaluations'::"text")));
+
+
+
 ALTER TABLE "public"."facilities" ENABLE ROW LEVEL SECURITY;
 
 
@@ -33296,12 +34568,12 @@ CREATE POLICY "staff_update" ON "public"."staff" FOR UPDATE TO "authenticated" U
 ALTER TABLE "public"."store_credit_entries" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "store_credit_insert" ON "public"."store_credit_entries" FOR INSERT TO "authenticated" WITH CHECK (
+CREATE POLICY "store_credit_insert" ON "public"."store_credit_entries" FOR INSERT TO "authenticated" WITH CHECK ((("reason" <> 'evaluation'::"text") AND ("evaluation_id" IS NULL) AND
 CASE
     WHEN (("amount" > (0)::numeric) AND ("reason" = 'gift_card'::"text")) THEN "private"."has_permission"("facility_id", 'financial_manage_gift_cards'::"text")
     WHEN ("amount" > (0)::numeric) THEN "private"."has_permission"("facility_id", 'process_refund'::"text")
     ELSE "private"."has_permission"("facility_id", 'financial_take_payment'::"text")
-END);
+END));
 
 
 
@@ -34424,6 +35696,10 @@ REVOKE ALL ON FUNCTION "private"."agreements_of_link"("p_link" "public"."waiver_
 
 
 
+REVOKE ALL ON FUNCTION "private"."apply_evaluation_to_pet"("p_evaluation_id" "uuid") FROM PUBLIC;
+
+
+
 REVOKE ALL ON FUNCTION "private"."area_pets_in_use"("p_room_id" "uuid", "p_range" "tstzrange", "p_exclude_booking" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "private"."area_pets_in_use"("p_room_id" "uuid", "p_range" "tstzrange", "p_exclude_booking" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "private"."area_pets_in_use"("p_room_id" "uuid", "p_range" "tstzrange", "p_exclude_booking" "uuid") TO "service_role";
@@ -34538,6 +35814,10 @@ REVOKE ALL ON FUNCTION "private"."daily_care_record_touch"() FROM PUBLIC;
 
 
 
+REVOKE ALL ON FUNCTION "private"."deliver_evaluation_card"("p_evaluation_id" "uuid", "p_by_name" "text", "p_auto" boolean, "p_channels" "text"[]) FROM PUBLIC;
+
+
+
 REVOKE ALL ON FUNCTION "private"."deposit_for_booking"("b" "public"."bookings") FROM PUBLIC;
 
 
@@ -34550,11 +35830,41 @@ REVOKE ALL ON FUNCTION "private"."estimate_before_update"() FROM PUBLIC;
 
 
 
+REVOKE ALL ON FUNCTION "private"."evaluation_caller"("p_facility_id" "uuid") FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "private"."evaluation_card_settings"("p_facility_id" "uuid") FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "private"."evaluation_derive"() FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "private"."evaluation_photo_may"("p_evaluation_id" "uuid", "p_action" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "private"."evaluation_photo_may"("p_evaluation_id" "uuid", "p_action" "text") TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "private"."evaluation_photo_object_may"("p_name" "text", "p_action" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "private"."evaluation_photo_object_may"("p_name" "text", "p_action" "text") TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "private"."evaluation_text_array"("p_value" "jsonb", "p_field" "text", "p_max_items" integer, "p_max_length" integer) FROM PUBLIC;
+
+
+
 GRANT ALL ON FUNCTION "private"."facility_of_client"("p_client_id" "uuid") TO "authenticated";
 
 
 
 GRANT ALL ON FUNCTION "private"."former_staff_ids"() TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "private"."grant_evaluation_credit"("p_evaluation_id" "uuid") FROM PUBLIC;
 
 
 
@@ -34636,6 +35946,10 @@ REVOKE ALL ON FUNCTION "private"."link_client_at"("p_facility_id" "uuid") FROM P
 
 
 REVOKE ALL ON FUNCTION "private"."locations_single_primary"() FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "private"."may_send_evaluation"("p_facility_id" "uuid", "p_evaluator_staff_id" "uuid") FROM PUBLIC;
 
 
 
@@ -34727,6 +36041,12 @@ GRANT ALL ON FUNCTION "private"."pet_passed_daycare_evaluation"("p_pet_id" "uuid
 
 
 
+REVOKE ALL ON FUNCTION "private"."pet_passed_evaluation_for"("p_pet_id" "uuid", "p_service" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "private"."pet_passed_evaluation_for"("p_pet_id" "uuid", "p_service" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "private"."pet_passed_evaluation_for"("p_pet_id" "uuid", "p_service" "text") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "private"."place_add_on_lines"("p_booking_id" "uuid", "p_lines" "jsonb", "p_mode" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "private"."place_add_on_lines"("p_booking_id" "uuid", "p_lines" "jsonb", "p_mode" "text") TO "authenticated";
 
@@ -34789,12 +36109,22 @@ REVOKE ALL ON FUNCTION "private"."service_add_on_same_facility"() FROM PUBLIC;
 
 
 
+REVOKE ALL ON FUNCTION "private"."service_needs_evaluation"("p_facility_id" "uuid", "p_service" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "private"."service_needs_evaluation"("p_facility_id" "uuid", "p_service" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "private"."service_needs_evaluation"("p_facility_id" "uuid", "p_service" "text") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "private"."staff_can_write_booking"("p_booking_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "private"."staff_can_write_booking"("p_booking_id" "uuid") TO "authenticated";
 
 
 
 REVOKE ALL ON FUNCTION "private"."staff_commission_rate"("p_staff_id" "uuid", "p_service" "text") FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "private"."staff_holds"("p_staff_id" "uuid", "p_permission" "text") FROM PUBLIC;
 
 
 
@@ -35148,6 +36478,12 @@ GRANT ALL ON FUNCTION "public"."decline_training_makeup"("p_makeup_id" "uuid") T
 
 
 
+REVOKE ALL ON FUNCTION "public"."discard_evaluation"("p_evaluation_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."discard_evaluation"("p_evaluation_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."discard_evaluation"("p_evaluation_id" "uuid") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."disconnect_payment_connection"("p_facility_id" "uuid", "p_reason" "text", "p_processor" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."disconnect_payment_connection"("p_facility_id" "uuid", "p_reason" "text", "p_processor" "text") TO "service_role";
 
@@ -35204,9 +36540,32 @@ GRANT ALL ON FUNCTION "public"."ensure_review_templates"("p_facility_id" "uuid")
 
 
 
+REVOKE ALL ON FUNCTION "public"."evaluation_card_for_owner"("p_evaluation_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."evaluation_card_for_owner"("p_evaluation_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."evaluation_card_for_owner"("p_evaluation_id" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."evaluation_reviewers"("p_facility_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."evaluation_reviewers"("p_facility_id" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."evaluation_viewer"("p_facility_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."evaluation_viewer"("p_facility_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."evaluation_viewer"("p_facility_id" "uuid") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."facility_branding_by_slug"("p_slug" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."facility_branding_by_slug"("p_slug" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."facility_branding_by_slug"("p_slug" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."facility_evaluators"("p_facility_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."facility_evaluators"("p_facility_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."facility_evaluators"("p_facility_id" "uuid") TO "service_role";
 
 
 
@@ -35254,6 +36613,12 @@ GRANT ALL ON FUNCTION "public"."facility_staff_recipients"("p_facility_id" "uuid
 REVOKE ALL ON FUNCTION "public"."facility_takings"("p_facility_id" "uuid", "p_from" timestamp with time zone, "p_to" timestamp with time zone, "p_time_zone" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."facility_takings"("p_facility_id" "uuid", "p_from" timestamp with time zone, "p_to" timestamp with time zone, "p_time_zone" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."facility_takings"("p_facility_id" "uuid", "p_from" timestamp with time zone, "p_to" timestamp with time zone, "p_time_zone" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."finish_evaluation"("p_evaluation_id" "uuid", "p_channels" "text"[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."finish_evaluation"("p_evaluation_id" "uuid", "p_channels" "text"[]) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."finish_evaluation"("p_evaluation_id" "uuid", "p_channels" "text"[]) TO "service_role";
 
 
 
@@ -35369,6 +36734,12 @@ GRANT ALL ON FUNCTION "public"."mark_all_my_notifications_read"("p_facility_id" 
 
 
 
+REVOKE ALL ON FUNCTION "public"."mark_evaluation_card_opened"("p_evaluation_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."mark_evaluation_card_opened"("p_evaluation_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."mark_evaluation_card_opened"("p_evaluation_id" "uuid") TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."report_cards" TO "anon";
 GRANT ALL ON TABLE "public"."report_cards" TO "authenticated";
 GRANT ALL ON TABLE "public"."report_cards" TO "service_role";
@@ -35407,6 +36778,12 @@ GRANT ALL ON FUNCTION "public"."my_booking_cancel_terms"("p_ref" bigint) TO "ser
 REVOKE ALL ON FUNCTION "public"."my_client_at"("p_facility_slug" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."my_client_at"("p_facility_slug" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."my_client_at"("p_facility_slug" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."my_evaluation_cards"("p_facility_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."my_evaluation_cards"("p_facility_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."my_evaluation_cards"("p_facility_id" "uuid") TO "service_role";
 
 
 
@@ -35585,6 +36962,11 @@ GRANT ALL ON FUNCTION "public"."purchase_package"("p_client_id" "uuid", "p_packa
 
 REVOKE ALL ON FUNCTION "public"."purge_e2e_bookings"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."purge_e2e_bookings"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."purge_e2e_evaluations"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."purge_e2e_evaluations"() TO "service_role";
 
 
 
@@ -35818,6 +37200,12 @@ GRANT ALL ON FUNCTION "public"."respond_to_estimate"("p_estimate_id" "uuid", "p_
 
 
 
+REVOKE ALL ON FUNCTION "public"."return_evaluation_card"("p_evaluation_id" "uuid", "p_comment" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."return_evaluation_card"("p_evaluation_id" "uuid", "p_comment" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."return_evaluation_card"("p_evaluation_id" "uuid", "p_comment" "text") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."reverse_package_pass"("p_ref" bigint, "p_note" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."reverse_package_pass"("p_ref" bigint, "p_note" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."reverse_package_pass"("p_ref" bigint, "p_note" "text") TO "service_role";
@@ -35866,6 +37254,17 @@ GRANT ALL ON FUNCTION "public"."save_checkout_cut_off"("p_facility_id" "uuid", "
 
 
 
+GRANT ALL ON TABLE "public"."evaluations" TO "service_role";
+GRANT SELECT ON TABLE "public"."evaluations" TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "public"."save_evaluation"("p_evaluation_id" "uuid", "p_patch" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."save_evaluation"("p_evaluation_id" "uuid", "p_patch" "jsonb") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."save_evaluation"("p_evaluation_id" "uuid", "p_patch" "jsonb") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."save_my_notification_preferences"("p_facility_id" "uuid", "p_in_app" "jsonb", "p_email" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."save_my_notification_preferences"("p_facility_id" "uuid", "p_in_app" "jsonb", "p_email" "jsonb") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."save_my_notification_preferences"("p_facility_id" "uuid", "p_in_app" "jsonb", "p_email" "jsonb") TO "service_role";
@@ -35882,6 +37281,12 @@ GRANT ALL ON FUNCTION "public"."save_onboarding_section"("p_token" "text", "p_ta
 REVOKE ALL ON FUNCTION "public"."save_yipyy_go_draft"("p_booking_id" "uuid", "p_pet_id" "uuid", "p_answers" "jsonb", "p_add_on_requests" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."save_yipyy_go_draft"("p_booking_id" "uuid", "p_pet_id" "uuid", "p_answers" "jsonb", "p_add_on_requests" "jsonb") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."save_yipyy_go_draft"("p_booking_id" "uuid", "p_pet_id" "uuid", "p_answers" "jsonb", "p_add_on_requests" "jsonb") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."send_evaluation_card"("p_evaluation_id" "uuid", "p_owner_note" "text", "p_channels" "text"[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."send_evaluation_card"("p_evaluation_id" "uuid", "p_owner_note" "text", "p_channels" "text"[]) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."send_evaluation_card"("p_evaluation_id" "uuid", "p_owner_note" "text", "p_channels" "text"[]) TO "service_role";
 
 
 
@@ -35968,6 +37373,12 @@ GRANT ALL ON FUNCTION "public"."skip_training_makeup"("p_missed_booking_id" "uui
 REVOKE ALL ON FUNCTION "public"."split_boarding_stay"("p_booking_ref" bigint, "p_from" "date", "p_room_id" "text", "p_override_reason" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."split_boarding_stay"("p_booking_ref" bigint, "p_from" "date", "p_room_id" "text", "p_override_reason" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."split_boarding_stay"("p_booking_ref" bigint, "p_from" "date", "p_room_id" "text", "p_override_reason" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."start_evaluation"("p_pet_id" "uuid", "p_booking_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."start_evaluation"("p_pet_id" "uuid", "p_booking_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."start_evaluation"("p_pet_id" "uuid", "p_booking_id" "uuid") TO "service_role";
 
 
 
