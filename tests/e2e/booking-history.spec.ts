@@ -91,6 +91,10 @@ test("a booking's status and price changes are its history", async ({
   expect(history.every((e) => e.who && e.who !== "System")).toBe(true);
 
   await page.goto(`/facility/dashboard/clients/${BOB.client}/bookings/${made}`);
+  // The history is on its own tab since the client's mock (2026-10-03).
+  await page
+    .getByRole("tab", { name: /notes & history/i })
+    .click({ timeout: 60_000 });
   const card = page.locator("#history");
   await expect(card).toBeVisible({ timeout: 60_000 });
   await expect(card).toContainText(/Status: Confirmed → No-show/);
@@ -131,6 +135,9 @@ test("checking out with care not logged keeps the reason", async ({ page }) => {
   ).toBe(true);
 
   await page.goto(`/facility/dashboard/clients/${BOB.client}/bookings/${made}`);
+  await page
+    .getByRole("tab", { name: /notes & history/i })
+    .click({ timeout: 60_000 });
   await expect(page.locator("#history")).toContainText(
     /Checked out with 1 care item not logged: .*owner fed him at pickup/,
     { timeout: 60_000 },

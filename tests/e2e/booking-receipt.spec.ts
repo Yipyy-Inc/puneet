@@ -156,7 +156,7 @@ test("a paid booking's receipt is emailed; an unpaid one is refused", async ({
   // The page offers it for the paid booking, under More.
   await page.goto(`/facility/dashboard/clients/${BOB.client}/bookings/${paid}`);
   await page
-    .getByRole("button", { name: /^more actions$/i })
+    .getByRole("button", { name: "More", exact: true })
     .click({ timeout: 60_000 });
   await expect(
     page.getByRole("menuitem", { name: /email the receipt/i }),

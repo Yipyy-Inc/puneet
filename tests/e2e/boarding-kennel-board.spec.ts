@@ -393,9 +393,11 @@ test.describe("a guest who moves kennels part-way", () => {
     await page.goto(
       `/facility/dashboard/clients/${CLIENT_REF}/bookings/${bookingRef}`,
     );
+    // The Stay card (the client's mock, 2026-10-03): its Kennel row reads
+    // "origin → target", and its action is "Move kennel".
     const card = page
-      .locator('[data-slot="card"]')
-      .filter({ has: page.getByText(/^kennels$/i) });
+      .locator("section")
+      .filter({ has: page.getByText(/^stay$/i) });
     await expect(card.getByText(origin.name)).toBeVisible({ timeout: 60_000 });
     await expect(card.getByText(target.name)).toBeVisible();
 

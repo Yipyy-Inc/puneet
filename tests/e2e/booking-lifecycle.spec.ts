@@ -83,8 +83,12 @@ async function stateOf(page: Page, ref: number): Promise<string> {
   return `${row.status}/${row.presence}`;
 }
 
-/** The number as the page prints it: formatBookingRef, "#" + 10000 + id. */
-const shown = (ref: number) => new RegExp(`#${10000 + ref}$`);
+/**
+ * The number as the page prints it — formatBookingRef, "#" + 10000 + id — on
+ * the line above the header, "#10123 · Daycare" (the client's mock,
+ * 2026-10-03; the heading is the pet's name now).
+ */
+const shown = (ref: number) => new RegExp(`^#${10000 + ref} · `);
 
 /**
  * The facility-wide "count the drawer on sign-in" setting, as the owner.
@@ -182,9 +186,9 @@ test.describe("a booking's lifecycle", () => {
     try {
       await signIn(page, ACCOUNTS.reception);
       await page.goto(`/employee/bookings/${ref}`);
-      await expect(page.getByRole("heading", { name: shown(ref) })).toBeVisible(
-        { timeout: 60_000 },
-      );
+      await expect(page.getByText(shown(ref))).toBeVisible({
+        timeout: 60_000,
+      });
       await page
         .getByRole("button", { name: /^check in buddy$/i })
         .click({ timeout: 30_000 });
@@ -222,7 +226,7 @@ test.describe("a booking's lifecycle", () => {
     await signIn(page, ACCOUNTS.accountant);
     await page.goto(`/employee/bookings/${ref}`);
     // The page has loaded when the booking's number is on it.
-    await expect(page.getByRole("heading", { name: shown(ref) })).toBeVisible({
+    await expect(page.getByText(shown(ref))).toBeVisible({
       timeout: 60_000,
     });
     // No arrival permission, so no arrival button — and money owed with
@@ -231,11 +235,16 @@ test.describe("a booking's lifecycle", () => {
     await expect(
       page.getByRole("button", { name: /^check in buddy$/i }),
     ).toHaveCount(0);
+    // Both live under the header's More menu since 2026-10-03.
+    await page.getByRole("button", { name: "More", exact: true }).click();
     await expect(
       page
-        .getByRole("button", { name: /take a prepayment|charge the deposit/i })
+        .getByRole("menuitem", {
+          name: /take a prepayment|charge the deposit/i,
+        })
         .first(),
     ).toBeVisible();
+    await page.keyboard.press("Escape");
 
     // And the route agrees: an arrival from somebody who may not move pets
     // is refused.

@@ -4,6 +4,7 @@ import { bookingListSearch } from "@/lib/api/booking-list-params";
 
 import { ACCOUNTS, signIn } from "./_auth";
 import { bookingsMarked } from "./_sweep";
+import { creditOff, methodCard, takePaymentDialog } from "./_take-payment";
 
 // ============================================================================
 // The facility home page counts the same day the check-in boards do.
@@ -609,33 +610,23 @@ test.describe("the facility home board", () => {
     // The dialog names the pet: "Check Buddy out".
     await checkOut.getByRole("button", { name: /^check .+ out$/i }).click();
 
-    // The payment modal. E-TRANSFER, and the choice is load-bearing:
+    // The payment modal: the client's Take payment dialog since 2026-10-03,
+    // the same one the booking page opens. CASH, and the choice is
+    // load-bearing:
     //
-    //   cash      keeps the confirm button disabled until a tendered amount
-    //             covering the balance is typed in, and this test is about the
-    //             ledger rather than about counting change
-    //   terminal  is disabled outright without a Clover device to charge on
-    //             ("a terminal payment with no terminal is not a payment",
-    //             PaymentCheckoutFlow.tsx). The e2e facility has no Clover
-    //             connection and should not have one, so this tender can never
-    //             arm here — it is what made this test hang on a disabled
-    //             button for 674 retries
-    //   custom    is not a tender the books recognise; `checkoutTender` throws
-    //             on it, which is the whole reason that helper exists
-    //
-    // e-transfer is in TENDER, needs no hardware and no second field. It is the
-    // only frictionless tender left, which is the point: everything else now
-    // demands evidence that the money actually moved.
-    const payment = page
-      .getByRole("dialog")
-      .filter({ hasText: /take payment/i });
-    await expect(payment).toBeVisible({ timeout: 15_000 });
-    await payment.getByRole("button", { name: /^e-transfer$/i }).click();
-
-    // Two presses by design: "Charge $X" arms it, "Confirm and charge $X"
-    // takes the money.
-    await payment.getByRole("button", { name: /^charge /i }).click();
-    await payment.getByRole("button", { name: /confirm and charge/i }).click();
+    //   cash        takes the exact amount when nothing is typed, in one press
+    //               ("Record $X cash"); this test is about the ledger, not
+    //               about counting change
+    //   terminal    is not offered without a Clover reader, and the e2e
+    //               facility has none and should have none
+    //   e-transfer  starts "pending until the transfer arrives", which records
+    //               NOTHING as paid — exactly what this test must not do
+    const payment = takePaymentDialog(page);
+    await expect(payment).toBeVisible({ timeout: 30_000 });
+    // Alice's own credit would pay it — and did, on 2026-10-03, $74.00 of it.
+    await creditOff(payment);
+    await methodCard(payment, /^cash/i).click();
+    await payment.getByRole("button", { name: /^record .+ cash$/i }).click();
 
     // THE ASSERTION THAT WOULD HAVE FAILED BEFORE THIS CHANGE. The handler
     // toasted "Charged $X" and called no payment endpoint at all, so the
@@ -768,14 +759,13 @@ test.describe("the facility home board", () => {
     await expect(checkOut).toBeVisible({ timeout: 15_000 });
     await checkOut.getByRole("button", { name: /^check .+ out$/i }).click();
 
-    // e-transfer, for the reasons the late-pickup test sets out at length.
-    const payment = page
-      .getByRole("dialog")
-      .filter({ hasText: /take payment/i });
-    await expect(payment).toBeVisible({ timeout: 15_000 });
-    await payment.getByRole("button", { name: /^e-transfer$/i }).click();
-    await payment.getByRole("button", { name: /^charge /i }).click();
-    await payment.getByRole("button", { name: /confirm and charge/i }).click();
+    // Cash, for the reasons the late-pickup test sets out.
+    const payment = takePaymentDialog(page);
+    await expect(payment).toBeVisible({ timeout: 30_000 });
+    // Alice's own credit would pay it — and did, on 2026-10-03, $74.00 of it.
+    await creditOff(payment);
+    await methodCard(payment, /^cash/i).click();
+    await payment.getByRole("button", { name: /^record .+ cash$/i }).click();
 
     await expect
       .poll(async () => (await readBooking(page, created.id))?.paymentStatus, {

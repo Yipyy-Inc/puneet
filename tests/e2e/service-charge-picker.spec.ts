@@ -102,7 +102,7 @@ async function openPicker(page: Page, ref: number) {
   await page.goto(
     `/facility/dashboard/clients/${ALICE.client}/bookings/${ref}`,
   );
-  const more = page.getByRole("button", { name: /more actions/i }).first();
+  const more = page.getByRole("button", { name: "More", exact: true }).first();
   await expect(more).toBeVisible({ timeout: 30_000 });
   await more.click();
   await page.getByRole("menuitem", { name: /add service charges/i }).click();

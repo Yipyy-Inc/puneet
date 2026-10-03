@@ -152,19 +152,15 @@ test.describe("notes", () => {
       `/facility/dashboard/clients/${booking!.clientId}/bookings/${booking!.id}`,
     );
     const text = `${MARKER} typed on booking ${booking!.id}`;
-    // The card's own button, not the header's notes sheet.
-    await page
-      .getByRole("button", { name: "Add a note", exact: true })
-      .last()
-      .click();
-    await page.getByRole("dialog").getByRole("textbox").first().fill(text);
-    await page
-      .getByRole("dialog")
-      .getByRole("button", { name: "Add a note", exact: true })
-      .click();
+    // The Notes & history tab's own line (the client's mock, 2026-10-03).
+    const notesTab = page.getByRole("tab", { name: /notes & history/i });
+    await notesTab.click({ timeout: 60_000 });
+    await page.getByPlaceholder("Add a note for staff").fill(text);
+    await page.getByRole("button", { name: "Add note", exact: true }).click();
     await expect(page.getByText(text).first()).toBeVisible();
 
     await page.reload();
+    await notesTab.click({ timeout: 60_000 });
     await expect(
       page.getByText(text).first(),
       "the note was gone after a reload — it never reached the database",

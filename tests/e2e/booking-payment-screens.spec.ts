@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 
 import { ACCOUNTS, signIn } from "./_auth";
 import { bookingsMarked } from "./_sweep";
+import { creditOff, methodCard, takePaymentDialog } from "./_take-payment";
 
 // ============================================================================
 // Checkout takes a payment, reached the way staff reach it now: check the
@@ -135,10 +136,21 @@ async function openCheckout(page: Page, ref: number, clientId: number) {
     () => true,
     () => false,
   );
-  if (gated)
-    await gate.getByRole("button", { name: /continue anyway/i }).click();
-  const dialog = page.getByRole("dialog").filter({ hasText: /take payment/i });
+  // The gate keeps WHY the pet left with care unlogged (2026-09-19), so going
+  // past it takes a reason and the button says what it does.
+  if (gated) {
+    await gate
+      .getByLabel(/why is the pet going home/i)
+      .fill("e2e: not what this test is about");
+    await gate.getByRole("button", { name: /^check out anyway$/i }).click();
+  }
+  const dialog = takePaymentDialog(page);
   await expect(dialog).toBeVisible({ timeout: 15_000 });
+  // The client's own credit would pay it; this test is about cash.
+  await creditOff(dialog);
+  // Cash, chosen outright: a facility with a card on file or a reader offers
+  // those first.
+  await methodCard(dialog, /^cash/i).click();
   return dialog;
 }
 
@@ -249,28 +261,15 @@ test.describe("the payment button reaches the ledger", () => {
     // The dialog names the amount it is about to take.
     await expect(dialog).toContainText(`$${AMOUNT.toFixed(2)}`);
 
-    // ── TAKING MONEY IS TWO PRESSES, AND THE TEST HAS TO MAKE BOTH ────────
+    // ── ONE PRESS, AND THE BUTTON SAYS WHAT IT DOES ────────────────────────
     //
-    // `PaymentCheckoutFlow` arms on the first press ("Charge $X") and
-    // charges on the second ("Confirm and charge $X"), which is deliberate: the
-    // button that moves real money is not the one under a cursor that was
-    // already heading there.
-    //
-    // This spec looked for `/confirm payment/i`, a label from the dialog this
-    // flow REPLACED, and so it clicked nothing and timed out waiting. It runs
-    // in neither `test:e2e:gate` nor `test:e2e:ci`, so nothing executed it and
-    // the rot was invisible. Matching on `/charge/i` now — the word both
-    // presses share and the one that actually describes what happens.
-    const charge = dialog.getByRole("button", { name: /charge \$/i }).first();
-    await expect(charge).toBeVisible();
-    await charge.click();
-    // Same locator, second press: the label changes, the button does not.
-    await expect(
-      dialog.getByRole("button", { name: /confirm and charge \$/i }),
-    ).toBeVisible();
+    // The client's Take payment dialog (2026-10-03) replaced the two-press
+    // `PaymentCheckoutFlow`: the summary sits above the button, and the button
+    // names the method and the figure — "Record $64.00 cash".
     await dialog
-      .getByRole("button", { name: /confirm and charge \$/i })
-      .first()
+      .getByRole("button", {
+        name: `Record $${AMOUNT.toFixed(2)} cash`,
+      })
       .click();
 
     // The proof is not the toast — it is the ledger. Re-read through the API,
@@ -313,7 +312,7 @@ test.describe("the payment button reaches the ledger", () => {
     // A settled booking offers no checkout: the action bar has no primary action
     // once the ledger says paid, and Pay by card needs a balance.
     await expect(
-      page.getByRole("button", { name: /^check .+ out$|^take payment$/i }),
+      page.getByRole("button", { name: /^check .+ out$|^take payment/i }),
     ).toHaveCount(0);
     await expect(page.getByRole("link", { name: /pay by card/i })).toHaveCount(
       0,
@@ -356,19 +355,13 @@ test.describe("the payment button reaches the ledger", () => {
     // balance, and the same helper computes what the mutation charges.
     const dialog = await openCheckout(page, created.id, created.clientId);
     await expect(dialog).toContainText(`$${(AMOUNT - part).toFixed(2)}`);
-    await expect(dialog).toContainText(/already paid/i);
 
-    // Two presses, as above — and here the SECOND one is the assertion that
-    // matters: its label carries the figure, so `Confirm and charge $48.00`
-    // proves the button about to move money names the balance and not the
-    // price. That is the whole point of this test.
-    await dialog
-      .getByRole("button", { name: /charge \$/i })
-      .first()
-      .click();
+    // The button's label carries the figure, so "Record $48.00 cash" proves
+    // the button about to move money names the balance and not the price.
+    // That is the whole point of this test.
     await dialog
       .getByRole("button", {
-        name: `Confirm and charge $${(AMOUNT - part).toFixed(2)}`,
+        name: `Record $${(AMOUNT - part).toFixed(2)} cash`,
       })
       .click();
 

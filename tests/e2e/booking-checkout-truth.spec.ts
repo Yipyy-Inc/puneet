@@ -1,6 +1,7 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 
 import { ACCOUNTS, signIn } from "./_auth";
+import { creditOff, methodCard, takePaymentDialog } from "./_take-payment";
 
 // ============================================================================
 // The booking checkout says what happened, and only once it has happened.
@@ -151,9 +152,19 @@ async function openCheckout(page: Page, booking: BookingPayload) {
   const open = page.getByRole("button", { name: /take payment/i }).first();
   await expect(open).toBeVisible({ timeout: 30_000 });
   await open.click();
-  const dialog = page.getByRole("dialog");
+  // The client's Take payment dialog (2026-10-03). Every test here is about
+  // a method and the figures it is given, so the client's own credit — which
+  // the dialog applies by default — is off.
+  const dialog = takePaymentDialog(page);
   await expect(dialog).toBeVisible();
+  await creditOff(dialog);
   return dialog;
+}
+
+/** The summary's "Total to collect", in dollars. */
+async function totalToCollect(dialog: Locator): Promise<number> {
+  const row = dialog.getByText(/^total to collect$/i).locator("..");
+  return Number(((await row.textContent()) ?? "").replace(/[^0-9.]/g, ""));
 }
 
 test.describe.configure({ mode: "serial" });
@@ -229,10 +240,10 @@ test.describe("the booking checkout tells the truth", () => {
     ).json()) as BookingPayload;
 
     const dialog = await openCheckout(page, created);
-    // $64 + 5% = $67.20, on the button the money moves from.
-    await dialog.getByRole("button", { name: /charge \$67\.20/i }).click();
+    await methodCard(dialog, /^cash/i).click();
+    // $64 + 5% = $67.20, on the button the money moves from — one press.
     await dialog
-      .getByRole("button", { name: /confirm and charge \$67\.20/i })
+      .getByRole("button", { name: /^record \$67\.20 cash$/i })
       .click();
     await expect(dialog.getByText(/payment complete/i)).toBeVisible({
       timeout: 20_000,
@@ -268,21 +279,20 @@ test.describe("the booking checkout tells the truth", () => {
     ).json()) as BookingPayload;
 
     const dialog = await openCheckout(page, created);
+    await methodCard(dialog, /^gift card/i).click();
+    // The textbox, not the method card: its sub ("Redeem a gift card code")
+    // carries the same words.
     await dialog
-      .getByRole("button", { name: /gift card/i })
-      .first()
-      .click();
-    await dialog.getByLabel(/gift card code/i).fill("E2E-NO-SUCH-CARD");
-    await dialog
-      .getByRole("button", { name: /charge \$/i })
-      .first()
-      .click();
-    await dialog
-      .getByRole("button", { name: /confirm and charge \$/i })
-      .click();
+      .getByRole("textbox", { name: /^gift card code$/i })
+      .fill("E2E-NO-SUCH-CARD");
+    await dialog.getByRole("button", { name: /^check balance$/i }).click();
 
-    // The reason, in the dialog — not "Payment Complete".
+    // The reason, in the dialog — not "Payment complete" — and a button that
+    // will not take a card nobody has.
     await expect(dialog.getByRole("alert")).toBeVisible({ timeout: 20_000 });
+    await expect(
+      dialog.getByRole("button", { name: /^redeem/i }),
+    ).toBeDisabled();
     await expect(dialog.getByText(/payment complete/i)).toHaveCount(0);
     const after = await findBooking(page, created.id);
     expect(Number(after?.amountPaid ?? -1)).toBe(0);
@@ -321,10 +331,11 @@ test.describe("the booking checkout tells the truth", () => {
     );
     // One step since 2026-09-18: the cancel dialog IS the confirmation — it
     // asks for the reason and the refund, and says what it will not do.
+    // The mock's More menu holds Cancel booking (2026-10-03).
     await page
-      .getByRole("button", { name: /^cancel booking$/i })
-      .first()
+      .getByRole("button", { name: "More", exact: true })
       .click({ timeout: 30_000 });
+    await page.getByRole("menuitem", { name: /^cancel booking$/i }).click();
 
     const dialog = page.getByRole("dialog");
     // It no longer promises a message nobody sends.
@@ -361,28 +372,15 @@ test.describe("the booking checkout tells the truth", () => {
     ).json()) as BookingPayload;
 
     const dialog = await openCheckout(page, created);
-    // Cash is the default tender. It never adds the tip; it says the booking
-    // carries one.
-    await expect(dialog.getByText(/carries a \$10\.00 tip/)).toBeVisible();
-    const cashLabel = await dialog
-      .getByRole("button", { name: /^charge \$/i })
-      .first()
-      .textContent();
-    const cash = Number(
-      /\$([\d,]+\.\d\d)/.exec(cashLabel ?? "")?.[1]?.replace(/,/g, ""),
-    );
+    // Cash never adds the tip; it says the booking carries one.
+    await methodCard(dialog, /^cash/i).click();
+    await expect(dialog.getByText(/the \$10\.00 tip pledged/i)).toBeVisible();
+    const cash = await totalToCollect(dialog);
     expect(cash).toBeGreaterThan(0);
 
     // A tender that takes a tip here starts at the booking's tip.
-    await dialog.getByRole("button", { name: /e-transfer/i }).click();
-    await expect(dialog.getByText(/already added below/)).toBeVisible();
-    await expect(
-      dialog
-        .getByRole("button", {
-          name: new RegExp(`^charge \\$${(cash + 10).toFixed(2)}`, "i"),
-        })
-        .first(),
-    ).toBeVisible();
+    await methodCard(dialog, /^e-transfer/i).click();
+    await expect.poll(() => totalToCollect(dialog)).toBeCloseTo(cash + 10, 2);
 
     // Nothing was taken by looking: the booking is still unpaid.
     await page.keyboard.press("Escape");
