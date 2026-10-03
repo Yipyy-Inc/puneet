@@ -22563,3 +22563,128 @@ registers and deletes, in the full suite:
 5. the owner reads it;
 6. daycare opens;
 7. a caretaker, granted `view_evaluations` for the test, reaches the module in `/employee/evaluations` (a manager meets the count-the-drawer screen first).
+
+## 2026-10-03 — The booking page is the client's four mocks, and one Take payment dialog takes the money
+
+The client sent four mocks for the facility's booking page, `docs/Booking_Details_-_{Boarding,Daycare,Grooming,Training}.html`
+(kept out of git: they carry a real client's name, phone and email). Decoded, they are ONE app whose
+only difference is the service it opens on, and each embeds a second app, "Take Payment". CLAUDE.md
+§ "Client mocks decide the look" lists them; the look is `booking-details`.
+
+**Where it lives.** The route page is a server page that reads its params; everything else is
+`components/bookings/details/`:
+
+- `use-booking-details.ts` (every read), `use-booking-handlers.ts` (every action, the same writes,
+  confirms and toasts the 2,194-line page had), `use-booking-till.ts` (the till, its late fees and
+  service charges, the care gate), `use-service-facts.ts` (the kennel, the daycare visit, the groom,
+  the training series).
+- `header/`, `overview/`, `journal/`, `tasks-tab.tsx`, `notes-tab.tsx`, `payment-card.tsx`,
+  `client-card.tsx`, and the dialogs (`booking-dialogs.tsx`, `details-small-dialogs.tsx`).
+- `take-payment/`: the dialog, its arithmetic (`lib/payments/take-payment-math.ts`, unit-tested), and
+  `board-take-payment.tsx`, which the dashboard board's Check Out opens.
+
+`/employee/bookings/[id]` renders the same screen; the screen itself refuses an assigned-scope viewer
+a booking outside their set.
+
+**Four decisions the user made (2026-10-03):**
+
+1. **One till everywhere.** The mock's dialog replaced `PaymentCheckoutFlow` on the booking page AND
+   the board's Check Out; `PaymentCheckoutFlow`, `TerminalPicker` and `PromoCodeField` are deleted.
+   **Grooming's own `PaymentDialog` (package passes) is still separate** — the one till that is not
+   this one.
+2. **Account credit is a facility setting** — `checkout_config.creditAtCheckout`, "auto" (the
+   default) or "ask", on Settings › Tips' "At checkout" card, beside `tip_config.deskServices` (which
+   services the dialog asks a tip on; grooming and training unless the facility says otherwise).
+3. **A pending e-transfer records nothing as paid.** It writes a booking note and a facility task
+   (`source_ref` `etransfer:booking:{ref}:{id}`, the amount, tax and reference in its metadata); the
+   payment card shows it in amber, and "Record arrival" in the dialog records it and completes the
+   task. Nothing matches it to the bank: a person does.
+4. **Groom preferences are stored per pet** (`pet_grooming_preferences`, 20261003150810), edited from
+   the card, and seen at every groom.
+
+**What changed underneath, and why it is safe:**
+
+- **A card or the terminal can now take PART of the balance.** `/api/payments/clover/charge` and
+  `/terminal` accept `subtotalCents` — a ceiling, never a price (the smaller of it and the row's
+  balance is charged), and only from someone holding `financial_take_payment`. The checkout sends it
+  for a custom amount, and for a card leg that is not the last of a split; the last leg of a full
+  payment still takes what the server says is left.
+- **The checkout runs the dialog's legs as given** (`CheckoutPayment.parts`: credit first, then one or
+  two methods, each with its supply, tax and tip). `CheckoutPayment` moved to
+  `lib/checkout/checkout-payment.ts`. Store credit is the client's own account now
+  (`useClientStoreCredit`), not the facility's whole ledger.
+- **A custom amount is tax included**, read back into supply and tax by `splitCollected` with the
+  same tax function the card routes use, so the button never shows a cent the card is not asked for.
+- **A promo code comes off by deleting its line.** `promo_code_redemptions.line_item_id` cascades, so
+  no migration was needed; `promo-codes.sql` P6 already proves the use comes back. The line items GET
+  says which lines are codes (`promoCode`).
+- **Receipts by email and text.** `POST /api/bookings/[ref]/receipt` takes `channels`; a booking still
+  part-owed gets a "received $X, $Y still owed" message instead of a receipt, opt-outs respected.
+- **A care log entry can be taken back** (`clear_care_log_entry`, 20261003150843): a second tap on the
+  journal's answer clears it, under the permission that may record it, and the booking's history says
+  so. The journal logs on the FACILITY's day, as the server's care gate reads it.
+- **Training skills are not a table.** A skill's state is its latest rating in `training_attendance`
+  (5 = mastered); a tap rates it for THIS booking's session, once the dog is checked in.
+- **The groom's checklist** is `grooming_appointments.session_progress` ("service:…" steps beside the
+  session panel's own; the panel now keeps steps it does not own).
+
+**Where the build differs from the mock, on purpose:**
+
+- "Save card on file" starts UNTICKED. The mock ticks it; a pre-ticked box is not the cardholder's
+  consent, and the charge route refuses a stored card without one.
+- A promo code is a line on the bill the moment it is applied, so "Balance due" already carries it
+  and the summary does not subtract it again (the mock does both, in one place).
+- A tip is offered on the methods that can carry one — a card and an e-transfer. The reader asks the
+  customer itself, cash leaves the change to the customer, and a gift card cannot pay a tip.
+- The saved cards show their expiry, not "Default": nothing stores a default card.
+- A groom's check-in goes straight on to "In grooming". That is the facility's own status rule
+  (`DEFAULT_BOOKING_STATUS_RULES` ships `grooming-check-in` on, and the calendar applies it too), so
+  the mock's "Start grooming" step appears only where a facility has turned that rule off.
+- A charge counted in units reads "1 × $3.50" where the mock writes "1 meal × $3.50": no line
+  stores its unit. A single add-on reads "Add-on", as the mock's does.
+- Online and Offline come from a `checkOnly` probe of each reader, asked only once a reader could be
+  used; an offline one cannot be chosen.
+- The tab's amber count is today's rows with nothing logged, as the mock counts it.
+- Words are ours (§5q): buttons are a verb and its object ("Mark ready for pickup", "Complete the
+  groom"), and dates and money go through `Intl`.
+
+**Still open.**
+
+- "Pickup: text parent when ready" is a toast that OFFERS the text after "Ready for pickup"; nothing
+  sends it unprompted.
+- The mock's two-pass layout (the payment card beside the content) needs ~1,000px of content; with
+  the app's sidebar that is a screen of about 1,340px. Narrower, the payment card sits under the
+  content, exactly as the mock does at that width.
+- "Booked by" reads the booking's first history entry; a booking with no history says "—".
+
+**Tests.** Unit `take-payment-math`, `booking-details-view`, `split-collected`; SQL `care-log-clear`,
+`pet-grooming-preferences`; the comparison shots `tests/shots/booking-details-{mock,ours}`; and
+`tests/e2e/booking-details-end-to-end.spec.ts` in the full suite.
+
+**What the first full runs found (2026-10-03):**
+
+- **Taking a payment is not leaving.** The page's till was only ever reached on site through "Check
+  {pet} out", so a bill it settled checked the pet out, behind the care gate. The payment card offers
+  "Take payment" at every stage, as the mock does, and went through that same till: an owner paying
+  the rest on day three would have sent their dog home and freed the kennel. The card's till now
+  only takes money — no care gate, no late-pickup fee, no departure — and the header's "Check
+  {pet} out" is still the departure. The end-to-end spec proves a boarder paid in full on the
+  first night is still checked in.
+
+- **The dialog changed under the cashier's hands.** The client's credit, cards and readers arrive
+  after the dialog opens, and they decide the total and the method offered first — so the form now
+  waits for them (`LoadingView`), and a press can no longer take money on figures nobody saw.
+- **The demo clients carry credit.** Alice held $74.00 in the production copy; credit is applied by
+  default, so a $64.00 booking showed "Total to collect $0.00" and no Cash card, and a spec looking
+  for one waited six minutes. Every spec that drives the dialog goes through
+  `tests/e2e/_take-payment.ts`: it waits for the form and turns credit off unless the test is about
+  credit, as staff may.
+- **`booking-payment-screens` had pressed "Continue anyway" since 2026-09-19**, when the care gate
+  started asking why and the button became "Check out anyway". It never noticed because the gate
+  never opened in that test; it now fills the reason and presses the real button.
+- A boarding guest cannot be checked in without a kennel (`boarding-arrival`); the end-to-end spec
+  presses the Stay card's "Find a kennel" first. A `ChoicePill`'s radio is visually hidden, so a
+  spec taps the pill (its label). The demo facility's tip tiers are 12, 16 and 22%, so no spec
+  may assume 15%.
+- At 390px a vaccine gap names every vaccine, and the chip did not wrap: the header's alerts and
+  the pet's chips wrap now.

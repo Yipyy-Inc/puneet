@@ -48,20 +48,23 @@ LAYOUT from the mock and their look from this section; now the mock decides the 
 inks, font sizes, control and chip sizes, radii, borders, shadows, selected states, chips and photo
 placeholders. Real data and behaviour stay ours, and so do words and formatting (§5q: `Intl`, French).
 
-| Mock (in `docs/`)                                                                                | Screens it decides                                                                               |
-| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
-| `Facility_01_-_Find_client.html`                                                                 | The booking wizard, both portals, every step                                                     |
-| `Feeding_Step.html`, `Medications_Step.html`                                                     | The Feeding and Medication steps (with the wizard's accent, not their violet)                    |
-| `Medication_and_Feeding_Instructions_setup_page_.html`                                           | Settings › Feeding & medications                                                                 |
-| `Yipyy_Evaluation_Booking.html` (kept out of git)                                                | The evaluation flow in the wizard; Settings › Services › Evaluations                             |
-| `Yipyy%2BEvaluations.html`, re-sent as `Yipyy_Evaluations.html` (the same file; kept out of git) | Operations › Evaluations, the evaluator and review dialogs, the report card, the customer's card |
+| Mock (in `docs/`)                                                                                | Screens it decides                                                                                                    |
+| ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| `Facility_01_-_Find_client.html`                                                                 | The booking wizard, both portals, every step                                                                          |
+| `Feeding_Step.html`, `Medications_Step.html`                                                     | The Feeding and Medication steps (with the wizard's accent, not their violet)                                         |
+| `Medication_and_Feeding_Instructions_setup_page_.html`                                           | Settings › Feeding & medications                                                                                      |
+| `Yipyy_Evaluation_Booking.html` (kept out of git)                                                | The evaluation flow in the wizard; Settings › Services › Evaluations                                                  |
+| `Yipyy%2BEvaluations.html`, re-sent as `Yipyy_Evaluations.html` (the same file; kept out of git) | Operations › Evaluations, the evaluator and review dialogs, the report card, the customer's card                      |
+| `Booking_Details_-_{Boarding,Daycare,Grooming,Training}.html` (one app; kept out of git)         | The facility's booking page, every service, both portals; its Take payment dialog, there and on the board's Check Out |
 
 - **Read the values from the mock's source, never by eye.** The bundles are 0.2–3.4 MB of script —
   never attach or Read them raw; extract the template and app script and port exact values. Port
   values, never markup or inline styles.
 - **Where they live:** each mock's palette is a `[data-look="…"]` block in `src/app/globals.css` that
   redefines the `:root` variables for its subtree (`booking`, `care-step`,
-  `care-setup`, `eval-module` — the evaluation booking mock shares `booking`). The staff wizard's accent is the mock's blue; the customer wizard's is
+  `care-setup`, `eval-module`, `booking-details` — the evaluation booking mock shares `booking`).
+  The booking page's Take payment dialog stamps `booking-details` itself, so it is the mock's
+  wherever it opens. The staff wizard's accent is the mock's blue; the customer wizard's is
   the facility's brand colour through `accentPalette()` (`src/lib/look/accent-palette.ts`), the mock's
   yellow when none is set. Sizes are variants in `components/ui`; tinted labels are `Chip`; missing
   photos are `PhotoPlaceholder`.
@@ -411,7 +414,7 @@ still absolute for **new** code: white, or a solid.
     ingestion reached 16.8 of 20 GB (AGENTS.md). CI itself runs only
     the 42-spec gate on a push (the authorisation boundary and money) and
     the full suite WEEKLY and on demand (nightly until 2026-09-26) —
-    because 158 specs is ~45 minutes and GitHub holds one pending run per
+    because 159 specs is ~45 minutes and GitHub holds one pending run per
     branch: with two people pushing, every queued run was cancelled by the
     next push and nothing finished. `bun run check:doc-counts` derives both
     numbers from package.json and fails if either drifts.

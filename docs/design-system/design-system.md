@@ -1299,6 +1299,12 @@ program) is the mocks' striped placeholder, `components/ui/photo-placeholder.tsx
 §5q's. CLAUDE.md § "Client mocks decide the look" lists each mock beside its screens, and a new
 mock adds a row there in the change that builds it.
 
+**2026-10-03, the same exception.** The client's four Booking_Details mocks (one app, one service
+each) decide the facility's booking page in both portals, and the Take payment dialog they embed
+decides the payment dialog there and on the board's Check Out. They are the `booking-details` look;
+the dialog stamps it itself, so it is the mock's wherever it opens. The list above covers it: the
+service colour rings the pet's avatar instead of the orange.
+
 ## 6. Hard rules
 
 1. **Orange is a surface and never an ink — no exceptions — and it marks the animal, never an action
