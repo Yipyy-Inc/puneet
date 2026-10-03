@@ -723,6 +723,12 @@ export const tipConfigSchema = z.object({
   customTip: z.boolean().optional(),
   /** Offer "round up to the next dollar" alongside the three options. */
   roundUp: z.boolean().optional(),
+  /**
+   * The services the front desk's Take payment dialog asks a tip on
+   * (2026-10-03). Optional and read with a default — grooming and training,
+   * see DEFAULT_DESK_TIP_SERVICES — for the reason the fields above are.
+   */
+  deskServices: z.array(z.string().min(1).max(60)).max(40).optional(),
   /** Post-stay tip reminder (sent after check-out) */
   reminder: tipReminderConfigSchema.optional(),
   /** Controls the tip ask attached to automated report cards */

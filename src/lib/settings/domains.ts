@@ -117,6 +117,10 @@ import {
 } from "@/lib/settings/booking-approval";
 import { careFeesSchema, NO_CARE_FEES } from "@/lib/settings/care-fees";
 import {
+  checkoutConfigSchema,
+  DEFAULT_CHECKOUT_CONFIG,
+} from "@/lib/settings/checkout";
+import {
   incidentProtocolsSchema,
   SHIPPED_INCIDENT_PROTOCOLS,
 } from "@/lib/settings/incident-protocols";
@@ -406,6 +410,13 @@ export const SETTING_DOMAINS = {
   tip_attribution: {
     schema: tipAttributionSchema,
     fallback: DEFAULT_TIP_ATTRIBUTION,
+  },
+  // What the front desk's Take payment dialog does with a client's account
+  // credit — applied automatically, or only once the client has been asked
+  // (2026-10-03). See lib/settings/checkout.ts.
+  checkout_config: {
+    schema: checkoutConfigSchema,
+    fallback: DEFAULT_CHECKOUT_CONFIG,
   },
   // Money, and the most consequential entry here: it decides what a customer
   // is CHARGED and what the facility owes a revenue authority.

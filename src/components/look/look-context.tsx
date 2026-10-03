@@ -26,7 +26,12 @@ import {
 // look in context every wrapper renders exactly as before.
 // ============================================================================
 
-export type LookName = "booking" | "care-step" | "care-setup" | "eval-module";
+export type LookName =
+  | "booking"
+  | "care-step"
+  | "care-setup"
+  | "eval-module"
+  | "booking-details";
 
 export interface Look {
   names: readonly LookName[];

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
+import { parseExerciseRatings } from "@/lib/api/mappers/training-attendance-history";
 import { writeFailure } from "@/lib/api/write-failure";
 import { deniedIfUntouched } from "@/lib/api/rls-write";
 import { requireCareLogged } from "@/lib/daily-care/require-care";
@@ -31,6 +32,14 @@ interface UpdateInput {
   notes?: string;
   /** Why today's care is unlogged, when staff choose to go ahead. */
   careOverrideReason?: string;
+  /**
+   * The session's ratings, whole — [{exerciseName, rating}]. The booking
+   * page's skills card writes one skill at a time through this (2026-10-03).
+   * An UPDATE, never an arrival: a dog that has not been checked in has no
+   * session to rate, and rating one must not check it in — which is what the
+   * POST beside this file would do.
+   */
+  exercises?: unknown;
 }
 
 async function bookingIdFor(
@@ -95,10 +104,22 @@ export async function PATCH(
     if (refused) return refused;
   }
 
+  const exercises =
+    body.exercises === undefined
+      ? undefined
+      : parseExerciseRatings(body.exercises);
+  if (exercises === null) {
+    return NextResponse.json(
+      { error: "Each exercise has a name and a whole rating from 1 to 5." },
+      { status: 422 },
+    );
+  }
+
   const patch: Record<string, unknown> = {};
   if (body.checkOut) patch.checked_out_at = new Date().toISOString();
   if (body.reopen) patch.checked_out_at = null;
   if (body.notes !== undefined) patch.session_notes = body.notes;
+  if (exercises !== undefined) patch.exercises = exercises;
 
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: "Nothing to change." }, { status: 422 });

@@ -81,6 +81,13 @@ const TerminalInput = z.object({
   tipOnDevice: z.boolean().default(false),
   /** Ask the device whether it is awake, and charge nothing. */
   checkOnly: z.boolean().default(false),
+  /**
+   * PART of the balance — the payment dialog's custom amount, or one leg of a
+   * split (2026-10-03). A ceiling, never a price: the smaller of this and what
+   * the row says is owed is charged, so it can only ever take less. Staff
+   * only, like everything on this route.
+   */
+  subtotalCents: z.number().int().min(1).max(10_000_000).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -165,6 +172,11 @@ export async function POST(request: NextRequest) {
       { status: 409 },
     );
   }
+  // What this sale takes: the balance, or the part of it the desk asked for.
+  const chargeCents = Math.min(
+    owedCents,
+    parsed.data.subtotalCents ?? owedCents,
+  );
 
   // ── TAX IS CHARGED, NOT JUST PRINTED ────────────────────────
   //
@@ -186,7 +198,7 @@ export async function POST(request: NextRequest) {
   // tax-free since 2026-09-21, and extras added at the counter stay taxed —
   // lib/payments/service-tax.ts splits a mixed balance in proportion.
   const taxOnCharge = computeTax(
-    taxableOwedOf(booking as unknown as BookingForReceipt, owedCents),
+    taxableOwedOf(booking as unknown as BookingForReceipt, chargeCents),
     bill.taxConfig,
   );
   // A tax-inclusive facility's tax is already inside the price, so nothing is
@@ -226,10 +238,10 @@ export async function POST(request: NextRequest) {
     const chosen = await readTipOnDevice(
       booking.facility_id,
       parsed.data.deviceSerial,
-      owedCents,
+      chargeCents,
       // Dollars, because the threshold that picks a smart tier is in dollars.
-      // `owedCents` is pre-tax, which is what a percentage here means.
-      cloverTipSuggestions(tipSettings, owedCents / 100),
+      // `chargeCents` is pre-tax, which is what a percentage here means.
+      cloverTipSuggestions(tipSettings, chargeCents / 100),
     );
     tipPrompted = chosen !== null;
     tipCents = chosen ?? 0;
@@ -249,7 +261,7 @@ export async function POST(request: NextRequest) {
     // taxed booking recorded as overpaid by exactly its tax — and a facility's
     // remittable tax was unreadable from its own ledger. `chargeOnTerminal`
     // adds them for the amount it charges.
-    subtotalCents: owedCents,
+    subtotalCents: chargeCents,
     taxCents: taxToAddCents,
     tipCents,
     deviceSerial: parsed.data.deviceSerial,
@@ -332,6 +344,7 @@ export async function POST(request: NextRequest) {
           booking as unknown as BookingForReceipt,
           bill,
           taxOnCharge,
+          chargeCents,
           owedCents,
           outcome,
         );
@@ -645,12 +658,14 @@ async function billFor(
  * Pure, and takes the SAME tax the card was charged, so the arithmetic on the
  * paper is the arithmetic in the ledger.
  *
- * @param owedCents what was owed before tax — the receipt's Subtotal.
+ * @param chargeCents what this sale took before tax — the receipt's Subtotal.
+ * @param owedCents   what was owed before it, when the sale took only part.
  */
 function receiptInputFor(
   booking: BookingForReceipt,
   bill: Bill,
   tax: { lines: ComputedTax[]; totalCents: number },
+  chargeCents: number,
   owedCents: number,
   outcome: Extract<Awaited<ReturnType<typeof chargeOnTerminal>>, { ok: true }>,
 ): ReceiptInput {
@@ -660,20 +675,24 @@ function receiptInputFor(
   // A part-paid booking's line items describe the WHOLE stay while only the
   // balance is being collected. Without this the printed lines would not sum to
   // the subtotal beneath them, so the difference is shown rather than hidden.
-  const lines =
-    lineTotal !== owedCents
-      ? [
-          ...bill.lines,
-          { label: "Already paid", amountCents: owedCents - lineTotal },
-        ]
-      : bill.lines;
+  const lines = [
+    ...bill.lines,
+    ...(lineTotal !== owedCents
+      ? [{ label: "Already paid", amountCents: owedCents - lineTotal }]
+      : []),
+    // And a sale that took only PART of the balance says what is left, so the
+    // lines still add up to the subtotal beneath them.
+    ...(chargeCents < owedCents
+      ? [{ label: "Still owed", amountCents: chargeCents - owedCents }]
+      : []),
+  ];
 
   // The terminal reports one number: what the customer actually paid. Subtotal
   // and tax are both known, so the tip is what is left — worked out AFTER tax,
   // or a taxed sale reports its tax as gratuity.
   const tipCents = Math.max(
     0,
-    outcome.amountCents - owedCents - tax.totalCents,
+    outcome.amountCents - chargeCents - tax.totalCents,
   );
 
   const zone = booking.facilities?.timezone ?? "UTC";
@@ -706,8 +725,8 @@ function receiptInputFor(
     // the subtotal has to come out from under it or Subtotal + tax would double
     // count and the total would not match the card.
     subtotalCents: bill.taxConfig.pricesIncludeTax
-      ? owedCents - tax.totalCents
-      : owedCents,
+      ? chargeCents - tax.totalCents
+      : chargeCents,
     taxLines: tax.lines.map((t) => ({
       name: t.name,
       rate: t.rate,

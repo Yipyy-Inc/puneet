@@ -377,6 +377,14 @@ function replaceTokens(template: string, tokens: Record<string, string>) {
 
 export function ReportCardsModule({
   defaultServiceType = "daycare" as ServiceType,
+  initialCardId,
+  initialVisitId,
+}: {
+  defaultServiceType?: ServiceType;
+  /** Open this card on arrival — the booking page's day draft (2026-10-03). */
+  initialCardId?: string;
+  /** Start a card on this visit (a booking ref) on arrival. */
+  initialVisitId?: string;
 }) {
   const isMounted = useHydrated();
   const { reportCards: reportCardConfig, profile } = useSettings();
@@ -452,13 +460,23 @@ export function ReportCardsModule({
     setLocalCards([]);
   };
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Seeded from the page's own search params, so the server and the client
+  // agree on the first render and nothing has to open it from an effect.
+  const [isModalOpen, setIsModalOpen] = useState(() => Boolean(initialVisitId));
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewingCard, setViewingCard] = useState<ReportCardEntry | null>(null);
+  // A card asked for by id is open once the list holds it.
+  const [requestedCardId, setRequestedCardId] = useState(initialCardId ?? null);
+  const requestedCard = requestedCardId
+    ? (reportCards.find((card) => card.id === requestedCardId) ?? null)
+    : null;
+  const viewing = viewingCard ?? requestedCard;
 
   const [serviceType, setServiceType] =
     useState<ServiceType>(defaultServiceType);
-  const [selectedVisitId, setSelectedVisitId] = useState<string>("");
+  const [selectedVisitId, setSelectedVisitId] = useState<string>(
+    initialVisitId ?? "",
+  );
   const [selectedTheme, setSelectedTheme] = useState<string>(
     reportCardConfig.enabledThemes[0] ?? "everyday",
   );
@@ -989,7 +1007,7 @@ export function ReportCardsModule({
       rc.delivery.status !== "sent",
   ).length;
   const viewingThemeMeta =
-    themeMeta[viewingCard?.theme ?? "everyday"] ?? themeMeta.everyday;
+    themeMeta[viewing?.theme ?? "everyday"] ?? themeMeta.everyday;
 
   if (!isMounted) {
     return null;
@@ -1862,15 +1880,21 @@ export function ReportCardsModule({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+      <Dialog
+        open={isViewModalOpen || requestedCard !== null}
+        onOpenChange={(open) => {
+          setIsViewModalOpen(open);
+          if (!open) setRequestedCardId(null);
+        }}
+      >
         <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex flex-wrap items-center gap-2">
               <PawPrint className="size-5" />
-              Report Card - {viewingCard?.petName}
+              Report Card - {viewing?.petName}
             </DialogTitle>
           </DialogHeader>
-          {viewingCard && (
+          {viewing && (
             <div className="space-y-6">
               {/* Full themed card */}
               <div
@@ -1918,14 +1942,11 @@ export function ReportCardsModule({
                       viewingThemeMeta.accentText,
                     )}
                   >
-                    {new Date(viewingCard.visitDate).toLocaleDateString(
-                      "en-US",
-                      {
-                        month: "long",
-                        day: "numeric",
-                        year: "numeric",
-                      },
-                    )}
+                    {new Date(viewing.visitDate).toLocaleDateString("en-US", {
+                      month: "long",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
                   </div>
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
@@ -1956,20 +1977,20 @@ export function ReportCardsModule({
                         <p className="text-muted-foreground text-xs">
                           Dog name
                         </p>
-                        <p className="font-medium">{viewingCard.petName}</p>
+                        <p className="font-medium">{viewing.petName}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground text-xs">
                           Parent name
                         </p>
-                        <p className="font-medium">{viewingCard.ownerName}</p>
+                        <p className="font-medium">{viewing.ownerName}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground text-xs">
                           Service type
                         </p>
                         <p className="font-medium capitalize">
-                          {viewingCard.serviceType}
+                          {viewing.serviceType}
                         </p>
                       </div>
                       <div>
@@ -1986,19 +2007,19 @@ export function ReportCardsModule({
               <div className="space-y-3">
                 <h3 className="font-semibold">Today&apos;s vibe</h3>
                 <p className="text-muted-foreground text-sm">
-                  {viewingCard.generated.todaysVibe}
+                  {viewing.generated.todaysVibe}
                 </p>
               </div>
               <div className="space-y-3">
                 <h3 className="font-semibold">Friends & fun</h3>
                 <p className="text-muted-foreground text-sm">
-                  {viewingCard.generated.friendsAndFun}
+                  {viewing.generated.friendsAndFun}
                 </p>
               </div>
               <div className="space-y-3">
                 <h3 className="font-semibold">Care metrics</h3>
                 <div className="text-muted-foreground space-y-2 text-sm">
-                  {viewingCard.generated.careMetrics
+                  {viewing.generated.careMetrics
                     .split("\n")
                     .filter(Boolean)
                     .map((line, index) => {
@@ -2019,33 +2040,33 @@ export function ReportCardsModule({
                     })}
                 </div>
               </div>
-              {viewingCard.generated.holidaySparkle && (
+              {viewing.generated.holidaySparkle && (
                 <div className="space-y-3">
                   <h3 className="font-semibold">
-                    {holidaySectionTitles[viewingCard.theme] ??
+                    {holidaySectionTitles[viewing.theme] ??
                       "Holiday special moment"}
                   </h3>
                   <p className="text-muted-foreground text-sm">
-                    {viewingCard.generated.holidaySparkle}
+                    {viewing.generated.holidaySparkle}
                   </p>
                 </div>
               )}
-              {viewingCard.input.overallFeedback && (
+              {viewing.input.overallFeedback && (
                 <div className="space-y-3">
                   <h3 className="font-semibold">
                     {overallFeedbackConfig.title}
                   </h3>
                   <p className="text-muted-foreground text-sm">
-                    {viewingCard.input.overallFeedback}
+                    {viewing.input.overallFeedback}
                   </p>
                 </div>
               )}
-              {viewingCard.input.customAnswers &&
-                Object.keys(viewingCard.input.customAnswers).length > 0 && (
+              {viewing.input.customAnswers &&
+                Object.keys(viewing.input.customAnswers).length > 0 && (
                   <div className="space-y-3">
                     <h3 className="font-semibold">Custom Feedback</h3>
                     <div className="text-muted-foreground space-y-2 text-sm">
-                      {Object.entries(viewingCard.input.customAnswers).map(
+                      {Object.entries(viewing.input.customAnswers).map(
                         ([qId, answer]) => {
                           const question = customQuestionsConfig.find(
                             (q) => q.id === qId,
@@ -2063,12 +2084,12 @@ export function ReportCardsModule({
                     </div>
                   </div>
                 )}
-              {viewingCard.input.petConditions &&
-                Object.keys(viewingCard.input.petConditions).length > 0 && (
+              {viewing.input.petConditions &&
+                Object.keys(viewing.input.petConditions).length > 0 && (
                   <div className="space-y-3">
                     <h3 className="font-semibold">Pet Condition</h3>
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      {Object.entries(viewingCard.input.petConditions).map(
+                      {Object.entries(viewing.input.petConditions).map(
                         ([catId, value]) => {
                           const cat = petConditionConfig.categories.find(
                             (c) => c.id === catId,
@@ -2092,16 +2113,14 @@ export function ReportCardsModule({
                   💖 From our team:
                 </p>
                 <p className="text-muted-foreground text-sm italic">
-                  &quot;{viewingCard.input.closingComment}&quot;
+                  &quot;{viewing.input.closingComment}&quot;
                 </p>
               </div>
 
               <div className="text-muted-foreground space-y-1 text-sm">
                 <p className="text-foreground font-medium">With love,</p>
-                <p>The {viewingCard.facilityName} Team 🐶</p>
-                <p>
-                  Thanks for trusting us with {viewingCard.petName}&apos;s day!
-                </p>
+                <p>The {viewing.facilityName} Team 🐶</p>
+                <p>Thanks for trusting us with {viewing.petName}&apos;s day!</p>
                 <p className="text-muted-foreground text-xs">
                   Reply to this message if you have any questions 💬
                 </p>
@@ -2109,19 +2128,19 @@ export function ReportCardsModule({
 
               <div className="space-y-3">
                 <h3 className="font-semibold">Photo Highlight</h3>
-                {viewingCard.photos.length > 0 ? (
+                {viewing.photos.length > 0 ? (
                   <div className="space-y-3">
                     <div className="bg-muted relative h-56 w-full overflow-hidden rounded-xl border">
                       <Image
-                        src={viewingCard.photos[0]}
+                        src={viewing.photos[0]}
                         alt="Report card hero"
                         fill
                         className="object-cover"
                       />
                     </div>
-                    {viewingCard.photos.length > 1 && (
+                    {viewing.photos.length > 1 && (
                       <div className="flex flex-wrap gap-2">
-                        {viewingCard.photos.slice(1).map((photo, index) => (
+                        {viewing.photos.slice(1).map((photo, index) => (
                           <div
                             key={`${photo}-${index}`}
                             className="bg-muted h-20 w-20 overflow-hidden rounded-lg border"
@@ -2151,11 +2170,11 @@ export function ReportCardsModule({
                     this product does not perform — the card reaches the owner
                     through their portal, and no email or SMS is sent for it. */}
                 <div className="text-muted-foreground mb-2 text-xs tracking-wide uppercase">
-                  Message preview — not yet sent to {viewingCard.petName}&apos;s
+                  Message preview — not yet sent to {viewing.petName}&apos;s
                   owner
                 </div>
                 <ReportCardNotificationPreviews
-                  data={toNotificationData(viewingCard)}
+                  data={toNotificationData(viewing)}
                 />
               </div>
 
@@ -2164,30 +2183,30 @@ export function ReportCardsModule({
                   Internal delivery controls
                 </div>
                 <div className="flex items-center justify-between">
-                  {viewingCard.delivery.status === "sent" ? (
+                  {viewing.delivery.status === "sent" ? (
                     <Badge variant="success">
                       <Check className="mr-1 size-3" />
                       Sent
-                      {viewingCard.delivery.sentAt &&
+                      {viewing.delivery.sentAt &&
                         ` at ${new Date(
-                          viewingCard.delivery.sentAt,
+                          viewing.delivery.sentAt,
                         ).toLocaleTimeString()}`}
                     </Badge>
-                  ) : viewingCard.delivery.status === "scheduled" ? (
+                  ) : viewing.delivery.status === "scheduled" ? (
                     <Badge variant="secondary">
                       <CalendarClock className="mr-1 size-3" />
                       Scheduled for{" "}
-                      {viewingCard.delivery.scheduledFor
+                      {viewing.delivery.scheduledFor
                         ? new Date(
-                            viewingCard.delivery.scheduledFor,
+                            viewing.delivery.scheduledFor,
                           ).toLocaleTimeString()
                         : "later"}
                     </Badge>
                   ) : (
                     <Badge variant="secondary">Pending</Badge>
                   )}
-                  {viewingCard.delivery.status !== "sent" && (
-                    <Button onClick={() => handleSendNow(viewingCard.id)}>
+                  {viewing.delivery.status !== "sent" && (
+                    <Button onClick={() => handleSendNow(viewing.id)}>
                       <Send className="mr-2 size-4" />
                       Send now
                     </Button>

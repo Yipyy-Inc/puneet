@@ -21,23 +21,54 @@ function Tabs({
   );
 }
 
+/**
+ * `details` is the booking details mocks' strip (CLAUDE.md § "Client mocks
+ * decide the look"): 44px tabs at 15px, the open one in body ink at 600 on a
+ * 2px accent line that sits over the strip's own hairline. Still an open rail
+ * — no radius, no fill — so §6 rule 1's one exception holds.
+ */
+type TabsVariant = "default" | "details";
+
 function TabsList({
   className,
+  variant = "default",
   ...props
-}: React.ComponentProps<typeof TabsPrimitive.List>) {
+}: React.ComponentProps<typeof TabsPrimitive.List> & {
+  variant?: TabsVariant;
+}) {
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
-      className={cn("flex gap-1 overflow-x-auto px-6", className)}
+      className={cn(
+        variant === "details"
+          ? "border-line flex gap-1 overflow-x-auto overflow-y-hidden border-b"
+          : "flex gap-1 overflow-x-auto px-6",
+        className,
+      )}
       {...props}
     />
   );
 }
 
+const DETAILS_TRIGGER =
+  "text-ink-tertiary data-[state=active]:border-primary data-[state=active]:text-body-ink -mb-px inline-flex min-h-11 shrink-0 items-center gap-2 border-b-2 border-transparent bg-transparent px-3.5 text-[15px] font-medium whitespace-nowrap data-[state=active]:font-semibold";
+
 function TabsTrigger({
   className,
+  variant = "default",
   ...props
-}: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
+}: React.ComponentProps<typeof TabsPrimitive.Trigger> & {
+  variant?: TabsVariant;
+}) {
+  if (variant === "details") {
+    return (
+      <TabsPrimitive.Trigger
+        data-slot="tabs-trigger"
+        className={cn(DETAILS_TRIGGER, className)}
+        {...props}
+      />
+    );
+  }
   return (
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"

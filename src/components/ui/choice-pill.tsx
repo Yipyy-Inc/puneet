@@ -71,6 +71,16 @@ const EVAL_TAG_TONE = {
 } as const;
 /** The mock's larger chip, its `chipH2`: training goals and experience. */
 const BOOKING_PILL_LG = "min-h-[38px] px-4 text-[13.5px] max-lg:min-h-11";
+/** The booking details mocks' option: a hairline on white; chosen, 1.5px of
+ *  the accent on its palest blue, the words in its deep blue. A journal
+ *  entry's answer (34px, 13px) or the payment dialog's tip and second method
+ *  (40px, 14px). */
+const DETAILS_PILL =
+  "border-line-strong bg-card text-body-ink has-checked:border-primary has-checked:bg-(--acc-pale) has-checked:text-acc-soft-text relative has-focus-visible:outline-primary flex cursor-pointer items-center gap-1.5 rounded-full border font-medium whitespace-nowrap has-checked:border-[1.5px] has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-disabled:cursor-not-allowed has-disabled:text-ink-disabled";
+const DETAILS_SIZE = {
+  sm: "min-h-[34px] px-3 text-[13px]",
+  md: "min-h-10 px-3.5 text-[14px]",
+} as const;
 
 export function ChoicePill({
   type,
@@ -78,6 +88,7 @@ export function ChoicePill({
   value,
   checked,
   onChange,
+  onReselect,
   disabled,
   size,
   tone = "accent",
@@ -91,6 +102,12 @@ export function ChoicePill({
   value?: string;
   checked: boolean;
   onChange: () => void;
+  /**
+   * The chosen pill was chosen again — a radio fires no change for itself,
+   * but its click still comes, from a tap or from Space. The booking page's
+   * journal takes a log back this way.
+   */
+  onReselect?: () => void;
   disabled?: boolean;
   /**
    * `lg` is the booking mock's larger chip. With `tone="ink"` the
@@ -108,6 +125,9 @@ export function ChoicePill({
   "aria-label"?: string;
 }) {
   const look = useLook();
+  // The INNERMOST look decides here: the booking wizard opened from the
+  // booking page wears both names and keeps its own pills.
+  const details = look?.names.at(-1) === "booking-details";
   const setup = look?.names.includes("care-setup") ?? false;
   const care = !setup && (look?.names.includes("care-step") ?? false);
   const booking =
@@ -126,21 +146,28 @@ export function ChoicePill({
         : "lg"
     ];
   const tagSize = EVAL_TAG_SIZE[size === "md" ? "md" : "sm"];
+  const detailsSize = DETAILS_SIZE[size === "md" ? "md" : "sm"];
   return (
     <label
       className={cn(
-        setup
-          ? SETUP_PILL
-          : care
-            ? CARE_PILL
-            : booking
-              ? tone === "ink"
-                ? cn(BOOKING_PILL_INK, inkSize)
-                : tone === "good" || tone === "watch"
-                  ? cn(EVAL_TAG, tagSize, EVAL_TAG_TONE[tone])
-                  : BOOKING_PILL
-              : choicePillClass,
-        booking && tone === "accent" && size === "lg" && BOOKING_PILL_LG,
+        details
+          ? cn(DETAILS_PILL, detailsSize)
+          : setup
+            ? SETUP_PILL
+            : care
+              ? CARE_PILL
+              : booking
+                ? tone === "ink"
+                  ? cn(BOOKING_PILL_INK, inkSize)
+                  : tone === "good" || tone === "watch"
+                    ? cn(EVAL_TAG, tagSize, EVAL_TAG_TONE[tone])
+                    : BOOKING_PILL
+                : choicePillClass,
+        !details &&
+          booking &&
+          tone === "accent" &&
+          size === "lg" &&
+          BOOKING_PILL_LG,
         className,
       )}
     >
@@ -151,6 +178,7 @@ export function ChoicePill({
         checked={checked}
         disabled={disabled}
         onChange={onChange}
+        onClick={onReselect && checked ? onReselect : undefined}
         aria-label={ariaLabel}
         className="sr-only"
       />

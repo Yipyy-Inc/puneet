@@ -26,7 +26,7 @@ export function Photo({
   imgClassName,
 }: {
   src?: string | null;
-  shape: "band" | "square" | "tile";
+  shape: "band" | "square" | "tile" | "pet" | "slot";
   /** The placeholder's stripes: the report card's are `warm`. */
   tone?: "default" | "soft" | "warm";
   /** What belongs here, for the placeholder — translated by the caller. */

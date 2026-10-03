@@ -87,6 +87,8 @@ export async function GET(request: NextRequest) {
 
   const url = new URL(request.url);
   const date = url.searchParams.get("date");
+  // One booking's appointment — the booking page reads its own, not the day's.
+  const bookingRef = Number(url.searchParams.get("bookingRef") ?? NaN);
 
   let query = supabase
     .from("bookings")
@@ -98,6 +100,7 @@ export async function GET(request: NextRequest) {
   // Optional day filter. The board asks for today; the calendar asks for a
   // range it builds itself, so this stays a single day rather than guessing at
   // a window.
+  if (Number.isFinite(bookingRef)) query = query.eq("ref", bookingRef);
   if (date) {
     query = query
       .gte("start_at", `${date}T00:00:00`)

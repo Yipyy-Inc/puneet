@@ -271,3 +271,40 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json(toEntry(data as unknown as Row), { status: 201 });
 }
+
+/**
+ * DELETE /api/care-log?id=<entry> — take a log back ("logged by mistake").
+ *
+ * Through `clear_care_log_entry`, which checks the same permission as
+ * recording that kind of entry and writes what it said to the booking's
+ * history in the same transaction (20261003150843). Nothing here decides who
+ * may.
+ */
+export async function DELETE(request: NextRequest) {
+  const user = await getCurrentUser().catch(() => null);
+  if (!user) {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+  const id = request.nextUrl.searchParams.get("id")?.trim() ?? "";
+  if (!/^[0-9a-f-]{36}$/i.test(id)) {
+    return NextResponse.json({ error: "Which entry?" }, { status: 422 });
+  }
+  const supabase = await createServerClient();
+  const { error } = await supabase.rpc("clear_care_log_entry", {
+    p_entry: id,
+  });
+  if (error) {
+    if (error.code === "P0002") {
+      return NextResponse.json(
+        { error: "That entry is already gone." },
+        { status: 404 },
+      );
+    }
+    return writeFailure(error, {
+      denied:
+        "You are not allowed to clear this kind of care at this facility.",
+      duplicate: "That entry is already gone.",
+    });
+  }
+  return new NextResponse(null, { status: 204 });
+}

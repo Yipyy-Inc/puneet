@@ -31,6 +31,11 @@ const SETUP_TRACK =
   "inline-flex max-w-full flex-wrap gap-1 self-start rounded-[10px] bg-(--care-track) p-1";
 const SETUP_SEGMENT =
   "text-ink-tertiary has-checked:bg-card has-checked:text-body-ink has-checked:shadow-[0_1px_2px_rgba(20,18,30,0.12)] has-focus-visible:outline-primary relative flex min-h-[34px] cursor-pointer items-center rounded-[8px] px-3.5 text-[14px] font-medium whitespace-nowrap has-focus-visible:outline-2 has-focus-visible:outline-offset-2";
+/** The Take payment mock's: a 10px slate track, 34px segments, 8px corners. */
+const DETAILS_TRACK =
+  "bg-surface-inset-2 inline-flex max-w-full flex-wrap gap-1 self-start rounded-[10px] p-1";
+const DETAILS_SEGMENT =
+  "text-ink-tertiary has-checked:bg-card has-checked:text-body-ink has-checked:shadow-(--bd-sh-seg) has-focus-visible:outline-primary relative flex min-h-[34px] cursor-pointer items-center rounded-[8px] px-3.5 text-[14px] font-medium whitespace-nowrap has-focus-visible:outline-2 has-focus-visible:outline-offset-2";
 const BOOKING_TRACK =
   "bg-surface-inset-2 inline-flex max-w-full flex-wrap gap-1 rounded-full p-1";
 const BOOKING_SEGMENT =
@@ -59,21 +64,27 @@ export function Segmented<T extends string>({
   className?: string;
 }) {
   const look = useLook();
-  const setup = look?.names.includes("care-setup") ?? false;
-  const care = !setup && (look?.names.includes("care-step") ?? false);
-  const booking = !setup && !care && (look?.names.includes("booking") ?? false);
+  // The innermost look decides, as for ChoicePill: the booking page's own.
+  const details = look?.names.at(-1) === "booking-details";
+  const setup = !details && (look?.names.includes("care-setup") ?? false);
+  const care =
+    !details && !setup && (look?.names.includes("care-step") ?? false);
+  const booking =
+    !details && !setup && !care && (look?.names.includes("booking") ?? false);
   return (
     <div
       role="radiogroup"
       aria-label={label}
       className={cn(
-        setup
-          ? SETUP_TRACK
-          : care
-            ? CARE_TRACK
-            : booking
-              ? BOOKING_TRACK
-              : TRACK,
+        details
+          ? DETAILS_TRACK
+          : setup
+            ? SETUP_TRACK
+            : care
+              ? CARE_TRACK
+              : booking
+                ? BOOKING_TRACK
+                : TRACK,
         className,
       )}
     >
@@ -82,13 +93,15 @@ export function Segmented<T extends string>({
           key={option.value}
           // Positioned so its hidden input stays inside it (see ChoicePill).
           className={
-            setup
-              ? SETUP_SEGMENT
-              : care
-                ? CARE_SEGMENT
-                : booking
-                  ? BOOKING_SEGMENT
-                  : SEGMENT
+            details
+              ? DETAILS_SEGMENT
+              : setup
+                ? SETUP_SEGMENT
+                : care
+                  ? CARE_SEGMENT
+                  : booking
+                    ? BOOKING_SEGMENT
+                    : SEGMENT
           }
         >
           <input

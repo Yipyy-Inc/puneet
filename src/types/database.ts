@@ -8065,6 +8065,60 @@ export type Database = {
         };
         Relationships: [];
       };
+      pet_grooming_preferences: {
+        Row: {
+          behavior: string;
+          cut: string;
+          ears: string;
+          face: string;
+          facility_id: string;
+          pet_id: string;
+          shampoo: string;
+          updated_at: string;
+          updated_by: string | null;
+          updated_by_name: string | null;
+        };
+        Insert: {
+          behavior?: string;
+          cut?: string;
+          ears?: string;
+          face?: string;
+          facility_id: string;
+          pet_id: string;
+          shampoo?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          updated_by_name?: string | null;
+        };
+        Update: {
+          behavior?: string;
+          cut?: string;
+          ears?: string;
+          face?: string;
+          facility_id?: string;
+          pet_id?: string;
+          shampoo?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          updated_by_name?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "pet_grooming_preferences_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "pet_grooming_preferences_pet_id_fkey";
+            columns: ["pet_id"];
+            isOneToOne: true;
+            referencedRelation: "pets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       pet_vaccinations: {
         Row: {
           administered_on: string | null;
@@ -14324,6 +14378,10 @@ export type Database = {
       cancel_my_booking: {
         Args: { p_reason?: string; p_ref: number };
         Returns: Json;
+      };
+      clear_care_log_entry: {
+        Args: { p_entry: string };
+        Returns: undefined;
       };
       client_missing_forms: {
         Args: {

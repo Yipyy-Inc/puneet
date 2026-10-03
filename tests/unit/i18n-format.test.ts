@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   formatCalendarDate,
+  formatStayRange,
   formatCalendarDayLong,
   formatDateISO,
   formatDateLong,
@@ -476,6 +477,30 @@ describe("formatCalendarDate", () => {
 
   test("anything but a calendar day is the em dash", () => {
     expect(formatCalendarDate("10/02/2026", "en")).toBe("—");
+  });
+});
+
+describe("formatStayRange", () => {
+  test("a stay's two days with its year, as Intl writes a range", () => {
+    expect(formatStayRange("2026-09-21", "2026-09-30", "en")).toBe(
+      "Sep 21–30, 2026",
+    );
+    expect(formatStayRange("2026-09-21", "2026-09-30", "fr")).toBe(
+      "21–30 sept. 2026",
+    );
+    expect(formatStayRange("2026-09-28", "2026-10-02", "en")).toBe(
+      "Sep 28–Oct 2, 2026",
+    );
+    expect(formatStayRange("2026-09-28", "2026-10-02", "fr")).toBe(
+      "28 sept. – 2 oct. 2026",
+    );
+  });
+
+  test("one day is that day", () => {
+    expect(formatStayRange("2026-09-30", "2026-09-30", "en")).toBe(
+      "Sep 30, 2026",
+    );
+    expect(formatStayRange("2026-09-30", "", "en")).toBe("Sep 30, 2026");
   });
 });
 

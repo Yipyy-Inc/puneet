@@ -99,3 +99,20 @@ export async function logCare(input: LogCareInput): Promise<CareLogEntry> {
   }
   return (await response.json()) as CareLogEntry;
 }
+
+/**
+ * Take a log back — the journal's second tap on the same answer. The server
+ * records what it said in the booking's history (20261003150843).
+ */
+export async function clearCare(entryId: string): Promise<void> {
+  const response = await fetch(
+    `/api/care-log?id=${encodeURIComponent(entryId)}`,
+    { method: "DELETE" },
+  );
+  if (!response.ok && response.status !== 404) {
+    const body = (await response.json().catch(() => ({}))) as {
+      error?: string;
+    };
+    throw new Error(body.error ?? "Could not clear that.");
+  }
+}

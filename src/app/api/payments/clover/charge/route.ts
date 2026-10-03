@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
+import { holds, myPermissions } from "@/lib/auth/permissions";
 import { getViewer } from "@/lib/auth/viewer";
 import { createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -57,6 +58,16 @@ export const dynamic = "force-dynamic";
 // earlier. Modelled as a union rather than two optional fields so "neither" and
 // "both" are rejected by the schema instead of by a branch somebody has to
 // remember to write.
+// ── PART OF THE BALANCE, AT THE DESK ONLY ─────────────────────────────────
+//
+// `subtotalCents` lets the front desk take PART of what is owed — the payment
+// dialog's "Custom amount", or one leg of a split (2026-10-03). It is a
+// ceiling, never a price: the route still reads the balance off the row and
+// charges the smaller of the two, so it can only ever take less. And only
+// someone trusted with money at the facility may send it — a customer paying
+// online pays the balance, or the deposit, and nothing in between.
+const PartOfBalance = z.number().int().min(1).max(10_000_000).optional();
+
 const ChargeInput = z.union([
   z.object({
     bookingId: z.uuid(),
@@ -66,6 +77,7 @@ const ChargeInput = z.union([
     tipCents: z.number().int().min(0).max(100_000).default(0),
     /** A deposit link (/pay/{ref}?deposit=1): the share, not the balance. */
     purpose: z.literal("deposit").optional(),
+    subtotalCents: PartOfBalance,
   }),
   z.object({
     bookingId: z.uuid(),
@@ -73,6 +85,7 @@ const ChargeInput = z.union([
     savedCardId: z.uuid(),
     tipCents: z.number().int().min(0).max(100_000).default(0),
     purpose: z.literal("deposit").optional(),
+    subtotalCents: PartOfBalance,
   }),
 ]);
 
@@ -167,6 +180,14 @@ export async function POST(request: NextRequest) {
     }
     subtotalCents = Math.min(owedCents, Math.round(share.amount * 100));
     tipCents = 0;
+  } else if (parsed.data.subtotalCents !== undefined) {
+    if (!holds(await myPermissions(), "financial_take_payment")) {
+      return NextResponse.json(
+        { error: "Only the facility can take part of a balance." },
+        { status: 403 },
+      );
+    }
+    subtotalCents = Math.min(owedCents, parsed.data.subtotalCents);
   }
 
   // ── A STORED CARD IS RESOLVED HERE, AS THE CALLER ───────────────────────

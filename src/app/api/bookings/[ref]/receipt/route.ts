@@ -3,10 +3,16 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getViewer } from "@/lib/auth/viewer";
 import { holds, myPermissions } from "@/lib/auth/permissions";
-import { emailItemisedReceipt } from "@/lib/clover/receipt-delivery";
-import { formatDateTimeInZone } from "@/lib/i18n/format";
+import {
+  emailItemisedReceipt,
+  smsItemisedReceipt,
+} from "@/lib/clover/receipt-delivery";
+import { escapeHtml } from "@/lib/email/shell";
+import { formatDateTimeInZone, formatMoney } from "@/lib/i18n/format";
 import { serviceTypeLabel } from "@/lib/i18n/labels";
-import { facilityTaxConfig } from "@/lib/payments/booking-tax";
+import { sendEmail, sendSms } from "@/lib/messaging/send";
+import { isSuppressed } from "@/lib/messaging/suppression";
+import { facilityTaxConfig, taxToAddCents } from "@/lib/payments/booking-tax";
 import {
   bookingReceiptInput,
   type ReceiptPaymentRow,
@@ -15,7 +21,7 @@ import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { DEFAULT_TIMEZONE } from "@/lib/time/facility-time";
 
 // ============================================================================
-// POST /api/bookings/[ref]/receipt   { to?: string }
+// POST /api/bookings/[ref]/receipt   { to?: string, channels?: ["email","sms"] }
 //
 // Emails a settled booking's itemised receipt — to the client's own address
 // unless staff give another — built from the payment ledger
@@ -26,6 +32,15 @@ import { DEFAULT_TIMEZONE } from "@/lib/time/facility-time";
 // A booking with something still owed is refused: a receipt says "paid", and
 // what such a booking needs is the pay link. The answer says whether the email
 // went — `sent: false` with the reason, never a success that did not happen.
+//
+// ── CHANNELS, FROM THE PAYMENT DIALOG (2026-10-03) ────────────────────────
+//
+// The payment dialog's "Receipt: Email · Text" sends `channels`. Then a text
+// is the same itemised receipt by SMS, and a booking still part-owed gets a
+// short message instead of a receipt — what was received and what is still
+// owed — because a receipt says "paid" and this is not. Each channel answers
+// for itself under `channels`, and an opted-out address is skipped and says
+// so. A caller that sends no `channels` gets exactly the old behaviour.
 // ============================================================================
 
 export const dynamic = "force-dynamic";
@@ -42,8 +57,15 @@ interface BookingRow {
   taxable_extras_total: number | string | null;
   taxable: boolean | null;
   payment_status: string | null;
+  amount_due: number | string | null;
+  amount_paid: number | string | null;
   facility_id: string;
-  clients: { name: string | null; email: string | null } | null;
+  clients: {
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+    preferred_language: string | null;
+  } | null;
   booking_pets: Array<{ pets: { name: string | null } | null }> | null;
   facilities: {
     name: string;
@@ -106,19 +128,36 @@ export async function POST(
   if (!Number.isFinite(bookingRef)) {
     return NextResponse.json({ error: "Invalid booking id." }, { status: 400 });
   }
-  const body = (await request.json().catch(() => ({}))) as { to?: string };
+  const body = (await request.json().catch(() => ({}))) as {
+    to?: string;
+    channels?: unknown;
+  };
+  const channels = Array.isArray(body.channels)
+    ? ([...new Set(body.channels)].filter(
+        (c): c is Channel => c === "email" || c === "sms",
+      ) as Channel[])
+    : null;
 
   const supabase = await createServerClient();
   const { data } = await supabase
     .from("bookings")
     .select(
-      "id, ref, service, service_type, base_price, discount, total_cost, extras_total, taxable_extras_total, taxable, payment_status, facility_id, clients(name, email), booking_pets(pets(name)), facilities(name, address, phone, email, website, logo_url, timezone)",
+      "id, ref, service, service_type, base_price, discount, total_cost, extras_total, taxable_extras_total, taxable, payment_status, amount_due, amount_paid, facility_id, clients(name, email, phone, preferred_language), booking_pets(pets(name)), facilities(name, address, phone, email, website, logo_url, timezone)",
     )
     .eq("ref", bookingRef)
     .maybeSingle();
   const booking = data as unknown as BookingRow | null;
   if (!booking || !booking.facilities) {
     return NextResponse.json({ error: "Booking not found." }, { status: 404 });
+  }
+  if (channels && booking.payment_status !== "paid") {
+    return NextResponse.json(
+      await partPaymentMessages(
+        supabase as unknown as SupabaseClient,
+        booking,
+        channels,
+      ),
+    );
   }
   if (booking.payment_status !== "paid") {
     return NextResponse.json(
@@ -132,7 +171,9 @@ export async function POST(
   }
 
   const to = (body.to ?? booking.clients?.email ?? "").trim();
-  if (!to) {
+  // With channels, each one answers for itself — a client with no email can
+  // still be texted.
+  if (!to && !channels) {
     return NextResponse.json(
       {
         error:
@@ -247,6 +288,151 @@ export async function POST(
     );
   }
 
+  if (channels) {
+    const results: ChannelResults = {};
+    for (const channel of channels) {
+      results[channel] = await sendThrough(
+        supabase as unknown as SupabaseClient,
+        booking.facility_id,
+        channel,
+        channel === "email" ? to : (booking.clients?.phone ?? "").trim(),
+        (address) =>
+          channel === "email"
+            ? emailItemisedReceipt(address, receipt)
+            : smsItemisedReceipt(address, receipt),
+      );
+    }
+    return NextResponse.json(summarise(results));
+  }
+
   const result = await emailItemisedReceipt(to, receipt);
   return NextResponse.json({ ...result, to });
+}
+
+type Channel = "email" | "sms";
+
+interface ChannelResult {
+  sent: boolean;
+  detail?: string;
+  to?: string;
+}
+
+type ChannelResults = Partial<Record<Channel, ChannelResult>>;
+
+/** One channel: the address, the client's opt-out, then the send itself. */
+async function sendThrough(
+  db: SupabaseClient,
+  facilityId: string,
+  channel: Channel,
+  address: string,
+  send: (to: string) => Promise<{ sent: boolean; detail?: string }>,
+): Promise<ChannelResult> {
+  if (!address) {
+    return {
+      sent: false,
+      detail:
+        channel === "email"
+          ? "This client has no email address on file."
+          : "This client has no phone number on file.",
+    };
+  }
+  const suppression = await isSuppressed(db, {
+    facilityId,
+    channel,
+    address,
+    isTransactional: true,
+  });
+  if (suppression.suppressed) {
+    return {
+      sent: false,
+      to: address,
+      detail:
+        suppression.reason === "invalid_address"
+          ? "The address on file is not one a message can be sent to."
+          : "This client has opted out of these messages.",
+    };
+  }
+  return { ...(await send(address)), to: address };
+}
+
+function summarise(results: ChannelResults) {
+  const all = Object.values(results);
+  return {
+    sent: all.some((r) => r.sent),
+    detail: all.find((r) => !r.sent)?.detail,
+    channels: results,
+  };
+}
+
+/**
+ * A part payment: what was received and what is still owed, in the client's
+ * language — never an itemised "receipt", which would say the booking is paid.
+ * The figure owed carries the facility's tax, as the pay link's does.
+ */
+async function partPaymentMessages(
+  db: SupabaseClient,
+  booking: BookingRow,
+  channels: Channel[],
+) {
+  const { data: last } = await db
+    .from("payments")
+    .select("grand_total")
+    .eq("booking_id", booking.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const owedCents = Math.max(
+    0,
+    Math.round(
+      (Number(booking.amount_due ?? 0) - Number(booking.amount_paid ?? 0)) *
+        100,
+    ),
+  );
+  const taxCents = taxToAddCents(
+    await facilityTaxConfig(db, booking.facility_id),
+    owedCents,
+    booking,
+  );
+  const french = Boolean(booking.clients?.preferred_language?.startsWith("fr"));
+  const language = french ? "fr" : "en";
+  const received = formatMoney(
+    Number(
+      (last as { grand_total?: number | string } | null)?.grand_total ?? 0,
+    ),
+    language,
+  );
+  const owed = formatMoney((owedCents + taxCents) / 100, language);
+  const facility = booking.facilities?.name ?? "";
+  const name = booking.clients?.name ?? "";
+  const subject = french
+    ? `${facility} : paiement reçu, réservation n° ${booking.ref}`
+    : `${facility}: payment received for booking #${booking.ref}`;
+  const text = french
+    ? `Bonjour ${name}, nous avons reçu ${received} pour la réservation n° ${booking.ref} chez ${facility}. Il reste ${owed} à payer.`
+    : `Hi ${name}, we received ${received} for booking #${booking.ref} at ${facility}. ${owed} is still owed.`;
+
+  const results: ChannelResults = {};
+  for (const channel of channels) {
+    const address =
+      (channel === "email"
+        ? booking.clients?.email
+        : booking.clients?.phone
+      )?.trim() ?? "";
+    results[channel] = await sendThrough(
+      db,
+      booking.facility_id,
+      channel,
+      address,
+      (to) =>
+        channel === "sms"
+          ? sendSms({ to, body: text })
+          : sendEmail({
+              to,
+              subject,
+              text,
+              html: `<p>${escapeHtml(text)}</p>`,
+            }),
+    );
+  }
+  return summarise(results);
 }

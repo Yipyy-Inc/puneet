@@ -33,6 +33,10 @@ const SHAPES = {
   tile: "size-13 rounded-[14px]",
   /** A person's 44px circle, with their initials. */
   circle: "size-11 rounded-full",
+  /** The booking details mock's pet: a 52px circle saying "photo". */
+  pet: "size-13 rounded-full",
+  /** Its before & after: a square slot under a dashed line. */
+  slot: "aspect-square w-full rounded-[14px] border-[1.5px] border-dashed border-(--check-off)",
 } as const;
 
 const STRIPE = {
@@ -40,6 +44,8 @@ const STRIPE = {
   square: 8,
   tile: 6,
   circle: 5,
+  pet: 6,
+  slot: 8,
 } as const;
 
 export function PhotoPlaceholder({
@@ -58,12 +64,19 @@ export function PhotoPlaceholder({
   className?: string;
 }) {
   const band = tone === "soft" ? 10 : STRIPE[shape];
+  // The booking details mock leans its stripes the other way (45°), in its
+  // own two greys: warm for the pet, cool for the before & after slots.
+  const details = shape === "pet" || shape === "slot";
   const [a, b] =
-    tone === "soft"
-      ? ["var(--stripe-soft-a)", "var(--stripe-b)"]
-      : tone === "warm"
-        ? ["var(--stripe-warm-a)", "var(--stripe-warm-b)"]
-        : ["var(--stripe-a)", "var(--stripe-b)"];
+    shape === "pet"
+      ? ["var(--bd-stripe-a)", "var(--bd-stripe-b)"]
+      : shape === "slot"
+        ? ["var(--bd-slot-a)", "var(--bd-slot-b)"]
+        : tone === "soft"
+          ? ["var(--stripe-soft-a)", "var(--stripe-b)"]
+          : tone === "warm"
+            ? ["var(--stripe-warm-a)", "var(--stripe-warm-b)"]
+            : ["var(--stripe-a)", "var(--stripe-b)"];
   return (
     <span
       aria-hidden
@@ -74,7 +87,7 @@ export function PhotoPlaceholder({
         className,
       )}
       style={{
-        backgroundImage: `repeating-linear-gradient(135deg, ${a} 0 ${band}px, ${b} ${band}px ${band * 2}px)`,
+        backgroundImage: `repeating-linear-gradient(${details ? 45 : 135}deg, ${a} 0 ${band}px, ${b} ${band}px ${band * 2}px)`,
       }}
     >
       {initials ? (
@@ -85,8 +98,14 @@ export function PhotoPlaceholder({
         <span
           className={cn(
             mono.className,
-            "text-(--stripe-label)",
-            shape === "square" ? "text-[10.5px]" : "text-[11px]",
+            details ? "text-ink-disabled" : "text-(--stripe-label)",
+            shape === "square"
+              ? "text-[10.5px]"
+              : shape === "pet"
+                ? "text-[10px]"
+                : shape === "slot"
+                  ? "text-[12px]"
+                  : "text-[11px]",
           )}
         >
           {label}

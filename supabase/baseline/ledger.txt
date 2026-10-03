@@ -405,3 +405,5 @@
 20261002194444	an_evaluator_is_a_permission
 20261002194536	a_service_needs_its_evaluation_for_a_customer
 20261002195001	an_evaluation_is_a_row
+20261003150810	a_pet_has_grooming_preferences
+20261003150843	a_care_log_entry_can_be_cleared

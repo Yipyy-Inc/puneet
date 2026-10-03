@@ -153,23 +153,6 @@ export type PaymentMethod =
   | "gift_card"
   | "custom";
 
-export const PAYMENT_METHODS: {
-  value: PaymentMethod;
-  label: string;
-  icon: string;
-}[] = [
-  { value: "card_on_file", label: "Card on File", icon: "CreditCard" },
-  { value: "cash", label: "Cash", icon: "Banknote" },
-  { value: "terminal", label: "Terminal", icon: "Smartphone" },
-  { value: "e_transfer", label: "E-Transfer", icon: "ArrowLeftRight" },
-  { value: "store_credit", label: "Store Credit", icon: "Wallet" },
-  // Offered only where the caller says it can take one (see PaymentCheckoutFlow's
-  // `giftCardTender`) — it pays through its own database function, not the
-  // ledger row the other tenders write.
-  { value: "gift_card", label: "Gift Card", icon: "Gift" },
-  { value: "custom", label: "Custom", icon: "MoreHorizontal" },
-];
-
 // ============================================================================
 // Tip split calculation
 // ============================================================================
@@ -229,16 +212,4 @@ export function calculateTipSplit(
       });
     }
   }
-}
-
-// ============================================================================
-// Cash change calculation
-// ============================================================================
-
-export function calculateChange(
-  amountDue: number,
-  amountCollected: number,
-): { change: number; isOverpayment: boolean } {
-  const change = Math.round((amountCollected - amountDue) * 100) / 100;
-  return { change: Math.max(0, change), isOverpayment: change > 0 };
 }

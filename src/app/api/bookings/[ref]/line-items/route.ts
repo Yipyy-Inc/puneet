@@ -69,10 +69,20 @@ export interface BookingLineItem {
    */
   feeId?: string;
   /**
+   * The code, when the line is a promo code — `redeem_promo_code` writes it
+   * with `source_id = promo:<id>`. Removing the line removes the redemption
+   * too (`promo_code_redemptions.line_item_id` cascades), so the payment
+   * dialog takes a code off the bill by deleting this line (2026-10-03).
+   */
+  promoCode?: string;
+  /**
    * Who an add-on is assigned to, when it needs somebody. Absent for a
    * customer reading their own bill: the staff list is not theirs to read.
    */
   staffName?: string;
+  /** An add-on's own minutes, where the catalogue gave it some — the
+   *  grooming page adds them to the groom's time. */
+  durationMin?: number;
 }
 
 /**
@@ -105,7 +115,7 @@ export async function GET(
   const { data, error } = await supabase
     .from("booking_line_items")
     .select(
-      "id, kind, name, unit_price, quantity, price, author_name, created_at, fee_id, staff ( first_name, last_name )",
+      "id, kind, name, unit_price, quantity, price, author_name, created_at, fee_id, source_id, duration_min, staff ( first_name, last_name )",
     )
     .eq("booking_id", booking.id)
     .order("created_at", { ascending: true });
@@ -124,6 +134,8 @@ export async function GET(
     author_name: string;
     created_at: string;
     fee_id: string | null;
+    source_id: string | null;
+    duration_min: number | null;
     staff: { first_name: string | null; last_name: string | null } | null;
   }[];
 
@@ -141,6 +153,10 @@ export async function GET(
       authorName: r.author_name,
       createdAt: r.created_at,
       ...(r.fee_id ? { feeId: r.fee_id } : {}),
+      ...(r.source_id?.startsWith("promo:")
+        ? { promoCode: r.name.replace(/^Promo code /, "") }
+        : {}),
+      ...(r.duration_min ? { durationMin: Number(r.duration_min) } : {}),
       ...(staffNameOf(r.staff) ? { staffName: staffNameOf(r.staff) } : {}),
     })) satisfies BookingLineItem[],
   );

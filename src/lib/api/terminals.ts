@@ -197,6 +197,8 @@ export function useChargeOnTerminal() {
        * ignored by the route — the payer's answer is the only one that counts.
        */
       tipOnDevice?: boolean;
+      /** Part of the balance; absent, everything still owed is charged. */
+      subtotalCents?: number;
     }): Promise<TerminalChargeResult> => {
       const response = await fetch("/api/payments/clover/terminal", {
         method: "POST",

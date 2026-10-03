@@ -17,8 +17,11 @@ function Switch({
   // Inside the booking wizard (CLAUDE.md § "Client mocks decide the look"):
   // the mock's 40×24 track, an 18px knob 3px in, a warm grey when off.
   const look = useLook();
-  const setup = look?.names.includes("care-setup") ?? false;
+  // The booking page's mock: the Take payment credit switch, 44×24, green on.
+  const details = look?.names.at(-1) === "booking-details";
+  const setup = !details && (look?.names.includes("care-setup") ?? false);
   const mock =
+    !details &&
     !setup &&
     ((look?.names.includes("booking") || look?.names.includes("eval-module")) ??
       false);
@@ -42,6 +45,8 @@ function Switch({
         `relative max-lg:before:absolute max-lg:before:top-1/2 max-lg:before:left-1/2 max-lg:before:size-12 max-lg:before:-translate-x-1/2 max-lg:before:-translate-y-1/2 max-lg:before:content-['']`,
         mock &&
           "h-6 w-10 border-[3px] shadow-none data-[state=unchecked]:bg-(--switch-off)",
+        details &&
+          "data-[state=checked]:bg-success h-6 w-11 border-[3px] shadow-none data-[state=unchecked]:bg-(--check-off)",
         // The setup page: 44×24 with an 18px knob, a row's 36×20 with 14px.
         setup &&
           (size === "sm"
@@ -56,6 +61,8 @@ function Switch({
         className={cn(
           `bg-background pointer-events-none block size-4 rounded-full shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-4 data-[state=unchecked]:translate-x-0`,
           mock && "size-[18px] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.2)]",
+          details &&
+            "size-[18px] bg-white shadow-(--bd-sh-knob) data-[state=checked]:translate-x-5",
           setup &&
             (size === "sm"
               ? "size-3.5 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.2)]"

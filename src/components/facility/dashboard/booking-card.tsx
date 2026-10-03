@@ -33,24 +33,11 @@ import {
   CheckOutDialog,
   type EarlyCheckoutAdjustment,
 } from "@/components/facility/dashboard/check-out-dialog";
-import { PaymentCheckoutFlow } from "@/components/bookings/PaymentCheckoutFlow";
-import {
-  computeTimeFees,
-  timeFeesTotal,
-  type TimeFeeResult,
-} from "@/lib/policies/time-fee";
+import { BoardTakePayment } from "@/components/bookings/details/take-payment/board-take-payment";
+import { computeTimeFees, type TimeFeeResult } from "@/lib/policies/time-fee";
 import { facilityHoursForDate } from "@/lib/settings/facility-hours";
 import { useFacilityTimeZone } from "@/lib/api/facility-profile";
 import { useActiveLoyaltyDiscount } from "@/hooks/use-loyalty-discount";
-import { useBookingCheckout } from "@/hooks/use-booking-checkout";
-import { balanceOf } from "@/lib/api/booking-money";
-import { useBookingTips } from "@/lib/api/booking-tips";
-import { tipStillToCollect } from "@/lib/payments/pledged-tip";
-import type {
-  CheckoutPayment,
-  CheckoutResult,
-} from "@/components/bookings/PaymentCheckoutFlow";
-import type { Booking } from "@/types/booking";
 
 // ── WHOSE RECORD THIS CARD LINKS TO ──────────────────────────────────────
 //
@@ -173,55 +160,6 @@ export function BookingCard({
     booking.source !== "training" &&
     booking.source !== "custom" &&
     Number.isFinite(bookingRef);
-  // Read only while the checkout is open, so a board of cards does not ask for
-  // the tips of every booking on it. The same read carries the tip the booking
-  // carries, which the board does not.
-  const { data: bookingTips } = useBookingTips(
-    paymentOpen && hasRow ? bookingRef : null,
-  );
-  // The same checkout the booking page uses (hooks/use-booking-checkout):
-  // awaited, every failure thrown so the dialog stays open, the late fee and
-  // reward on the bill before any tender, the terminal really charged.
-  const checkout = useBookingCheckout({
-    booking: hasRow
-      ? ({
-          id: bookingRef,
-          totalCost: booking.price ?? 0,
-          amountDue: booking.amountDue ?? booking.price ?? 0,
-          amountPaid: booking.amountPaid ?? 0,
-          status: "confirmed",
-        } as unknown as Booking)
-      : undefined,
-    clientRef: ownerRef ?? 0,
-    timeFees: pendingTimeFees,
-    clearTimeFees: () => setPendingTimeFees([]),
-    // ── NO `serviceCharges` HERE, DELIBERATELY ───────────────────────────
-    //
-    // The booking page passes them; this card must not, and the asymmetry is
-    // the correct answer rather than an omission.
-    //
-    // `booking.amountDue` is `total_cost + extras_total`, so a service charge
-    // the create path already wrote is ALREADY in the figure above and in the
-    // one this card shows. Passing it again would display a doubled total and
-    // charge whatever the customer was shown.
-    //
-    // Excluding what is already there needs the booking's line items, which
-    // is a query per row on a board that renders many. The only booking this
-    // leaves uncharged is one that had no price when it was made — a
-    // customer's request — and those are priced and settled from the booking
-    // page, which does pass them.
-    loyaltyDiscount,
-    consumeLoyaltyDiscount,
-    releaseLoyaltyDiscount,
-    membershipDiscount: null,
-    // This card checks the booking out through the board's own status flow.
-    completeOnSettle: false,
-    text: {
-      discountRefused: "The member discount could not be applied.",
-      giftCardNoTip: "A gift card cannot pay a tip.",
-      giftCardRemaining: (amount) => `$${amount.toFixed(2)} left on the card`,
-    },
-  });
   const petImage = getPetImage(booking.petId);
   const petHref = ownerRef
     ? `/facility/dashboard/clients/${ownerRef}/pets/${booking.petId}`
@@ -327,9 +265,18 @@ export function BookingCard({
         `${fee.label}: ${fee.minutesOver} min — $${fee.amount.toFixed(2)} goes on the bill at payment`,
       );
     }
+    setCheckOutOpen(false);
+    // Training and custom services have no booking row to charge against:
+    // the departure is recorded and the card says nothing was taken.
+    if (!hasRow) {
+      updateStatus(booking.id, "checked-out", { timestamp, earlyCheckout });
+      toast.info(
+        `Checked out — no payment recorded: ${booking.serviceLabel} has no booking to charge against yet.`,
+      );
+      return;
+    }
     setPendingCheckout({ timestamp, earlyCheckout });
     setPendingTimeFees(timeFees);
-    setCheckOutOpen(false);
     setPaymentOpen(true);
   };
 
@@ -347,45 +294,6 @@ export function BookingCard({
     });
     setPendingCheckout(null);
     setPendingTimeFees([]);
-  };
-
-  /**
-   * Take the money, then check out.
-   *
-   * It used to swallow every failure — `toast.error` and `return` — so the
-   * dialog it answered then said "Payment of $X taken" for a payment that was
-   * refused. Failures THROW now and the dialog stays open. Its "Terminal"
-   * tender recorded a terminal payment without touching a terminal; the shared
-   * checkout asks the terminal for real.
-   */
-  const handlePaymentConfirm = async (
-    payment: CheckoutPayment,
-  ): Promise<CheckoutResult> => {
-    if (!pendingCheckout) throw new Error("Check the booking out first.");
-
-    if (!hasRow) {
-      afterPayment();
-      return {
-        taken: 0,
-        message: `Checked out — no payment recorded: ${booking.serviceLabel} has no booking to charge against yet.`,
-      };
-    }
-
-    const owed = balanceOf({
-      totalCost: booking.price ?? 0,
-      amountDue:
-        (booking.amountDue ?? booking.price ?? 0) +
-        timeFeesTotal(pendingTimeFees),
-      amountPaid: booking.amountPaid ?? 0,
-    });
-    if (owed <= 0) {
-      afterPayment();
-      return { taken: 0, message: "Checked out — nothing was left to pay." };
-    }
-
-    const result = await checkout(payment);
-    afterPayment();
-    return result;
   };
 
   return (
@@ -585,40 +493,21 @@ export function BookingCard({
                 />
               </div>
             )}
-            {paymentOpen && (
+            {paymentOpen && hasRow && (
               <div onClick={(e) => e.stopPropagation()}>
-                {/* The bill, and what is left of it.
-                    `depositPaid` was hardcoded to 0 and the total was
-                    `price + lateFee` — so a booking with a deposit against it
-                    was presented for the full amount again, and for boarding
-                    and daycare, whose `price` was undefined, the modal offered
-                    to charge the late fee on its own. */}
-                <PaymentCheckoutFlow
+                <BoardTakePayment
+                  bookingRef={bookingRef}
                   open={paymentOpen}
                   onOpenChange={setPaymentOpen}
-                  amountDue={Math.max(
-                    0,
-                    (booking.amountDue ?? booking.price ?? 0) +
-                      timeFeesTotal(pendingTimeFees) -
-                      (booking.amountPaid ?? 0),
-                  )}
-                  taxableBill={{
-                    totalCost: booking.price,
-                    extrasTotal: booking.extrasTotal,
-                    taxableExtrasTotal: booking.taxableExtrasTotal,
-                    taxable: booking.taxable,
+                  timeFees={pendingTimeFees}
+                  clearTimeFees={() => setPendingTimeFees([])}
+                  loyalty={{
+                    discount: loyaltyDiscount,
+                    consume: consumeLoyaltyDiscount,
+                    release: releaseLoyaltyDiscount,
                   }}
-                  depositPaid={booking.amountPaid ?? 0}
-                  invoiceTotal={
-                    (booking.amountDue ?? booking.price ?? 0) +
-                    timeFeesTotal(pendingTimeFees)
-                  }
-                  loyaltyDiscount={loyaltyDiscount ?? undefined}
-                  pledgedTip={tipStillToCollect(
-                    bookingTips?.tipOnBooking,
-                    bookingTips?.tipCollected,
-                  )}
-                  onConfirm={handlePaymentConfirm}
+                  canSettle={() => pendingCheckout !== null}
+                  onSettled={afterPayment}
                 />
               </div>
             )}

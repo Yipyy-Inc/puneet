@@ -2157,6 +2157,183 @@ button {
 }
 
 /* ============================================================================
+ * LOOK: booking-details — the facility booking page, all four services, and
+ * its Take payment dialog, as the client's Booking_Details mocks draw them
+ * (docs/Booking_Details_-_{Boarding,Daycare,Grooming,Training}.html,
+ * 2026-10-03): slate inks, cool hairlines and their own blue. Each service has
+ * a colour and a soft fill of its own, and so does each kind of entry in the
+ * guest journal.
+ *
+ * Declared BEFORE `booking`, on purpose: looks nest, and the booking wizard
+ * opened from this page wears both names. Equal specificity goes to the later
+ * block, so the wizard keeps its own palette inside this one.
+ * ========================================================================= */
+[data-look~="booking-details"] {
+  --acc: #1a6fe8;
+  --acc-text: #ffffff;
+  --acc-soft: #eaf2fe;
+  --acc-soft-text: #1f4e8c;
+  --acc-deep: #1a6fe8;
+  --acc-glow: rgba(26, 111, 232, 0.28);
+  --acc-pale: #f3f8ff;
+
+  --primary: #1a6fe8;
+  --primary-foreground: #ffffff;
+  --primary-hover: #155bc4;
+  --primary-ink: #1a6fe8;
+  --primary-tint: #eaf2fe;
+  --wash-primary: #eaf2fe;
+
+  --heading: #0f172a;
+  --body: #0f172a;
+  --ink-secondary: #475569;
+  --ink-tertiary: #64748b;
+  --ink-disabled: #94a3b8;
+
+  --ground: #fafaf8;
+  --card: #ffffff;
+  --inset: #f8fafc;
+  --inset-2: #f1f5f9;
+  --line: #edf0f4;
+  --line-strong: #e2e8f0;
+  /* A row's rule inside a card. */
+  --line-soft: #f1f5f9;
+  --row-line: #f1f5f9;
+  --check-off: #cbd5e1;
+
+  --success: #1e7a45;
+  --wash-success: #e7f5ec;
+  --warning: #8a5300;
+  --wash-warning: #fff4e0;
+  --error: #b4232c;
+  --bad: #b4232c;
+  --wash-error: #fdecec;
+  --info-wash: #eaf2fe;
+  --info-ink: #1f4e8c;
+
+  --ring: #1a6fe8;
+  --ring-halo: #dce9fd;
+  /* The avatar's ring is the service's colour, drawn by the page. */
+  --pet-ring: none;
+
+  /* The pet's name, the one navy on the page. */
+  --bd-name: #0b2545;
+  /* A red chip's words (an allergy, "Required", "Unpaid"). */
+  --bd-danger-ink: #9b1c24;
+  --bd-sh-card: 0 1px 3px rgba(15, 23, 42, 0.04);
+  --bd-sh-menu: 0 12px 32px rgba(20, 18, 30, 0.14);
+  --bd-sh-cta: 0 6px 16px rgba(26, 111, 232, 0.28);
+  --bd-sh-pay: 0 8px 20px rgba(26, 111, 232, 0.28);
+  /* The dashed "+ Log activity" and "+ Add photo". */
+  --bd-acc-dash: #c7daf8;
+  /* A day's dot when only part of it is logged. */
+  --bd-partial: #e8a33b;
+  /* "Day 3" over a day chip and a tip's amount under its chip: the mock's
+     faded body ink, composited so no text carries opacity (§6 rule 4).
+     Chosen, both take the deepest blue that holds 4.5:1 on the pale chip. */
+  --bd-faded: #4b515f;
+  --bd-faded-2: #575d6a;
+  --bd-faded-on: #4a6c9c;
+  /* Belongings handed back, and the account credit box. */
+  --bd-ok-line: #cfe8d8;
+  --bd-credit-bg: #f1faf4;
+  --bd-credit-ink: #14532d;
+  --bd-credit-sub: #2f6b45;
+  /* The feeding plan's times and its dot; the medications' dot. */
+  --bd-feed-ink: #a34a12;
+  --bd-feed-dot: #d9651f;
+  --bd-meds-dot: #5b3fd6;
+  /* The pet's photo circle, and the before & after slots. */
+  --bd-stripe-a: #f0eeea;
+  --bd-stripe-b: #fafaf8;
+  --bd-slot-a: #f1f5f9;
+  --bd-slot-b: #f8fafc;
+
+  /* The Take payment dialog. */
+  --bd-scrim: rgba(20, 18, 30, 0.45);
+  --bd-modal: #fcfbf9;
+  --bd-sh-modal: 0 24px 60px rgba(20, 18, 30, 0.25);
+  --bd-sh-seg: 0 1px 2px rgba(20, 18, 30, 0.12);
+  --bd-sh-knob: 0 1px 2px rgba(0, 0, 0, 0.2);
+  /* A blocked submit, and the split box's dashed edge. */
+  --bd-off: #c9d9f5;
+
+  /* The mock sets no line height: every line is the font's own. */
+  line-height: normal;
+}
+
+/* A service's colour and its soft fill: the avatar's ring, the service chip. */
+[data-look~="booking-details"] [data-svc="boarding"] {
+  --svc: #5b3fd6;
+  --svc-soft: #f1effe;
+}
+[data-look~="booking-details"] [data-svc="daycare"] {
+  --svc: #d9651f;
+  --svc-soft: #fff1e6;
+}
+[data-look~="booking-details"] [data-svc="grooming"] {
+  --svc: #0e8a7e;
+  --svc-soft: #e3f5f2;
+}
+[data-look~="booking-details"] [data-svc="training"],
+[data-look~="booking-details"] [data-svc="other"] {
+  --svc: #1e7a45;
+  --svc-soft: #e7f5ec;
+}
+
+/* A chip's two colours, by what it labels: a journal entry's kind, a skill's
+   state, a session's place in the program. `Chip tone="kind"` reads them. */
+[data-look~="booking-details"] [data-kind="meal"] {
+  --chip-bg: #fff1e6;
+  --chip-ink: #a34a12;
+}
+[data-look~="booking-details"] [data-kind="med"] {
+  --chip-bg: #f1effe;
+  --chip-ink: #4332b8;
+}
+[data-look~="booking-details"] [data-kind="potty"],
+[data-look~="booking-details"] [data-kind="today"] {
+  --chip-bg: #eaf2fe;
+  --chip-ink: #1f4e8c;
+}
+[data-look~="booking-details"] [data-kind="activity"],
+[data-look~="booking-details"] [data-kind="mastered"] {
+  --chip-bg: #e7f5ec;
+  --chip-ink: #1e7a45;
+}
+[data-look~="booking-details"] [data-kind="practising"] {
+  --chip-bg: #fff4e0;
+  --chip-ink: #8a5300;
+}
+[data-look~="booking-details"] [data-kind="not-started"],
+[data-look~="booking-details"] [data-kind="upcoming"] {
+  --chip-bg: #f1f5f9;
+  --chip-ink: #64748b;
+}
+
+/* Its fields: 40px pills (42 or 46 where a field sets --bd-field-h), 12px in,
+   14px type, the placeholder in the pale slate, and focus as the mock draws
+   it — the accent's line and a soft blue halo, no inner ring. */
+[data-look~="booking-details"] [data-slot="input"] {
+  min-height: var(--bd-field-h, 40px);
+  padding-inline: 12px;
+  font-size: var(--bd-field-fs, 14px);
+}
+[data-look~="booking-details"] [data-slot="textarea"] {
+  font-size: 14px;
+  padding-inline: 12px;
+}
+[data-look~="booking-details"] [data-slot="input"]::placeholder,
+[data-look~="booking-details"] [data-slot="textarea"]::placeholder {
+  color: var(--ink-disabled);
+}
+[data-look~="booking-details"] [data-slot="input"]:focus-visible,
+[data-look~="booking-details"] [data-slot="textarea"]:focus-visible {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--ring-halo);
+}
+
+/* ============================================================================
  * LOOK: booking — the booking wizard, both portals, as
  * docs/Facility_01_-_Find_client.html draws it (INK, MUT, FAINT, LINE and the
  * per-portal accent at the top of its script).

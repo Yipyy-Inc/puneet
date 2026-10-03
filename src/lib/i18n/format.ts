@@ -284,6 +284,28 @@ export function formatDayRange(
 }
 
 /**
+ * `Sep 21–30, 2026` · `21–30 sept. 2026` — a stay's two days with its year,
+ * the way `Intl` writes the range in each language (the booking page's header,
+ * 2026-10-03). One day is that day.
+ */
+export function formatStayRange(
+  from: string,
+  to: string,
+  locale: AppLocale,
+): string {
+  const a = calendarDay(from);
+  const b = calendarDay(to || from);
+  if (!a || !b) return NO_DATE;
+  const fmt = dateFmt(locale, "stayRange", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+  return b.getTime() <= a.getTime() ? fmt.format(a) : fmt.formatRange(a, b);
+}
+
+/**
  * `Sep` · `sept.` — a chart axis month, from `YYYY-MM`.
  *
  * Read in UTC from the first of the month, so no zone can move it into the
@@ -505,6 +527,29 @@ export function formatMoney(
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   }).format(Number(value ?? 0));
+}
+
+/**
+ * The currency sign and which side it goes on — `$` before in English, ` $`
+ * after in French — for a money FIELD, where the number is typed and only the
+ * sign is ours to place. From the same formatter as `formatMoney`.
+ */
+export function currencyAffix(
+  locale: AppLocale,
+  currency: string = CURRENCY,
+): { symbol: string; before: boolean } {
+  const parts = numFmt(locale, `cur2:${currency}`, {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).formatToParts(1);
+  const sign = parts.findIndex((part) => part.type === "currency");
+  const number = parts.findIndex((part) => part.type === "integer");
+  return {
+    symbol: parts[sign]?.value ?? "$",
+    before: sign < number,
+  };
 }
 
 /**

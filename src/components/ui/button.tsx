@@ -128,6 +128,36 @@ const buttonVariants = cva(
         flat: `
           bg-primary text-primary-foreground
         `,
+        /** The booking details mock's action: the accent under its own blue
+         *  glow, no lift. */
+        "bd-cta": `
+          bg-primary text-primary-foreground shadow-(--bd-sh-cta)
+          hover:bg-primary-hover
+        `,
+        /** The booking details mock's "+ Log activity": a dashed pale-blue
+         *  line on white, blue words. */
+        "bd-dashed": `
+          border-[1.5px] border-dashed border-(--bd-acc-dash) bg-card
+          text-primary
+        `,
+        /** The Take payment dialog's submit: the accent, and its pale blue
+         *  while something still stops it. */
+        "bd-submit": `
+          bg-primary text-primary-foreground hover:bg-primary-hover
+          [&:disabled:not([data-loading])]:bg-(--bd-off)
+        `,
+        /** "Use credit now": solid green. "Save it for later": its outline. */
+        "bd-credit": `
+          bg-success text-white
+        `,
+        "bd-credit-quiet": `
+          border border-(--bd-ok-line) bg-card text-(--bd-credit-ink)
+        `,
+        /** "+ Promo code", "Split between two methods": words in the accent,
+         *  no box. */
+        "bd-text": `
+          bg-transparent text-primary
+        `,
       },
       size: {
         // 40px, and 48px below 1024px — §1, and rule 7's standing-staff tap
@@ -194,6 +224,29 @@ const buttonVariants = cva(
         "care-lg": "h-[46px] rounded-[12px] px-[22px] text-[15px]",
         /** The calendar's month arrows: 34px circles. */
         "mock-icon-34": "size-[34px] text-[15px]",
+        /** The booking details mocks' buttons, exactly as they size them: a
+         *  card's action and a journal option (34px), "Send report card"
+         *  (36px), the dashed adds (38px), Add (40px), "Add note" and Apply
+         *  (42px), the header's buttons (44px) and its primary, the dialog's
+         *  footer (46px), and Take payment (52px). Mocked screens only. */
+        "bd-34": "h-[34px] px-3 text-[13px] font-medium",
+        "bd-36": "h-9 px-3 text-[13px] font-medium",
+        "bd-38": "h-[38px] px-3.5 text-[14px] font-semibold",
+        "bd-40": "h-10 px-3.5 text-[14px] font-semibold",
+        "bd-42": "h-[42px] px-4 text-[14px] font-semibold",
+        "bd-44": "h-11 px-3.5 text-[14px] font-medium",
+        "bd-44-cta": "h-11 px-[18px] text-[15px] font-semibold",
+        "bd-46": "h-[46px] px-[18px] text-[15px] font-medium",
+        "bd-52": "h-[52px] w-full px-5 text-[16px] font-semibold",
+        /** The Take payment dialog's: the × (36px, 10px corners), the
+         *  credit buttons (38px, 10px corners), a cash quick amount (38px),
+         *  and a text action that keeps a 40px hit area. */
+        "bd-close": "size-9 rounded-[10px] px-0 text-[22px] font-normal",
+        "bd-38-sq": "h-[38px] rounded-[10px] px-3.5 text-[14px]",
+        "bd-38q": "h-[38px] px-3 text-[14px] font-medium",
+        "bd-text": "h-10 px-0 text-[14px] font-semibold",
+        /** A chip's ×: 24px, with a 48px hit area on touch (§6 rule 7). */
+        "bd-chip-x": `relative size-6 rounded-full px-0 text-[15px] font-normal max-lg:before:absolute max-lg:before:top-1/2 max-lg:before:left-1/2 max-lg:before:size-12 max-lg:before:-translate-1/2 max-lg:before:content-['']`,
       },
     },
     defaultVariants: {

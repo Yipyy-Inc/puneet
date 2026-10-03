@@ -93,6 +93,12 @@ export interface CloverCardFieldsProps {
   sdkUrl: string;
   /** Told when the iframes are actually usable, so a caller can gate a button. */
   onReadyChange?: (ready: boolean) => void;
+  /**
+   * `pills`: the Take payment mock's row — number, expiry and CVC as 42px
+   * pills side by side (2fr 1fr 1fr), the postal code under them, the labels
+   * kept for screen readers only. The iframes fill whatever box they get.
+   */
+  variant?: "default" | "pills";
   className?: string;
 }
 
@@ -100,7 +106,14 @@ export const CloverCardFields = forwardRef<
   CloverCardFieldsHandle,
   CloverCardFieldsProps
 >(function CloverCardFields(
-  { publicApiKey, merchantId, sdkUrl, onReadyChange, className },
+  {
+    publicApiKey,
+    merchantId,
+    sdkUrl,
+    onReadyChange,
+    variant = "default",
+    className,
+  },
   ref,
 ) {
   // A catalogue key for our own sentences; Clover's per-field message is
@@ -206,13 +219,33 @@ export const CloverCardFields = forwardRef<
 
   return (
     <div className={className}>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div
+        className={
+          variant === "pills"
+            ? "grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)] gap-2"
+            : "grid gap-3 sm:grid-cols-2"
+        }
+      >
         {FIELDS.map((field) => (
           <div
             key={field.slug}
-            className={field.kind === "CARD_NUMBER" ? "sm:col-span-2" : ""}
+            className={
+              variant === "pills"
+                ? field.kind === "CARD_POSTAL_CODE"
+                  ? "col-span-2"
+                  : ""
+                : field.kind === "CARD_NUMBER"
+                  ? "sm:col-span-2"
+                  : ""
+            }
           >
-            <label className="text-muted-foreground mb-1 block text-xs font-medium">
+            <label
+              className={
+                variant === "pills"
+                  ? "sr-only"
+                  : "text-muted-foreground mb-1 block text-xs font-medium"
+              }
+            >
               {t(field.labelKey)}
             </label>
             {/* Empty on purpose: Clover mounts an iframe here.
@@ -225,7 +258,11 @@ export const CloverCardFields = forwardRef<
             <div
               id={idFor(field.slug)}
               data-clover-field={field.slug}
-              className="bg-background h-10 rounded-md border px-3 py-2"
+              className={
+                variant === "pills"
+                  ? "border-line-strong bg-card h-[42px] rounded-full border px-3 py-2.5"
+                  : "bg-background h-10 rounded-md border px-3 py-2"
+              }
             />
           </div>
         ))}

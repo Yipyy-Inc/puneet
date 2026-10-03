@@ -167,7 +167,18 @@ export function GroomingSessionPanel({
       // source of truth for the tick so the checkbox does not wait on a round
       // trip; the write is what makes it survive a reload.
       saveProgress(
-        { id: appointment.id, sessionProgress: next },
+        {
+          id: appointment.id,
+          // The array is shared: the booking page ticks the appointment's
+          // SERVICES into it too ("service:…" steps, 2026-10-03). Keep what
+          // this panel does not own, or a tick here would erase those.
+          sessionProgress: [
+            ...next,
+            ...(appointment.groomingProgress ?? []).filter(
+              (p) => !(GROOMING_STEPS as readonly string[]).includes(p.step),
+            ),
+          ],
+        },
         { onError: (error) => toast.error(error.message) },
       );
       return next;

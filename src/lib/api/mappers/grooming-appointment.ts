@@ -351,6 +351,9 @@ export function rowToGroomingAppointment(
 
     packageId: ext?.service?.legacy_id ?? "",
     packageName: ext?.service_name ?? row.status,
+    ...(ext?.service_duration_min
+      ? { serviceDurationMin: Number(ext.service_duration_min) }
+      : {}),
     // The booking's `add_on` lines. (A groom booked before 2026-09-30 held
     // them in `grooming_appointment_add_ons`, which went that day.)
     addOns: (row.lines ?? [])
@@ -441,6 +444,7 @@ export function rowToGroomingAppointment(
 
     // ── Drop-off (20260806180000) ───────────────────────────────────────────
     afterPhotos: photos.filter((p) => p.type === "after"),
+    beforePhotoList: photos.filter((p) => p.type === "before"),
     ...(intakeRow
       ? {
           intake: {

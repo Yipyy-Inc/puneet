@@ -5785,6 +5785,34 @@ $$;
 ALTER FUNCTION "private"."permitted_facility_ids"("p_permission" "text") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "private"."pet_grooming_preferences_stamp"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_uid text := (select auth.jwt() ->> 'sub');
+begin
+  select p.facility_id into new.facility_id
+    from public.pets p
+   where p.id = new.pet_id;
+  if new.facility_id is null then
+    raise exception 'That pet does not exist.' using errcode = '23503';
+  end if;
+  new.updated_at := now();
+  new.updated_by := v_uid;
+  new.updated_by_name := (
+    select coalesce(nullif(btrim(pr.full_name), ''), nullif(btrim(pr.email), ''))
+      from public.profiles pr
+     where pr.id = v_uid
+  );
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "private"."pet_grooming_preferences_stamp"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "private"."pet_matches_booking_client"("p_booking_id" "uuid", "p_pet_id" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -9791,6 +9819,60 @@ $$;
 
 
 ALTER FUNCTION "public"."cancel_my_booking"("p_ref" bigint, "p_reason" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."clear_care_log_entry"("p_entry" "uuid") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_row public.care_log_entries;
+begin
+  select * into v_row from public.care_log_entries where id = p_entry;
+  if not found then
+    raise exception 'No such care log entry.' using errcode = 'P0002';
+  end if;
+  if not private.has_permission(
+    v_row.facility_id,
+    private.care_log_permission_for(v_row.task_type)
+  ) then
+    raise exception 'Not allowed to clear this care log entry.'
+      using errcode = '42501';
+  end if;
+
+  delete from public.care_log_entries where id = p_entry;
+
+  perform private.record_audit(
+    p_action      => 'Care log entry cleared',
+    p_category    => 'Data',
+    p_severity    => 'Low',
+    p_entity_type => 'booking',
+    p_entity_id   => v_row.booking_id::text,
+    p_facility_id => v_row.facility_id,
+    p_description => format(
+      'Cleared %s logged as %s on %s.',
+      v_row.task_key, v_row.outcome, v_row.occurred_on
+    ),
+    p_changes     => jsonb_build_array(jsonb_build_object(
+      'field', 'care_log',
+      'from', jsonb_build_object(
+        'taskKey', v_row.task_key,
+        'taskType', v_row.task_type,
+        'outcome', v_row.outcome,
+        'occurredOn', v_row.occurred_on
+      ),
+      'to', null
+    ))
+  );
+end;
+$$;
+
+
+ALTER FUNCTION "public"."clear_care_log_entry"("p_entry" "uuid") OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."clear_care_log_entry"("p_entry" "uuid") IS 'Clears one care log entry, under the permission that may record it, and records what it said in audit_log against its booking (2026-10-03).';
+
 
 
 CREATE OR REPLACE FUNCTION "public"."client_missing_forms"("p_client_id" "uuid", "p_pet_ids" "uuid"[], "p_service" "text", "p_stage" "text") RETURNS TABLE("form_id" "uuid", "form_name" "text", "form_slug" "text", "pet_id" "uuid", "pet_name" "text", "enforcement" "text")
@@ -23901,6 +23983,32 @@ CREATE TABLE IF NOT EXISTS "public"."permissions" (
 ALTER TABLE "public"."permissions" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."pet_grooming_preferences" (
+    "pet_id" "uuid" NOT NULL,
+    "facility_id" "uuid" NOT NULL,
+    "cut" "text" DEFAULT ''::"text" NOT NULL,
+    "face" "text" DEFAULT ''::"text" NOT NULL,
+    "ears" "text" DEFAULT ''::"text" NOT NULL,
+    "shampoo" "text" DEFAULT ''::"text" NOT NULL,
+    "behavior" "text" DEFAULT ''::"text" NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_by" "text" DEFAULT ("auth"."jwt"() ->> 'sub'::"text"),
+    "updated_by_name" "text",
+    CONSTRAINT "pet_grooming_preferences_behavior_check" CHECK (("length"("behavior") <= 500)),
+    CONSTRAINT "pet_grooming_preferences_cut_check" CHECK (("length"("cut") <= 200)),
+    CONSTRAINT "pet_grooming_preferences_ears_check" CHECK (("length"("ears") <= 200)),
+    CONSTRAINT "pet_grooming_preferences_face_check" CHECK (("length"("face") <= 200)),
+    CONSTRAINT "pet_grooming_preferences_shampoo_check" CHECK (("length"("shampoo") <= 200))
+);
+
+
+ALTER TABLE "public"."pet_grooming_preferences" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."pet_grooming_preferences" IS 'How a pet is groomed — cut, face, ears, shampoo and behaviour — carried from groom to groom. One row per pet; its facility is the pet''s (trigger). Shown and edited on the booking page''s grooming card (2026-10-03).';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."pet_vaccinations" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "pet_id" "uuid" NOT NULL,
@@ -26755,6 +26863,11 @@ ALTER TABLE ONLY "public"."permissions"
 
 
 
+ALTER TABLE ONLY "public"."pet_grooming_preferences"
+    ADD CONSTRAINT "pet_grooming_preferences_pkey" PRIMARY KEY ("pet_id");
+
+
+
 ALTER TABLE ONLY "public"."pet_vaccinations"
     ADD CONSTRAINT "pet_vaccinations_pkey" PRIMARY KEY ("id");
 
@@ -29425,6 +29538,10 @@ CREATE OR REPLACE TRIGGER "payments_refs_valid" BEFORE INSERT ON "public"."payme
 
 
 
+CREATE OR REPLACE TRIGGER "pet_grooming_preferences_stamp" BEFORE INSERT OR UPDATE ON "public"."pet_grooming_preferences" FOR EACH ROW EXECUTE FUNCTION "private"."pet_grooming_preferences_stamp"();
+
+
+
 CREATE OR REPLACE TRIGGER "pet_vaccinations_set_facility" BEFORE INSERT OR UPDATE ON "public"."pet_vaccinations" FOR EACH ROW EXECUTE FUNCTION "private"."pet_vaccination_facility"();
 
 
@@ -31071,6 +31188,16 @@ ALTER TABLE ONLY "public"."payments"
 
 ALTER TABLE ONLY "public"."payments"
     ADD CONSTRAINT "payments_saved_card_id_fkey" FOREIGN KEY ("saved_card_id") REFERENCES "public"."saved_cards"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."pet_grooming_preferences"
+    ADD CONSTRAINT "pet_grooming_preferences_facility_id_fkey" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."pet_grooming_preferences"
+    ADD CONSTRAINT "pet_grooming_preferences_pet_id_fkey" FOREIGN KEY ("pet_id") REFERENCES "public"."pets"("id") ON DELETE CASCADE;
 
 
 
@@ -33836,6 +33963,21 @@ CREATE POLICY "permissions_update" ON "public"."permissions" FOR UPDATE TO "auth
 
 
 
+ALTER TABLE "public"."pet_grooming_preferences" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "pet_grooming_preferences_insert" ON "public"."pet_grooming_preferences" FOR INSERT TO "authenticated" WITH CHECK (("private"."has_permission"("facility_id", 'edit_pet_records'::"text") OR "private"."has_permission"("facility_id", 'grooming_manage_styles'::"text")));
+
+
+
+CREATE POLICY "pet_grooming_preferences_read" ON "public"."pet_grooming_preferences" FOR SELECT TO "authenticated" USING (("private"."is_platform_admin"() OR "private"."has_permission"("facility_id", 'view_pet_records'::"text")));
+
+
+
+CREATE POLICY "pet_grooming_preferences_update" ON "public"."pet_grooming_preferences" FOR UPDATE TO "authenticated" USING (("private"."has_permission"("facility_id", 'edit_pet_records'::"text") OR "private"."has_permission"("facility_id", 'grooming_manage_styles'::"text"))) WITH CHECK (("private"."has_permission"("facility_id", 'edit_pet_records'::"text") OR "private"."has_permission"("facility_id", 'grooming_manage_styles'::"text")));
+
+
+
 ALTER TABLE "public"."pet_vaccinations" ENABLE ROW LEVEL SECURITY;
 
 
@@ -36031,6 +36173,10 @@ GRANT ALL ON FUNCTION "private"."permitted_facility_ids"("p_permission" "text") 
 
 
 
+REVOKE ALL ON FUNCTION "private"."pet_grooming_preferences_stamp"() FROM PUBLIC;
+
+
+
 GRANT ALL ON FUNCTION "private"."pet_matches_booking_client"("p_booking_id" "uuid", "p_pet_id" "uuid") TO "authenticated";
 
 
@@ -36378,6 +36524,12 @@ GRANT ALL ON FUNCTION "public"."booking_search_names"("b" "public"."bookings") T
 REVOKE ALL ON FUNCTION "public"."cancel_my_booking"("p_ref" bigint, "p_reason" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."cancel_my_booking"("p_ref" bigint, "p_reason" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."cancel_my_booking"("p_ref" bigint, "p_reason" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."clear_care_log_entry"("p_entry" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."clear_care_log_entry"("p_entry" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."clear_care_log_entry"("p_entry" "uuid") TO "service_role";
 
 
 
@@ -38189,6 +38341,11 @@ GRANT SELECT,INSERT,REFERENCES,TRIGGER,MAINTAIN ON TABLE "public"."payments" TO 
 GRANT ALL ON TABLE "public"."permissions" TO "anon";
 GRANT ALL ON TABLE "public"."permissions" TO "authenticated";
 GRANT ALL ON TABLE "public"."permissions" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."pet_grooming_preferences" TO "service_role";
+GRANT SELECT,INSERT,UPDATE ON TABLE "public"."pet_grooming_preferences" TO "authenticated";
 
 
 

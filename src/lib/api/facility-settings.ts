@@ -40,6 +40,7 @@ import {
   type SettingsAudience,
 } from "@/lib/api/settings-audience";
 import type { BookingApproval } from "@/lib/settings/booking-approval";
+import type { CheckoutConfig } from "@/lib/settings/checkout";
 import type { CareFees } from "@/lib/settings/care-fees";
 import type { IncidentProtocols } from "@/lib/settings/incident-protocols";
 import type { AbandonmentRecoverySettings } from "@/types/unfinished-booking";
@@ -130,6 +131,8 @@ export interface FacilitySettings {
   tip_config: SettingState<TipConfig>;
   /** Who a tip is owed to once collected. Read by the attribution trigger too. */
   tip_attribution: SettingState<TipAttribution>;
+  /** What the Take payment dialog does with account credit. */
+  checkout_config: SettingState<CheckoutConfig>;
   tax_config: SettingState<TaxConfig>;
   /** Overtime rule + statutory holidays. `configured: false` = nobody has said. */
   payroll_config: SettingState<PayrollConfig>;

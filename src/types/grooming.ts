@@ -719,6 +719,8 @@ export const groomingAppointmentSchema = z.object({
   stationId: z.string().optional(),
   packageId: z.string(),
   packageName: z.string(),
+  /** The main groom's own minutes (`grooming_appointments.service_duration_min`). */
+  serviceDurationMin: z.number().optional(),
   addOns: z.array(z.string()),
   basePrice: z.number(),
   priceAdjustments: z.array(priceAdjustmentSchema),
@@ -785,6 +787,9 @@ export const groomingAppointmentSchema = z.object({
   allergies: z.array(z.string()),
   intake: groomingIntakeSchema.optional(),
   afterPhotos: z.array(groomingPhotoSchema).optional(),
+  /** The before-photos as photos (the intake carries only their URLs) — the
+   *  booking page's Before & after card (2026-10-03). */
+  beforePhotoList: z.array(groomingPhotoSchema).optional(),
   lastGroomDate: z.string().optional(),
   createdAt: z.string(),
   onlineBooking: z.boolean(),

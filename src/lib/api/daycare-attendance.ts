@@ -27,12 +27,14 @@ export interface DaycareDayPayload {
   capacity: { total: number; bySize: Partial<Record<PetSize, number>> };
 }
 
-const daycareKeys = {
+export const daycareKeys = {
   all: ["daycare-attendance"] as const,
   day: (date?: string) => [...daycareKeys.all, date ?? "today"] as const,
 };
 
-async function fetchDay(date?: string): Promise<DaycareDayPayload> {
+export async function fetchDaycareDay(
+  date?: string,
+): Promise<DaycareDayPayload> {
   const response = await fetch(
     `/api/daycare/attendance${date ? `?date=${date}` : ""}`,
   );
@@ -49,7 +51,7 @@ async function fetchDay(date?: string): Promise<DaycareDayPayload> {
 export function useDaycareDay(date?: string) {
   return useQuery({
     queryKey: daycareKeys.day(date),
-    queryFn: () => fetchDay(date),
+    queryFn: () => fetchDaycareDay(date),
   });
 }
 

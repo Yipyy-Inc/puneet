@@ -34,6 +34,21 @@ const CATALOGUES: Record<string, { en: Areas; fr: Areas }> = {
  * to shorten this list would make the French wrong.
  */
 const SAME_IN_BOTH = new Set([
+  // The booking page and its Take payment dialog (2026-10-03).
+  "staff.bookingDetail.tabJournal", // Journal / Journal
+  "staff.bookingDetail.cardServices", // Services / Services
+  "staff.bookingDetail.photoSlot", // photo / photo
+  "staff.bookingDetail.rowDate", // Date / Date
+  "staff.bookingDetail.rowTable", // Table / Table
+  "staff.bookingDetail.sessionsLeft", // {n}
+  "staff.bookingDetail.quantityTimesPrice", // {n} × {price}
+  "staff.bookingDetail.payTerminal", // Terminal / Terminal
+  "staff.bookingDetail.total", // Total / Total
+  "staff.takePayment.promoChip", // {code} · −{amount}
+  "staff.takePayment.methodTerminal", // Terminal / Terminal
+  "staff.takePayment.shortTerminal", // Terminal / Terminal
+  "staff.takePayment.printService", // Service / Service
+  "staff.takePayment.printNote", // Note / Note
   // The operations calendar (2026-09-20) — each the same word in French.
   "staff.opsCalendar.colService", // Service / Service
   "staff.groomingServices.minutesUnit", // min / min

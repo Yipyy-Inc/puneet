@@ -15,7 +15,8 @@ import { bookingMutations } from "./booking";
 // pointed the Accept Payment button under the itemised breakdown at it, so the
 // one button beside the bill offered card and cash and could not reach a card
 // reader, while the checkout flow that could was on a different control. Both
-// now open PaymentCheckoutFlow, and the modal was deleted rather than repaired:
+// now open the till (PaymentCheckoutFlow then; the client's Take payment
+// dialog since 2026-10-03), and the modal was deleted rather than repaired:
 // it also reported "Base Price $62.50 + Tip $22.30 = Total $133.80", printing
 // the base price where the total used `amountDue`, so its own arithmetic
 // disagreed on any booking with an added item.
@@ -509,19 +510,35 @@ export function usePayWithGiftCard() {
 export function useChargeSavedCard() {
   const invalidate = useSettleInvalidation();
   return useMutation({
-    mutationFn: async (input: {
-      /** The booking's uuid, not its ref — the card route reads by id. */
-      bookingRowId: string;
-      savedCardId: string;
-      tipCents?: number;
-    }) => {
+    mutationFn: async (
+      input: {
+        /** The booking's uuid, not its ref — the card route reads by id. */
+        bookingRowId: string;
+        tipCents?: number;
+        /**
+         * Part of the balance, when only part is being paid (the payment
+         * dialog's custom amount, or one leg of a split). Absent, the route
+         * charges everything still owed.
+         */
+        subtotalCents?: number;
+      } & (
+        | { savedCardId: string; source?: undefined }
+        /** A card typed now: the `clv_` token from the hosted fields. */
+        | { source: string; savedCardId?: undefined }
+      ),
+    ) => {
       const response = await fetch("/api/payments/clover/charge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           bookingId: input.bookingRowId,
-          savedCardId: input.savedCardId,
+          ...(input.savedCardId
+            ? { savedCardId: input.savedCardId }
+            : { source: input.source }),
           tipCents: Math.max(0, Math.round(input.tipCents ?? 0)),
+          ...(input.subtotalCents !== undefined
+            ? { subtotalCents: Math.max(1, Math.round(input.subtotalCents)) }
+            : {}),
         }),
       });
       const parsed = (await response.json().catch(() => null)) as {

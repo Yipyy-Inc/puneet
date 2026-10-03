@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import type {
   CheckoutPayment,
   CheckoutResult,
-} from "@/components/bookings/PaymentCheckoutFlow";
+} from "@/lib/checkout/checkout-payment";
 import {
   balanceOf,
   checkoutTender,
@@ -18,7 +18,10 @@ import { useAddLineItems } from "@/lib/api/booking-line-items";
 import { useBookingArrival } from "@/lib/api/booking-arrival";
 import { incidentQueries, useUpdateIncident } from "@/lib/api/incidents";
 import { useEarnLoyaltyPoints } from "@/lib/api/loyalty-ledger";
-import { useStoreCredit, useWriteStoreCredit } from "@/lib/api/store-credit";
+import {
+  useClientStoreCredit,
+  useWriteStoreCredit,
+} from "@/lib/api/store-credit";
 import { useChargeOnTerminal } from "@/lib/api/terminals";
 import { planSplit, type PlannedPart } from "@/lib/checkout/plan-split";
 import { timeFeesTotal, type TimeFeeResult } from "@/lib/policies/time-fee";
@@ -53,6 +56,15 @@ import type { Booking } from "@/types/booking";
 // Recorded apart (see lib/api/booking-money paymentRow). Store credit that does
 // not cover the bill pays its share of each and says what is still owed; a
 // split records each part (lib/checkout/plan-split).
+//
+// ── PART OF THE BILL, AND A CARD THAT PAYS ONE LEG ────────────────────────
+//
+// The client's Take payment dialog (2026-10-03) takes a custom amount and
+// splits between two methods with a typed share for EACH, and works out every
+// leg itself (`parts`). So a card or the terminal is sent its own share
+// (`subtotalCents`) when the payment is `partial` or the leg is not the
+// last; the last leg of a full payment still takes what is left, decided on
+// the server, exactly as before.
 // ============================================================================
 
 interface Discount {
@@ -106,7 +118,8 @@ export function useBookingCheckout(input: {
   const updateIncident = useUpdateIncident();
   const queryClient = useQueryClient();
   const earnPoints = useEarnLoyaltyPoints();
-  const { data: storeCredit } = useStoreCredit();
+  // The client's own account, not the facility's whole ledger.
+  const { data: storeCredit } = useClientStoreCredit(input.clientRef);
   const storeCreditBalance =
     storeCredit?.accounts.find((a) => a.clientRef === input.clientRef)
       ?.balance ?? 0;
@@ -279,21 +292,29 @@ export function useBookingCheckout(input: {
       );
     };
 
-    const payPart = async (part: {
-      method: CheckoutPayment["method"];
-      subtotal: number;
-      tax: number;
-      tip: number;
-      cashReceived?: number;
-    }) => {
+    const payPart = async (
+      part: {
+        method: CheckoutPayment["method"];
+        subtotal: number;
+        tax: number;
+        tip: number;
+        cashReceived?: number;
+      },
+      /** Send a card its own share rather than letting it take the rest. */
+      ownShare: boolean,
+    ) => {
+      const shareCents = ownShare
+        ? Math.max(1, Math.round(part.subtotal * 100))
+        : undefined;
       if (part.method === "terminal") {
         if (!payment.deviceSerial) throw new Error("Choose a terminal.");
         // The customer is asked for the tip ON THE DEVICE; the route charges
-        // what is still owed plus the facility's tax.
+        // what is still owed (or this part of it) plus the facility's tax.
         const result = await chargeOnTerminal.mutateAsync({
           bookingRef: booking.id,
           deviceSerial: payment.deviceSerial,
           tipOnDevice: true,
+          ...(shareCents ? { subtotalCents: shareCents } : {}),
         });
         const amount = result.amountCents / 100;
         const card = result.cardLast4
@@ -322,20 +343,31 @@ export function useBookingCheckout(input: {
             .filter(Boolean)
             .join(" · "),
         });
-        return { amount, supply: owedSupply - supplyPaid };
+        return {
+          amount,
+          supply: shareCents ? part.subtotal : owedSupply - supplyPaid,
+        };
       }
       if (part.method === "card_on_file") {
-        if (!payment.savedCardId) throw new Error("Choose a card to charge.");
+        if (!payment.savedCardId && !payment.cardSource) {
+          throw new Error("Choose a card to charge.");
+        }
         if (!booking.rowId) throw new Error("The booking is still loading.");
         const result = await chargeSavedCard.mutateAsync({
           bookingRowId: booking.rowId,
-          savedCardId: payment.savedCardId,
+          ...(payment.savedCardId
+            ? { savedCardId: payment.savedCardId }
+            : { source: payment.cardSource ?? "" }),
           tipCents: Math.round(part.tip * 100),
+          ...(shareCents ? { subtotalCents: shareCents } : {}),
         });
         if (result.card) {
           toast.info(`$${result.amount.toFixed(2)} charged to ${result.card}`);
         }
-        return { amount: result.amount, supply: owedSupply - supplyPaid };
+        return {
+          amount: result.amount,
+          supply: shareCents ? part.subtotal : owedSupply - supplyPaid,
+        };
       }
       if (part.method === "gift_card") {
         if (part.tip > 0) throw new Error(input.text.giftCardNoTip);
@@ -369,7 +401,9 @@ export function useBookingCheckout(input: {
       method: CheckoutPayment["method"];
       cashReceived?: number;
     })[];
-    if (payment.splits && payment.splits.length > 0) {
+    if (payment.parts) {
+      parts = payment.parts;
+    } else if (payment.splits && payment.splits.length > 0) {
       const plan = planSplit({
         subtotal: payment.subtotal,
         tax: payment.tax,
@@ -407,10 +441,13 @@ export function useBookingCheckout(input: {
       ];
     }
 
-    for (const part of parts) {
+    for (const [index, part] of parts.entries()) {
       if (part.subtotal <= 0 && part.tax <= 0 && part.tip <= 0) continue;
+      const ownShare =
+        payment.parts !== undefined &&
+        (payment.partial === true || index < parts.length - 1);
       try {
-        const { amount, supply } = await payPart(part);
+        const { amount, supply } = await payPart(part, ownShare);
         taken = Math.round((taken + amount) * 100) / 100;
         supplyPaid = Math.round((supplyPaid + supply) * 100) / 100;
         recorded = true;
