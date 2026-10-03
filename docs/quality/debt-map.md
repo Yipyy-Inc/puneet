@@ -22307,8 +22307,9 @@ required / disabled setting is now read by the booking form.
 The client sent their booking flow as an HTML mock (`docs/Facility_01_-_Find_client.html`, kept as
 the reference): one wizard for staff and pet owners — Client & pet, Service, Details with a
 service's own sub-steps, Confirm — at desktop, tablet and phone. It replaced the old modal's steps
-screen by screen. Layout is the mock's; the look is the design system's (two exceptions logged in
-§5i and §5t). What a reader needs before touching it:
+screen by screen. Layout is the mock's (two exceptions logged in §5i and §5t), and since the
+client's review the same day so is the look — see "The client's mocks decide the look", below. What a
+reader needs before touching it:
 
 - **Where it lives.** `components/bookings/modals/BookingModal.tsx` still owns the state and the
   saving; every screen it draws is under `components/bookings/wizard/` (`shell/`, `steps/…`), and
@@ -22416,8 +22417,8 @@ the user, but focus and `scrollIntoView` scroll it. The whole form rose out of v
 The client sent two more mocks (`docs/Yipyy_Evaluation_Booking.html`, `docs/Yipyy%2BEvaluations.html`,
 kept as the reference, untracked): booking an evaluation in the wizard (both portals), its settings
 page, and Operations › Evaluations — Today, the review queue, every evaluation, Setup, the
-evaluator's four-step form beside a live report card, and the reviewer. Layout is the mocks'; the
-look is the design system's. What a reader needs before touching it:
+evaluator's four-step form beside a live report card, and the reviewer. Layout and look are the
+mocks' — see "The client's mocks decide the look", below. What a reader needs before touching it:
 
 - **One rule for "services that need an evaluation first".** Five places could each demand one
   (`booking_flow.servicesRequiringEvaluation`, `booking_flow.evaluationRequired`, each module's
@@ -22474,3 +22475,64 @@ look is the design system's. What a reader needs before touching it:
 - Discard (evaluator dialog footer, §5j confirmation) throws away only an evaluation still being
   answered. A wrong pet caught after Finish has to be sent back first, then discarded.
 - The report card's date is shown on the reader's clock; the module's times are the facility's.
+
+## 2026-10-03 — The client's mocks decide the look of the screens they cover
+
+The client reviewed the booking flow and asked for the screens they drew to look exactly like their
+HTML mocks ("the whole design system is changed now"), with one placeholder wherever a photo is
+missing. CLAUDE.md § "Client mocks decide the look" lists the mocks and their screens; §5v logs the
+exception. What a reader needs before touching it:
+
+- **A look is a CSS scope, not a per-file restyle.** Each mock's palette is a `[data-look~="…"]`
+  block in `globals.css` — `booking`, `care-step` nested inside it, `care-setup` and `eval-module` —
+  that redefines the `:root` variables for its subtree, so every token utility inside repaints.
+  Three things make that work, and each one fails silently when it is missing:
+  - The alias block is `:root, [data-look]`, because an alias like `--border: var(--line)` resolves
+    once, where it is declared.
+  - `[data-look]{color:var(--foreground)}` is needed because text colour inherits already computed.
+  - A scope cannot repaint `body`, so the module's ground sits on its own root.
+- **`LookScope` sets a scope, and overlays stamp it.** It lives in `components/look/look-context.tsx`.
+  Radix portals dialogs, selects, popovers and tooltips into `<body>`, outside the scope, so the
+  shadcn wrappers put `data-look` (and the customer accent's variables) on their own Content. A new
+  overlay wrapper without `useLookStamp` renders in the root look inside a mocked screen.
+- **Primitives branch on `useLook()`.** That covers ChoicePill, Segmented, Switch, Checkbox, the
+  `pills` variant of SavedViews, OptionCards, RadioCards and SwitchRow. The default branch of each is
+  unchanged, so every other screen renders as before; check both branches when you edit one.
+- **Sizes under 40px live in `components/ui`** — Button's `mock-*`, `care*` and `setup*` sizes and
+  ChoicePill's sizes — which keeps `check:control-heights` honest. A mock's chip is `Chip`, not
+  `Badge`, so `check:badge-glyph` does not move.
+- **Unlayered `[data-slot]` rules beat Tailwind utilities.** These are the care-setup input and the
+  module's table. A call site inside those scopes that needs its own size uses `!`.
+- **The customer wizard's accent is the facility's brand colour.** It goes through `accentPalette()`
+  (`lib/look/accent-palette.ts`, unit-tested), and is the mock's yellow when no colour is set. The
+  staff wizard uses the mock's blue.
+- **Missing photos are handled app-wide.** `Photo` (`components/ui/photo.tsx`) draws the facility's
+  own picture, or `PhotoPlaceholder`'s stripes when there is none or it fails to load. It covers:
+  - the wizard's service, room type and add-ons
+  - the evaluation report card
+  - room units and categories, and play areas
+  - training programs, in both portals
+  - the retail POS and the variant picker
+
+  Pets and people keep their initials.
+
+- **Where the build differs from the mocks, on purpose:**
+  - The font stays Plus Jakarta Sans; the care mocks use Instrument Sans.
+  - The customer evaluation flow uses the brand colour, not the mock's blue.
+  - Words and formatting are ours: `Intl` times, and "Next" where a mock says "Continue".
+  - The booking-created toast can cover "Start another booking". It comes from the shared
+    `use-create-booking`.
+- **The comparison specs live in `tests/shots/`:**
+  - The mock side is `wizard-mock`, `care-mock` and `evaluation-mock`; the last needs the two
+    untracked evaluation mocks in `docs/`.
+  - Our side is `wizard-ours`, `evaluation-ours`, `feeding-step`, `medications-step` and
+    `feeding-medications-settings`.
+
+**Still open.**
+
+- These screens still have no striped placeholder:
+  - Grooming stations show a stock photo per station type when the facility has none.
+  - A daycare section without a photo is a colour band, a different layout rather than an empty slot.
+  - A gift-card design without an image is a gradient.
+- `components/booking/shared/` (`ServiceCard`, `RoomCard`, `AddonCard` and their barrel) is imported
+  nowhere. It is dead code with its own image fallbacks, and was left alone.

@@ -1277,6 +1277,28 @@ Every print stylesheet:
     If the same exception comes back a second time it was never an exception — it is the rule, and
     the system changes. A system nobody is allowed to change is a system nobody uses.
 
+**Logged exception, 2026-10-02 (rule 10).** The client reviewed the booking flow and asked for the
+screens they drew to look exactly like their HTML mocks — "the whole design system is changed now".
+Those screens take every visual value from their mock: palette, inks, type sizes, control and chip
+sizes, radii, borders, shadows and selected states. The screens are the booking wizard in both
+portals with its Feeding and Medication steps, Settings › Feeding & medications, the evaluation flow,
+Settings › Services › Evaluations, and Operations › Evaluations with its dialogs and cards. Each mock
+is a `[data-look]` block in `globals.css` that redefines this document's tokens for its own subtree,
+so nothing outside it moves. Inside those screens, and nowhere else, these are allowed:
+
+- tint fills
+- the facility's brand colour as the customer wizard's action colour
+- opacity on a locked card
+- 42px chips on touch
+- chips without glyphs
+- pets without the orange ring
+
+One value left the mocks for every screen: a missing object photo (room, service, add-on, product or
+program) is the mocks' striped placeholder, `components/ui/photo-placeholder.tsx`, and its
+`--stripe-*` tokens are the only colours this exception added to `:root`. Words and formatting stay
+§5q's. CLAUDE.md § "Client mocks decide the look" lists each mock beside its screens, and a new
+mock adds a row there in the change that builds it.
+
 ## 6. Hard rules
 
 1. **Orange is a surface and never an ink — no exceptions — and it marks the animal, never an action

@@ -39,6 +39,43 @@ evaluate.** Colour, shape, motion, size, density, icons, mascot, copy, date/numb
 and governance are all decided and measured. Adopt it completely. Do not invent, do not soften, do
 not "improve" a value.
 
+### Client mocks decide the look of the screens they cover (since 2026-10-02)
+
+**One exception outranks everything below: a screen the client drew in an HTML mock looks exactly like
+the mock.** The client reviewed the shipped booking flow and asked for it — "make it exactly same as
+the html file … the whole design system is changed now". Until then these screens took only their
+LAYOUT from the mock and their look from this section; now the mock decides the look too: colours, text
+inks, font sizes, control and chip sizes, radii, borders, shadows, selected states, chips and photo
+placeholders. Real data and behaviour stay ours, and so do words and formatting (§5q: `Intl`, French).
+
+| Mock (in `docs/`)                                      | Screens it decides                                                                               |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| `Facility_01_-_Find_client.html`                       | The booking wizard, both portals, every step                                                     |
+| `Feeding_Step.html`, `Medications_Step.html`           | The Feeding and Medication steps (with the wizard's accent, not their violet)                    |
+| `Medication_and_Feeding_Instructions_setup_page_.html` | Settings › Feeding & medications                                                                 |
+| `Yipyy_Evaluation_Booking.html` (kept out of git)      | The evaluation flow in the wizard; Settings › Services › Evaluations                             |
+| `Yipyy%2BEvaluations.html` (kept out of git)           | Operations › Evaluations, the evaluator and review dialogs, the report card, the customer's card |
+
+- **Read the values from the mock's source, never by eye.** The bundles are 0.2–3.4 MB of script —
+  never attach or Read them raw; extract the template and app script and port exact values. Port
+  values, never markup or inline styles.
+- **Where they live:** each mock's palette is a `[data-look="…"]` block in `src/app/globals.css` that
+  redefines the `:root` variables for its subtree (`booking`, `care-step`,
+  `care-setup`, `eval-module` — the evaluation booking mock shares `booking`). The staff wizard's accent is the mock's blue; the customer wizard's is
+  the facility's brand colour through `accentPalette()` (`src/lib/look/accent-palette.ts`), the mock's
+  yellow when none is set. Sizes are variants in `components/ui`; tinted labels are `Chip`; missing
+  photos are `PhotoPlaceholder`.
+- **Allowed inside these screens, and only there:** tint fills, the facility's brand colour (or the
+  mock's yellow) as the customer wizard's action colour, opacity on a locked card, 42px chips on
+  touch, chips without glyphs, pets without the orange ring.
+- **App-wide:** every missing _object_ photo (room, service, add-on, product, program) is the mock's
+  striped `PhotoPlaceholder` — on every screen, mocked or not. Pets and people keep their initials.
+- **The gates do not move.** Control sizes live in `components/ui` variants (outside
+  `check:control-heights`), mock chips are `Chip` rather than `Badge` (so `check:badge-glyph` only
+  ratchets down), and edge accents and hover-only controls stay banned everywhere.
+- **Every other screen follows the rest of this section, unchanged.** A new mock from the client adds a
+  row to the table above in the same change that builds it.
+
 **The four sources, in order:**
 
 1. [docs/design-system/design-system.md](docs/design-system/design-system.md) — the spec, ~40
