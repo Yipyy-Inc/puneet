@@ -194,15 +194,19 @@ test.describe("a facility's settings", () => {
     browser,
   }) => {
     await signIn(page, ACCOUNTS.owner);
+    const SLOGAN = "[e2e facility-settings] the facility's own words";
 
     const base = (await (await page.request.get(SETTINGS)).json()) as {
       booking_flow: { value: Record<string, unknown> };
       daycare_config: { value: Record<string, unknown> };
     };
 
-    // Hiding a service and pricing a module are decisions the BOOKING page has
-    // to honour. Both were read from a fixture, so a facility that hid grooming
-    // still had it offered.
+    // Hiding a service and describing a module are decisions the BOOKING page
+    // has to honour. Both were read from a fixture, so a facility that hid
+    // grooming still had it offered. (The module side asserted `basePrice`
+    // until 2026-10-03: the schema dropped it on 2026-09-20, a save strips it,
+    // and the assertion failed on every run since. `slogan` is still the
+    // facility's own, and proves the same round trip.)
     //
     // Put back in `finally`. This left grooming hidden and evaluations required
     // on the shared e2e facility, and grooming-menu-live's customer wizard then
@@ -228,7 +232,7 @@ test.describe("a facility's settings", () => {
           await page.request.patch(SETTINGS, {
             data: {
               domain: "daycare_config",
-              value: { ...base.daycare_config.value, basePrice: 77 },
+              value: { ...base.daycare_config.value, slogan: SLOGAN },
             },
           })
         ).status(),
@@ -243,11 +247,11 @@ test.describe("a facility's settings", () => {
           value: { evaluationRequired: boolean; hiddenServices: string[] };
           configured: boolean;
         };
-        daycare_config: { value: { basePrice: number }; configured: boolean };
+        daycare_config: { value: { slogan: string }; configured: boolean };
       };
       expect(body.booking_flow.value.evaluationRequired).toBe(true);
       expect(body.booking_flow.value.hiddenServices).toContain("grooming");
-      expect(body.daycare_config.value.basePrice).toBe(77);
+      expect(body.daycare_config.value.slogan).toBe(SLOGAN);
       expect(body.daycare_config.configured).toBe(true);
 
       await other.close();
