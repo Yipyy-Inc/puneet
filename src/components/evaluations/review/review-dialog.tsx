@@ -293,6 +293,31 @@ function ReviewBody({
             </fieldset>
           </div>
 
+          {/* The two actions sit under "Send by", in the column, as the mock
+              places them (2026-10-03) — not in a footer. */}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="quiet"
+              size="lg"
+              className="px-[18px] text-[14px] font-semibold"
+              disabled={!mayAct || busy || returning}
+              onClick={() => setReturning(true)}
+            >
+              {t("sendBack")}
+            </Button>
+            <Button
+              type="button"
+              size="lg"
+              // The mock's approval: green, flat, the width it is given.
+              className="bg-success hover:bg-success min-w-[200px] flex-1 text-[15px] font-bold [--sh-cta-active:none] [--sh-cta-hover:none] [--sh-cta:none]"
+              disabled={!mayAct || busy}
+              onClick={approve}
+            >
+              {send.isPending ? t("sending") : t("approveSend")}
+            </Button>
+          </div>
+
           {returning ? (
             <section className="bg-card border-line flex flex-col gap-2 rounded-[18px] border px-4 py-3.5">
               <label
@@ -329,29 +354,6 @@ function ReviewBody({
             </section>
           ) : null}
         </div>
-
-        <footer className="bg-card flex flex-wrap items-center gap-2 border-t border-(--inset-2) px-4 py-3.5 md:px-[18px]">
-          <Button
-            type="button"
-            variant="quiet"
-            size="lg"
-            className="px-[18px] text-[14.5px] font-semibold"
-            disabled={!mayAct || busy || returning}
-            onClick={() => setReturning(true)}
-          >
-            {t("sendBack")}
-          </Button>
-          <Button
-            type="button"
-            size="lg"
-            // The mock's approval: green, flat, the width it is given.
-            className="bg-success hover:bg-success min-w-[200px] flex-1 text-[15px] font-bold [--sh-cta-active:none] [--sh-cta-hover:none] [--sh-cta:none]"
-            disabled={!mayAct || busy}
-            onClick={approve}
-          >
-            {send.isPending ? t("sending") : t("approveSend")}
-          </Button>
-        </footer>
       </div>
       <div className="border-line hidden min-h-0 border-l lg:flex">
         <CardPreview card={card} />

@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   bookedServiceSince,
   passRateOf,
+  latestPerPet,
   sortAllRows,
   viewerMayReview,
   visitReason,
@@ -187,7 +188,8 @@ export async function evaluationsBoard(
       .select(EVALUATION_COLUMNS)
       .eq("facility_id", facilityId)
       .eq("card_status", "in_review")
-      .order("submitted_at")
+      // Newest first, as the mock lists them (2026-10-03).
+      .order("submitted_at", { ascending: false })
       .limit(200),
     supabase
       .from("evaluations")
@@ -392,6 +394,7 @@ export async function evaluationsBoard(
             result: row.status === "completed" ? row.result : null,
             completedAt: row.completed_at,
             scheduledAt: null,
+            nextVisitAt: null,
             evaluatorName: row.evaluator_name || null,
             approvedServices: row.approved_services ?? [],
           } satisfies AllRow,
@@ -412,6 +415,7 @@ export async function evaluationsBoard(
         result: null,
         completedAt: null,
         scheduledAt: booking.start_at,
+        nextVisitAt: null,
         evaluatorName: booking.assigned_staff_name,
         approvedServices: [],
       });
@@ -436,7 +440,8 @@ export async function evaluationsBoard(
     },
     waiting,
     sent,
-    all: sortAllRows(all),
+    // One row per pet, as the mock lists them (2026-10-03).
+    all: sortAllRows(latestPerPet(all)),
     viewer,
   };
 }

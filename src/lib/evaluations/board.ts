@@ -72,6 +72,35 @@ const STATE_ORDER: Record<AllRow["state"], number> = {
 };
 
 /**
+ * "All evaluations", one row per pet — the client's mock lists each pet once
+ * with where it stands (2026-10-03). That is its latest finished result; else
+ * the evaluation being answered; else the visit it is booked for. Beside a
+ * row that is not itself the visit, the pet's next visit still to come — so a
+ * pet that did not pass and is booked again reads "Scheduled …".
+ */
+export function latestPerPet(rows: readonly AllRow[]): AllRow[] {
+  const time = (value: string | null) =>
+    value ? new Date(value).getTime() : 0;
+  const byPet = new Map<string, AllRow[]>();
+  for (const row of rows) {
+    byPet.set(row.pet.id, [...(byPet.get(row.pet.id) ?? []), row]);
+  }
+  return [...byPet.values()].flatMap((list) => {
+    const finished = list
+      .filter((row) => row.state === "sent" || row.state === "in_review")
+      .sort((a, b) => time(b.completedAt) - time(a.completedAt));
+    const answering = list.filter((row) => row.state === "in_progress");
+    const booked = list
+      .filter((row) => row.state === "scheduled")
+      .sort((a, b) => time(a.scheduledAt) - time(b.scheduledAt));
+    const base = finished[0] ?? answering[0] ?? booked[0];
+    if (!base) return [];
+    const next = base.state === "scheduled" ? null : (booked[0] ?? null);
+    return [{ ...base, nextVisitAt: next?.scheduledAt ?? null }];
+  });
+}
+
+/**
  * "All evaluations": the finished ones newest first, then those being
  * answered, then those only booked, soonest first.
  */

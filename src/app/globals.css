@@ -2443,6 +2443,20 @@ button {
   --em-progress: #2fa36b;
   /* A chosen step: the accent's lightest tint. */
   --em-step-on: #e8f0fe;
+  /* AI assist on the evaluator's note: the mock's violet, its pale panel
+     and the dashed edge of its quick chips. */
+  --ai: #6d3fc0;
+  --ai-panel: #f7f3ff;
+  --ai-line: #e5dbfa;
+  --ai-chip-line: #cdbdf0;
+  /* The internal note, staff only: a dashed blush. */
+  --internal-line: #e4c7c2;
+  --internal-bg: #fffaf9;
+  /* Finish while the card cannot go yet: the success green, washed out. */
+  --finish-off: #a9c9b5;
+  /* A chosen tag's line: a strength's green, a watch-for's amber. */
+  --good-line: #9fd7b5;
+  --watch-line: #f0cf96;
 }
 
 /* Its tables: small capitals on the quiet row, 13.5px cells, warm hairlines. */

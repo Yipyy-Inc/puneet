@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  formatCalendarDate,
   formatCalendarDayLong,
   formatDateISO,
   formatDateLong,
@@ -380,6 +381,15 @@ describe("a list of names gets the reader's conjunction", () => {
     expect(formatList(pets, "fr")).toBe("Buddy, Whiskers, Daisy et Max");
     expect(formatList(["Kofi"], "fr")).toBe("Kofi");
   });
+
+  test("a bare list is commas in English, French keeps its et", () => {
+    expect(formatList(["Daycare", "Boarding"], "en", "unit")).toBe(
+      "Daycare, Boarding",
+    );
+    expect(formatList(["Daycare", "Boarding"], "fr", "unit")).toBe(
+      "Daycare et Boarding",
+    );
+  });
 });
 
 // ============================================================================
@@ -446,6 +456,26 @@ describe("formatCalendarDayLong", () => {
   test("anything but a calendar day is the em dash", () => {
     expect(formatCalendarDayLong("2026-10", "en")).toBe("—");
     expect(formatCalendarDayLong("", "fr")).toBe("—");
+  });
+});
+
+describe("formatCalendarDate", () => {
+  test("the day without its weekday, whatever zone the process is in", () => {
+    const original =
+      process.env.TZ ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+    try {
+      for (const zone of ["Pacific/Kiritimati", "Etc/GMT+12", "UTC"]) {
+        process.env.TZ = zone;
+        expect(formatCalendarDate("2026-02-10", "en")).toBe("Feb 10, 2026");
+        expect(formatCalendarDate("2026-02-10", "fr")).toBe("10 févr. 2026");
+      }
+    } finally {
+      process.env.TZ = original;
+    }
+  });
+
+  test("anything but a calendar day is the em dash", () => {
+    expect(formatCalendarDate("10/02/2026", "en")).toBe("—");
   });
 });
 

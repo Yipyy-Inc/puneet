@@ -4539,7 +4539,7 @@
         "stateScheduled": "Scheduled",
         "stateInProgress": "In progress",
         "scheduledAt": "Scheduled {day} · {time}",
-        "searchAll": "Search pets, owners or evaluators",
+        "scheduledToday": "Scheduled {time}",
         "emptyAllTitle": "No evaluations yet",
         "emptyAllBody": "Every evaluation started or booked shows up here.",
         "result_approved": "Approved",

@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardCheck, Mail, MailOpen, MailX } from "lucide-react";
+import { ClipboardCheck } from "lucide-react";
 
 import { EvaluationResultChip } from "@/components/evaluations/result-chip";
 import { useEvaluationCardSettings } from "@/components/evaluations/use-evaluation-card-settings";
@@ -21,7 +21,6 @@ import {
 } from "@/lib/i18n/format";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import { wallClockParts } from "@/lib/time/facility-time";
-import { cn } from "@/lib/utils";
 
 // ============================================================================
 // Report cards to review — the client's mock (2026-10-02): what Setup says
@@ -235,13 +234,6 @@ function SentItem({
       : state.kind === "delivered"
         ? t("delivered")
         : t("notOpened");
-  const OpenIcon =
-    state.kind === "opened"
-      ? MailOpen
-      : state.kind === "delivered"
-        ? Mail
-        : MailX;
-
   return (
     <li>
       <button
@@ -264,17 +256,12 @@ function SentItem({
           </span>
         </span>
         {row.result ? <EvaluationResultChip result={row.result} /> : null}
+        {/* Plain words, as the mock writes them (2026-10-03): green while
+            it reached them, red when it has not been opened. */}
         <span
-          className={cn(
-            "inline-flex items-center gap-1.5 text-[12px] font-semibold",
-            state.kind === "opened"
-              ? "text-success"
-              : state.kind === "delivered"
-                ? "text-ink-secondary"
-                : "text-destructive",
-          )}
+          data-unopened={state.kind === "not_opened" || undefined}
+          className="text-success data-unopened:text-bad text-[12px] font-semibold"
         >
-          <OpenIcon className="size-4" aria-hidden />
           {opened}
         </span>
       </button>

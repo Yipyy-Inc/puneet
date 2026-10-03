@@ -8,7 +8,7 @@ import { Chip } from "@/components/ui/chip";
 import type { AllRow, EvaluationsBoard } from "@/lib/evaluations/board-types";
 import { isPass } from "@/lib/evaluations/questions";
 import {
-  formatCalendarDayLong,
+  formatCalendarDate,
   formatList,
   formatTimeInZone,
   formatWeekdayDate,
@@ -21,6 +21,10 @@ import { wallClockParts } from "@/lib/time/facility-time";
 // Evaluator, Approved for. A pet only booked so far reads "Scheduled" with
 // its time; one being answered, "In progress". Six columns, inside §6 rule
 // 6's seven; the phone card takes pet, result, date and what it unlocked.
+//
+// Since 2026-10-03, as the mock lists it: one row per pet (latestPerPet), the
+// date bare ("Feb 10, 2026"), the services as a list ("Daycare, Boarding"),
+// and no search band above the table.
 // ============================================================================
 
 export function AllTab({
@@ -97,7 +101,7 @@ export function AllTab({
       sortValue: (row) => row.completedAt ?? row.scheduledAt ?? "",
       render: (row) =>
         row.completedAt
-          ? formatCalendarDayLong(dayOf(row.completedAt), locale)
+          ? formatCalendarDate(dayOf(row.completedAt), locale)
           : "—",
     },
     {
@@ -109,25 +113,34 @@ export function AllTab({
       key: "approved",
       label: t("colApprovedFor"),
       render: (row) => {
-        if (row.state === "scheduled" && row.scheduledAt) {
+        const passed = row.result !== null && isPass(row.result);
+        // A visit to come: the pet's own booked one, or — after a result
+        // that is not a pass — the one it is booked for next.
+        const visit =
+          row.state === "scheduled"
+            ? row.scheduledAt
+            : passed
+              ? null
+              : row.nextVisitAt;
+        if (visit) {
+          const day = dayOf(visit);
+          const time = formatTimeInZone(visit, locale, board.timeZone);
           return (
             <span className="text-ink-secondary text-[12.5px]">
-              {fill("scheduledAt", {
-                day: formatWeekdayDate(
-                  new Date(`${dayOf(row.scheduledAt)}T12:00:00`),
-                  locale,
-                ),
-                time: formatTimeInZone(row.scheduledAt, locale, board.timeZone),
-              })}
+              {day === board.today
+                ? fill("scheduledToday", { time })
+                : fill("scheduledAt", {
+                    day: formatWeekdayDate(new Date(`${day}T12:00:00`), locale),
+                    time,
+                  })}
             </span>
           );
         }
-        const approved =
-          row.result && isPass(row.result) ? row.approvedServices : [];
+        const approved = passed ? row.approvedServices : [];
         return (
           <span className="text-ink-secondary text-[12.5px]">
             {approved.length > 0
-              ? formatList(approved.map(serviceName), locale)
+              ? formatList(approved.map(serviceName), locale, "unit")
               : "—"}
           </span>
         );
@@ -142,17 +155,7 @@ export function AllTab({
       columns={columns}
       cardColumns={["pet", "result", "date", "approved"]}
       getItemId={(row) => row.key}
-      getSearchValue={(row) =>
-        [
-          row.pet.name,
-          row.pet.breed ?? "",
-          row.client.name,
-          row.evaluatorName ?? "",
-        ]
-          .join(" ")
-          .toLowerCase()
-      }
-      searchPlaceholder={t("searchAll")}
+      hideToolbar
       onRowClick={(row) => {
         if (row.evaluationId) onOpen(row.evaluationId);
       }}

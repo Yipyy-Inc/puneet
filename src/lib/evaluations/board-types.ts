@@ -100,6 +100,11 @@ export interface AllRow {
   completedAt: string | null;
   /** When a scheduled one starts. */
   scheduledAt: string | null;
+  /**
+   * The pet's next evaluation visit still to come, beside a row that is not
+   * itself that visit (one row per pet, latestPerPet).
+   */
+  nextVisitAt: string | null;
   evaluatorName: string | null;
   approvedServices: string[];
 }

@@ -12,6 +12,8 @@ import { useStaffText } from "@/lib/staff/use-staff-text";
 // "Add a photo from the evaluation" — the client's mock (2026-10-02): the
 // evaluator snaps one during play (the phone's camera, where there is one)
 // and it goes on the owner's card. One photo; another replaces it.
+//
+// A row at the foot of the note's card, as the mock draws it (2026-10-03).
 // ============================================================================
 
 export function PhotoField({
@@ -29,12 +31,10 @@ export function PhotoField({
   const busy = upload.isPending || remove.isPending;
 
   return (
-    <section className="bg-card border-line flex min-w-0 flex-col gap-3 rounded-2xl border p-4">
-      <div className="flex min-w-0 flex-wrap items-center gap-3">
-        <Camera className="text-ink-secondary size-5 shrink-0" aria-hidden />
-        <h3 className="text-body-strong text-body-ink min-w-0 flex-1">
-          {t("photoTitle")}
-        </h3>
+    <div className="mt-1 flex min-w-0 flex-col gap-2">
+      <div className="text-ink-secondary flex min-w-0 flex-wrap items-center gap-2 text-[13px]">
+        <Camera className="size-[18px] shrink-0" aria-hidden />
+        <span className="min-w-0 flex-1">{t("photoTitle")}</span>
         <input
           ref={input}
           type="file"
@@ -55,11 +55,12 @@ export function PhotoField({
         />
         <Button
           type="button"
-          variant="outline"
+          variant="quiet"
+          size="mock-34"
+          className="px-3 font-semibold"
           disabled={disabled || busy}
           onClick={() => input.current?.click()}
         >
-          <Camera aria-hidden />
           {upload.isPending
             ? t("photoUploading")
             : photoUrl
@@ -96,6 +97,6 @@ export function PhotoField({
           </Button>
         </div>
       ) : null}
-    </section>
+    </div>
   );
 }

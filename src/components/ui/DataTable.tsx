@@ -151,6 +151,13 @@ export interface DataTableProps<T> {
   cardColumns?: string[];
   /** Extra content rendered at the end of the toolbar row */
   toolbarExtra?: React.ReactNode;
+  /**
+   * No toolbar band at all — no search, filters or column picker. For a
+   * screen a client mock draws without one (the evaluations mock's All tab,
+   * 2026-10-03, CLAUDE.md § "Client mocks decide the look"). Every other
+   * table keeps the band.
+   */
+  hideToolbar?: boolean;
   /** Stick the header row to the top on vertical scroll. Off by default. */
   stickyHeader?: boolean;
   /** Alternate row shading (white / very light grey). Off by default. */
@@ -216,6 +223,7 @@ export function DataTable<T extends object>({
   tableId,
   cardColumns,
   toolbarExtra,
+  hideToolbar = false,
   emptyState,
   stickyHeader = false,
   zebra = false,
@@ -383,11 +391,12 @@ export function DataTable<T extends object>({
     .map((filter) => ({ filter, value: filterValues[filter.key] }))
     .filter(({ value }) => value && value !== "all");
   const hasToolbar =
-    hasSearch ||
-    filters.length > 0 ||
-    Boolean(onFilterClick) ||
-    hasColumnPicker ||
-    Boolean(toolbarExtra);
+    !hideToolbar &&
+    (hasSearch ||
+      filters.length > 0 ||
+      Boolean(onFilterClick) ||
+      hasColumnPicker ||
+      Boolean(toolbarExtra));
   const selectionCount =
     selectable && getItemId ? (externalSelectedIds?.size ?? 0) : 0;
   // Distinguish "nothing here yet" from "your search/filter hid everything".

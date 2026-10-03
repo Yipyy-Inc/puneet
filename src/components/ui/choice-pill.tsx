@@ -45,13 +45,29 @@ const CARE_PILL =
 const BOOKING_PILL_INK =
   "border-line-strong bg-card text-body-ink has-checked:border-body-ink has-checked:bg-body-ink relative has-focus-visible:outline-primary flex cursor-pointer items-center gap-2 rounded-full font-semibold has-checked:text-white has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-disabled:cursor-not-allowed has-disabled:text-ink-disabled";
 /** The ink pill's sizes, as the evaluation mock draws each: an answer (42px),
- *  a session length (38px), a service (36px), a weekday (58×42, 12px corners). */
+ *  a session length (38px), a service (36px), a weekday (58×42, 12px corners),
+ *  and the AI note's tone (30px, 12px). */
 const INK_SIZE = {
   lg: "min-h-[42px] border-[1.5px] px-4 text-[14px]",
   md: "min-h-[38px] border px-3.5 text-[13.5px]",
   sm: "min-h-9 border px-3.5 text-[13.5px]",
   xs: "min-h-[34px] border px-3 text-[13px]",
+  xxs: "min-h-[30px] border px-[11px] text-[12px]",
   day: "min-h-[42px] w-[58px] justify-center rounded-[12px] border px-0 text-[13.5px] font-bold text-ink-tertiary",
+} as const;
+/** The evaluation mock's tag: a 1.5px line; chosen, the tint of what it
+ *  means — a strength green, a watch-for amber. 36px and 13px, or its
+ *  service chip at `md`, 38px and 13.5px. */
+const EVAL_TAG =
+  "border-line-strong bg-card text-body-ink relative has-focus-visible:outline-primary flex cursor-pointer items-center gap-[5px] rounded-full border-[1.5px] px-[13px] font-semibold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-disabled:cursor-not-allowed has-disabled:text-ink-disabled";
+const EVAL_TAG_SIZE = {
+  sm: "min-h-9 text-[13px]",
+  md: "min-h-[38px] text-[13.5px]",
+} as const;
+const EVAL_TAG_TONE = {
+  good: "has-checked:border-(--good-line) has-checked:bg-wash-success has-checked:text-success",
+  watch:
+    "has-checked:border-(--watch-line) has-checked:bg-wash-warning has-checked:text-warning",
 } as const;
 /** The mock's larger chip, its `chipH2`: training goals and experience. */
 const BOOKING_PILL_LG = "min-h-[38px] px-4 text-[13.5px] max-lg:min-h-11";
@@ -81,9 +97,12 @@ export function ChoicePill({
    * evaluation mock's sizes: `lg` an answer (the default), `md` a length,
    * `sm` a service, `day` a weekday. Outside a booking look, ignored.
    */
-  size?: "md" | "lg" | "sm" | "xs" | "day";
-  /** `ink`: the evaluation mock's answer, solid ink when chosen. */
-  tone?: "accent" | "ink";
+  size?: "md" | "lg" | "sm" | "xs" | "xxs" | "day";
+  /**
+   * `ink`: the evaluation mock's answer, solid ink when chosen. `good` and
+   * `watch`: its tags, tinted by what they mean.
+   */
+  tone?: "accent" | "ink" | "good" | "watch";
   className?: string;
   children: React.ReactNode;
   "aria-label"?: string;
@@ -98,10 +117,15 @@ export function ChoicePill({
       false);
   const inkSize =
     INK_SIZE[
-      size === "md" || size === "sm" || size === "xs" || size === "day"
+      size === "md" ||
+      size === "sm" ||
+      size === "xs" ||
+      size === "xxs" ||
+      size === "day"
         ? size
         : "lg"
     ];
+  const tagSize = EVAL_TAG_SIZE[size === "md" ? "md" : "sm"];
   return (
     <label
       className={cn(
@@ -112,9 +136,11 @@ export function ChoicePill({
             : booking
               ? tone === "ink"
                 ? cn(BOOKING_PILL_INK, inkSize)
-                : BOOKING_PILL
+                : tone === "good" || tone === "watch"
+                  ? cn(EVAL_TAG, tagSize, EVAL_TAG_TONE[tone])
+                  : BOOKING_PILL
               : choicePillClass,
-        booking && tone !== "ink" && size === "lg" && BOOKING_PILL_LG,
+        booking && tone === "accent" && size === "lg" && BOOKING_PILL_LG,
         className,
       )}
     >

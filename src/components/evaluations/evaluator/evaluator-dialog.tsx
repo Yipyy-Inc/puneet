@@ -193,12 +193,16 @@ function EvaluatorBody({
             ))
           )}
         </div>
-        <footer className="bg-card flex flex-wrap items-center justify-between gap-3 border-t border-(--inset-2) px-4 py-3.5 md:px-[22px]">
+        {/* The mock's footer (2026-10-03): 46px pills — Back on a hairline,
+            Next the flat accent, Finish green, washed out until it can go. */}
+        <footer className="bg-card flex flex-wrap items-center justify-between gap-2 border-t border-(--inset-2) px-4 py-3.5 md:px-[18px]">
           <div className="flex flex-wrap items-center gap-3">
             {step > 0 ? (
               <Button
                 type="button"
-                variant="outline"
+                variant="quiet"
+                size="wizard"
+                className="px-[18px] text-[14px] font-semibold"
                 onClick={() => setStep((s) => (s - 1) as 0 | 1 | 2)}
               >
                 {t("back")}
@@ -214,14 +218,19 @@ function EvaluatorBody({
             ) : null}
           </div>
           <div className="flex min-w-0 flex-wrap items-center justify-end gap-3">
+            {/* Why Finish waits — said to a screen reader; the header's
+                "0 of 10" already says it on screen. */}
             {step === 3 && evaluator.editable && !complete ? (
-              <p className="text-meta text-ink-secondary">
+              <p id="ev-finish-why" className="sr-only">
                 {fill("answerAllFirst", { count: total })}
               </p>
             ) : null}
             {step < 3 ? (
               <Button
                 type="button"
+                variant="flat"
+                size="wizard"
+                className="px-[22px] text-[14.5px] font-bold"
                 onClick={() => setStep((s) => (s + 1) as 1 | 2 | 3)}
               >
                 {t("next")}
@@ -229,8 +238,11 @@ function EvaluatorBody({
             ) : evaluator.editable ? (
               <Button
                 type="button"
-                className="yy-cta"
+                variant="flat"
+                size="wizard"
+                className="bg-success px-5 text-[14.5px] font-bold text-white [&:disabled:not([data-loading])]:bg-(--finish-off) [&:disabled:not([data-loading])]:text-white"
                 disabled={!complete || finish.isPending}
+                aria-describedby={complete ? undefined : "ev-finish-why"}
                 onClick={() => void finishEvaluation()}
               >
                 {finish.isPending
@@ -240,7 +252,13 @@ function EvaluatorBody({
                     : t("finishReview")}
               </Button>
             ) : (
-              <Button type="button" variant="outline" onClick={close}>
+              <Button
+                type="button"
+                variant="quiet"
+                size="wizard"
+                className="px-[18px] text-[14px] font-semibold"
+                onClick={close}
+              >
                 {t("close")}
               </Button>
             )}

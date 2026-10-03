@@ -1,8 +1,14 @@
 "use client";
 
-import { BadgeCheck, CircleCheck, Heart, Tag, X } from "lucide-react";
+import {
+  BadgeCheck,
+  CircleCheck,
+  Heart,
+  Tag,
+  Volleyball,
+  X,
+} from "lucide-react";
 
-import { Playgroup } from "@/components/icons/yipyy-icons";
 import { DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import type { EvaluationDetail } from "@/lib/evaluations/detail-types";
 import { SECTIONS } from "@/lib/evaluations/questions";
@@ -20,7 +26,8 @@ import type { SaveState } from "./use-evaluator";
 // A step that is fully answered shows a check instead of its glyph.
 // ============================================================================
 
-const STEP_GLYPH = [Heart, Playgroup, Tag, BadgeCheck] as const;
+// The mock's four (2026-10-03): favorite, sports_tennis, sell, verified.
+const STEP_GLYPH = [Heart, Volleyball, Tag, BadgeCheck] as const;
 
 export function EvaluatorHeader({
   detail,

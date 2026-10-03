@@ -9,6 +9,7 @@ import {
 } from "@/lib/evaluations/ai-note";
 import {
   bookedServiceSince,
+  latestPerPet,
   passRateOf,
   sortAllRows,
   viewerMayReview,
@@ -100,6 +101,7 @@ describe("the board", () => {
       result: "approved",
       completedAt: null,
       scheduledAt: null,
+      nextVisitAt: null,
       evaluatorName: null,
       approvedServices: [],
       ...patch,
@@ -118,6 +120,68 @@ describe("the board", () => {
       "soon",
       "later",
     ]);
+  });
+
+  test("all evaluations: each pet once, where it stands, its next visit beside it", () => {
+    const row = (key: string, pet: string, patch: Partial<AllRow>): AllRow => ({
+      key,
+      evaluationId: key,
+      pet: {
+        id: pet,
+        ref: 1,
+        name: pet,
+        breed: null,
+        species: null,
+        imageUrl: null,
+      },
+      client: { id: "c", ref: 1, name: "C" },
+      state: "sent",
+      result: "approved",
+      completedAt: null,
+      scheduledAt: null,
+      nextVisitAt: null,
+      evaluatorName: null,
+      approvedServices: [],
+      ...patch,
+    });
+    const booked = (key: string, pet: string, at: string) =>
+      row(key, pet, {
+        state: "scheduled",
+        result: null,
+        evaluationId: null,
+        scheduledAt: at,
+      });
+    const rows = latestPerPet([
+      // Max did not pass in January, passed in March, and is booked again.
+      row("max-jan", "max", {
+        result: "not_approved",
+        completedAt: "2026-01-08T13:00:00Z",
+      }),
+      row("max-mar", "max", { completedAt: "2026-03-08T13:00:00Z" }),
+      booked("max-oct", "max", "2026-10-09T13:00:00Z"),
+      // Luna is only booked, twice: the sooner visit is her row.
+      booked("luna-late", "luna", "2026-10-12T13:00:00Z"),
+      booked("luna-soon", "luna", "2026-10-05T13:00:00Z"),
+      // Coco is being answered, with nothing finished before.
+      row("coco", "coco", { state: "in_progress", result: null }),
+      // Rex's result is in review while a re-evaluation is underway: the
+      // finished one is where he stands.
+      row("rex-review", "rex", {
+        state: "in_review",
+        result: "needs_re_evaluation",
+        completedAt: "2026-09-30T13:00:00Z",
+      }),
+      row("rex-now", "rex", { state: "in_progress", result: null }),
+    ]);
+    const byPet = new Map(rows.map((r) => [r.pet.id, r]));
+    expect(rows).toHaveLength(4);
+    expect(byPet.get("max")?.key).toBe("max-mar");
+    expect(byPet.get("max")?.nextVisitAt).toBe("2026-10-09T13:00:00Z");
+    expect(byPet.get("luna")?.key).toBe("luna-soon");
+    expect(byPet.get("luna")?.nextVisitAt).toBeNull();
+    expect(byPet.get("coco")?.key).toBe("coco");
+    expect(byPet.get("coco")?.nextVisitAt).toBeNull();
+    expect(byPet.get("rex")?.key).toBe("rex-review");
   });
 });
 

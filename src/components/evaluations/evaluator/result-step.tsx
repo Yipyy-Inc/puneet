@@ -45,33 +45,38 @@ export function ResultStep({
 
       {/* The card frames the fieldset rather than being it: a legend sits
           on its fieldset's border, and this one belongs inside the card. */}
-      <div className="bg-card border-line rounded-2xl border p-4">
+      <div className="bg-card border-line rounded-[18px] border px-4 py-3.5">
         <fieldset
-          className="flex min-w-0 flex-col gap-2"
+          className="min-w-0"
           aria-describedby="ev-approved-help"
           disabled={disabled || !passed}
         >
-          <legend className="text-body-strong text-body-ink">
+          <legend className="text-body-ink text-[15px] font-bold">
             {t("approvedForTitle")}
           </legend>
-          <p id="ev-approved-help" className="text-meta text-ink-secondary">
+          <p
+            id="ev-approved-help"
+            className="text-ink-tertiary mt-0.5 mb-2 text-[12.5px]"
+          >
             {passed ? t("approvedForHelp") : t("approvedForNeedsPass")}
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {detail.serviceChoices.map((service) => {
               const on = evaluator.approved.includes(service);
               return (
                 <ChoicePill
                   key={service}
                   type="checkbox"
+                  tone="good"
+                  size="md"
                   checked={on}
                   disabled={disabled || !passed}
                   onChange={() => evaluator.toggleApproved(service)}
                 >
                   {on ? (
-                    <CircleCheck className="size-4" aria-hidden />
+                    <CircleCheck className="size-[17px]" aria-hidden />
                   ) : (
-                    <CirclePlus className="size-4" aria-hidden />
+                    <CirclePlus className="size-[17px]" aria-hidden />
                   )}
                   {serviceName(service)}
                 </ChoicePill>

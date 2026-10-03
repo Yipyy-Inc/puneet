@@ -22536,3 +22536,30 @@ exception. What a reader needs before touching it:
   - A gift-card design without an image is a gradient.
 - `components/booking/shared/` (`ServiceCard`, `RoomCard`, `AddonCard` and their barrel) is imported
   nowhere. It is dead code with its own image fallbacks, and was left alone.
+
+**The evaluations mock came back on 2026-10-03 as `docs/Yipyy_Evaluations.html`.** It is byte-identical
+to `Yipyy%2BEvaluations.html`. The client asked for it "end to end, exactly as the html", so these last
+differences were closed:
+
+- **Behavior step.** The AI-assist block is drawn in the mock's violet (`--ai*` tokens). A chosen
+  strength turns green and a chosen watch-for amber (`ChoicePill` tones `good` and `watch`). The note,
+  the internal note and the photo now share one card.
+- **Evaluator footer.** Finish is green, washed out (`--finish-off`) until the card can go.
+- **Play profile tab.** The glyph is `Volleyball`, standing in for the mock's `sports_tennis`.
+- **Review tab.** The open states are plain words with no glyphs, and the queue lists the newest card
+  first.
+- **Review dialog.** Its two actions sit under "Send by" rather than in a footer.
+- **All evaluations.** It is **one row per pet** (`latestPerPet` in `lib/evaluations/board.ts`), with
+  bare dates ("Feb 10, 2026") and "Daycare, Boarding". It also has **no search band**: `DataTable` has
+  an opt-in `hideToolbar`, so the list can no longer be searched. A pet's full history is on its profile.
+
+`tests/e2e/evaluation-end-to-end.spec.ts` walks the whole chain through the screens, on a dog it
+registers and deletes, in the full suite:
+
+1. a new dog cannot book daycare;
+2. staff book the evaluation in the wizard;
+3. the evaluator runs it;
+4. a reviewer sends the card;
+5. the owner reads it;
+6. daycare opens;
+7. a caretaker, granted `view_evaluations` for the test, reaches the module in `/employee/evaluations` (a manager meets the count-the-drawer screen first).

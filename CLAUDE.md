@@ -48,13 +48,13 @@ LAYOUT from the mock and their look from this section; now the mock decides the 
 inks, font sizes, control and chip sizes, radii, borders, shadows, selected states, chips and photo
 placeholders. Real data and behaviour stay ours, and so do words and formatting (§5q: `Intl`, French).
 
-| Mock (in `docs/`)                                      | Screens it decides                                                                               |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
-| `Facility_01_-_Find_client.html`                       | The booking wizard, both portals, every step                                                     |
-| `Feeding_Step.html`, `Medications_Step.html`           | The Feeding and Medication steps (with the wizard's accent, not their violet)                    |
-| `Medication_and_Feeding_Instructions_setup_page_.html` | Settings › Feeding & medications                                                                 |
-| `Yipyy_Evaluation_Booking.html` (kept out of git)      | The evaluation flow in the wizard; Settings › Services › Evaluations                             |
-| `Yipyy%2BEvaluations.html` (kept out of git)           | Operations › Evaluations, the evaluator and review dialogs, the report card, the customer's card |
+| Mock (in `docs/`)                                                                                | Screens it decides                                                                               |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| `Facility_01_-_Find_client.html`                                                                 | The booking wizard, both portals, every step                                                     |
+| `Feeding_Step.html`, `Medications_Step.html`                                                     | The Feeding and Medication steps (with the wizard's accent, not their violet)                    |
+| `Medication_and_Feeding_Instructions_setup_page_.html`                                           | Settings › Feeding & medications                                                                 |
+| `Yipyy_Evaluation_Booking.html` (kept out of git)                                                | The evaluation flow in the wizard; Settings › Services › Evaluations                             |
+| `Yipyy%2BEvaluations.html`, re-sent as `Yipyy_Evaluations.html` (the same file; kept out of git) | Operations › Evaluations, the evaluator and review dialogs, the report card, the customer's card |
 
 - **Read the values from the mock's source, never by eye.** The bundles are 0.2–3.4 MB of script —
   never attach or Read them raw; extract the template and app script and port exact values. Port

@@ -225,6 +225,22 @@ export function formatCalendarDayLong(day: string, locale: AppLocale): string {
   }).format(d);
 }
 
+/**
+ * `Sep 1, 2026` · `1 sept. 2026` — a calendar DAY without its weekday, where
+ * a column of dates reads better bare (the evaluations mock's "All
+ * evaluations", 2026-10-03). Pinned in UTC like `formatCalendarDayLong`.
+ */
+export function formatCalendarDate(day: string, locale: AppLocale): string {
+  const d = calendarDay(day);
+  if (!d) return NO_DATE;
+  return dateFmt(locale, "calendarDate", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(d);
+}
+
 /** A `YYYY-MM-DD` calendar day at UTC midnight, or null. */
 function calendarDay(day: string): Date | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
@@ -457,10 +473,16 @@ export function isPluralOne(count: number, locale: AppLocale): boolean {
 export function formatList(
   items: string[],
   locale: AppLocale,
-  /** "disjunction" for "Buddy or Max" · "Buddy ou Max". */
-  type: "conjunction" | "disjunction" = "conjunction",
+  /**
+   * "disjunction" for "Buddy or Max" · "Buddy ou Max"; "unit" for a bare
+   * list, "Daycare, Boarding", where "and" would read as a sentence.
+   */
+  type: "conjunction" | "disjunction" | "unit" = "conjunction",
 ): string {
-  return new Intl.ListFormat(TAG[locale], { type }).format(items);
+  return new Intl.ListFormat(TAG[locale], {
+    type,
+    style: type === "unit" ? "short" : "long",
+  }).format(items);
 }
 
 // ── MONEY, NUMBERS, PERCENT ────────────────────────────────────────────────

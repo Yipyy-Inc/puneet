@@ -4539,7 +4539,7 @@
         "stateScheduled": "Prévue",
         "stateInProgress": "En cours",
         "scheduledAt": "Prévue le {day} à {time}",
-        "searchAll": "Rechercher un animal, un propriétaire ou une personne",
+        "scheduledToday": "Prévue à {time}",
         "emptyAllTitle": "Aucune évaluation pour l’instant",
         "emptyAllBody": "Chaque évaluation commencée ou réservée s’affiche ici.",
         "result_approved": "Réussie",

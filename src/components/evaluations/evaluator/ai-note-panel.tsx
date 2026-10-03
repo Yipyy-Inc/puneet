@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,9 @@ import { useStaffText } from "@/lib/staff/use-staff-text";
 // polished note. Tricky moments are worded gently." A few words, the quick
 // points, a tone, and Write (or Rewrite) with AI; the note lands in the
 // field below it, to edit like any other.
+//
+// Drawn in the mock's violet (2026-10-03): a pale panel, dashed quick chips,
+// tone pills in ink, and a violet "Write with AI".
 // ============================================================================
 
 export function AiNotePanel({
@@ -63,8 +66,8 @@ export function AiNotePanel({
     );
 
   return (
-    <div className="border-line flex flex-col gap-3 rounded-2xl border p-3.5">
-      <p className="text-meta text-ink-secondary">{t("aiHelp")}</p>
+    <div className="flex flex-col gap-2 rounded-[14px] border border-(--ai-line) bg-(--ai-panel) p-3">
+      <p className="text-ink-secondary text-[12.5px]">{t("aiHelp")}</p>
       <label htmlFor="ev-ai-points" className="sr-only">
         {t("aiPointsLabel")}
       </label>
@@ -75,14 +78,16 @@ export function AiNotePanel({
         disabled={disabled}
         placeholder={t("aiPointsPlaceholder")}
         onChange={(event) => setPoints(event.target.value)}
+        className="bg-card min-h-[42px] rounded-[12px] px-3 text-[14px] max-lg:min-h-[42px]"
       />
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-[5px]">
         {QUICK_POINTS.map((point) => (
           <Button
             key={point}
             type="button"
-            variant="outline"
-            className="border-dashed"
+            variant="quiet"
+            size="mock-30"
+            className="gap-1 border-dashed border-(--ai-chip-line) px-2.5 text-[12px] font-semibold text-(--violet-ink)"
             disabled={disabled}
             onClick={() =>
               setPoints((current) =>
@@ -92,13 +97,16 @@ export function AiNotePanel({
               )
             }
           >
-            <Plus aria-hidden />
+            <span aria-hidden>+</span>
             {t(`point_${point}`)}
           </Button>
         ))}
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <span id="ev-ai-tone" className="text-meta text-ink-secondary">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span
+          id="ev-ai-tone"
+          className="text-body-ink text-[12.5px] font-semibold"
+        >
           {t("aiTone")}
         </span>
         <div
@@ -114,6 +122,8 @@ export function AiNotePanel({
               value={option}
               checked={tone === option}
               disabled={disabled}
+              tone="ink"
+              size="xxs"
               onChange={() => setTone(option)}
             >
               {t(`tone_${option}`)}
@@ -122,10 +132,13 @@ export function AiNotePanel({
         </div>
         <Button
           type="button"
+          variant="flat"
+          size="mock-38"
+          className="gap-1.5 bg-(--ai) px-4 font-bold text-white"
           disabled={disabled || write.isPending}
           onClick={run}
         >
-          <Sparkles aria-hidden />
+          <Sparkles aria-hidden className="size-[18px]" />
           {write.isPending
             ? t("aiWriting")
             : hasNote
