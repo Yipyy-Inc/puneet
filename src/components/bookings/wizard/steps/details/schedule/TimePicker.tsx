@@ -57,8 +57,8 @@ export function TimePicker({
   return (
     <div className="flex flex-col gap-2" role="radiogroup" aria-label={label}>
       <div className="flex flex-wrap justify-between gap-x-2 gap-y-0.5">
-        <span className="text-body-strong text-body-ink">{label}</span>
-        <span className="text-meta text-ink-tertiary tabular-nums">
+        <span className="text-body-ink text-[13px] font-semibold">{label}</span>
+        <span className="text-ink-tertiary text-[12px] tabular-nums">
           {time(window.start)} – {time(window.end)}
         </span>
       </div>

@@ -47,7 +47,7 @@ export function OwnerEvaluationCard({ id }: { id: string }) {
           />
         </div>
       ) : (
-        <div className="border-line bg-ground overflow-hidden rounded-3xl border">
+        <div className="border-line bg-ground overflow-hidden rounded-[28px] border">
           <h1 className="sr-only">{t("title")}</h1>
           <EvaluationReportCard
             serviceName={serviceName}

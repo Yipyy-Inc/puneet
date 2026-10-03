@@ -53,7 +53,7 @@ export function RulesCard({
       onReset={onReset}
     >
       <div className="flex min-w-0 flex-col gap-2.5 px-5 py-4 sm:px-6">
-        <span className="text-body-strong text-body-ink">
+        <span className="text-body-ink text-[15px] font-medium">
           {t("supplyRule")}
         </span>
         <OptionCards<SupplyRule>
@@ -74,8 +74,10 @@ export function RulesCard({
         {RULES.map(({ rule, title, sub }) => (
           <SetupRow key={rule} className="justify-between">
             <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="text-body-strong text-body-ink">{t(title)}</span>
-              <span className="text-meta text-ink-tertiary">{t(sub)}</span>
+              <span className="text-body-ink text-[15px] font-medium">
+                {t(title)}
+              </span>
+              <span className="text-ink-tertiary text-[13px]">{t(sub)}</span>
             </span>
             <Switch
               checked={rules[rule]}

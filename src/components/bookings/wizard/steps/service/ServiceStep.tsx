@@ -2,18 +2,12 @@
 
 import { useMemo, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Check,
-  ClipboardCheck,
-  FileSignature,
-  Flag,
-  Info,
-  Lock,
-  PawPrint,
-} from "lucide-react";
+import { Info } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/ui/chip";
+import { Photo } from "@/components/ui/photo";
+import { Tick } from "@/components/ui/tick";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { useSettings } from "@/hooks/use-settings";
 import { useBoardingMenu } from "@/lib/api/boarding-catalogue";
@@ -251,7 +245,6 @@ export function ServiceStep({
             ? evaluationConfig.description
             : (config?.slogan ?? service.description ?? "");
           const photo = config?.bannerImage ?? service.image ?? null;
-          const Icon = service.icon;
           const price = priceLabel(service.id);
           const owed = isCustomerMode ? 0 : unsigned(service.id);
           const kind = t(KIND_KEYS[service.id] ?? "wizKindCustom");
@@ -276,25 +269,23 @@ export function ServiceStep({
                 event.preventDefault();
                 onSelect(service.id);
               }}
-              className="border-line-strong bg-card hover:border-ink-disabled focus-visible:outline-primary data-[disabled=true]:bg-surface-inset data-[disabled=true]:hover:border-line-strong relative flex min-w-0 cursor-pointer gap-4 rounded-2xl border p-3.5 transition-[box-shadow,border-color] duration-120 ease-[ease] outline-none focus-visible:outline-2 focus-visible:outline-offset-2 data-[disabled=true]:cursor-not-allowed data-[on=true]:border-transparent data-[on=true]:shadow-[inset_0_0_0_2px_var(--primary)] motion-reduce:transition-none"
+              // The booking mock's service card (2026-10-02): a picked card is the
+              // accent with its glow; a locked one stays white at 60%, as drawn.
+              className="mk-pick bg-card focus-visible:outline-primary relative flex min-w-0 cursor-pointer gap-4 rounded-[22px] p-3.5 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-60"
             >
-              <div className="bg-surface-inset text-ink-tertiary flex size-[84px] shrink-0 items-center justify-center overflow-hidden rounded-xl sm:size-[132px]">
-                {photo ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- a facility's own banner may live on any host
-                  <img
-                    src={photo}
-                    alt=""
-                    className="size-full object-cover"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                ) : (
-                  <Icon aria-hidden className="size-6" />
-                )}
-              </div>
-              <div className="flex min-w-0 flex-1 flex-col gap-1 py-1 pr-7">
+              {/* The facility's banner, or — none, or one that will not
+                  load — the striped placeholder in its place. */}
+              <Photo
+                src={photo}
+                shape="square"
+                label={fill(t("wizPhotoOf"), {
+                  kind: kind.toLocaleLowerCase(locale),
+                })}
+                className="size-[84px] shrink-0 rounded-[16px] sm:size-[132px]"
+              />
+              <div className="flex min-w-0 flex-1 flex-col gap-[5px] py-1 pr-[26px]">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-micro text-ink-tertiary uppercase">
+                  <p className="text-ink-tertiary text-[11px] font-semibold tracking-[0.08em] uppercase">
                     {kind}
                   </p>
                   {/* "Start here" (the evaluation mock): the visit a pet
@@ -302,49 +293,50 @@ export function ServiceStep({
                   {isEvaluation &&
                   selectedPets.length > 0 &&
                   !petsAllEvaluated(selectedPets) ? (
-                    <Badge variant="default">
-                      <Flag aria-hidden />
+                    <span className="bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-[11px] font-bold">
                       {t("wizEvStartHere")}
-                    </Badge>
+                    </span>
                   ) : null}
                 </div>
-                <p className="text-section text-body-ink">{name}</p>
+                <p className="text-body-ink text-[17px] font-semibold">
+                  {name}
+                </p>
                 {line ? (
-                  <p className="text-meta text-ink-secondary text-pretty">
+                  <p className="text-ink-tertiary text-[13.5px] text-pretty">
                     {line}
                   </p>
                 ) : null}
                 {price ? (
-                  <p className="text-body-strong text-body-ink mt-0.5 tabular-nums">
+                  <p className="text-acc-deep mt-0.5 text-[14px] font-semibold tabular-nums">
                     {price}
                   </p>
                 ) : null}
                 {isEvaluation &&
                 evaluationConfig.multiPet === false &&
                 selectedPets.length > 1 ? (
-                  <Badge
-                    variant="pending"
-                    className="mt-0.5 h-auto min-h-[26px] self-start py-1 whitespace-normal"
+                  <Chip
+                    tone="warning"
+                    size="sm"
+                    className="mt-0.5 self-start py-[3px] whitespace-normal"
                   >
-                    <PawPrint aria-hidden />
                     {t("wizEvOnePetAtATime")}
-                  </Badge>
+                  </Chip>
                 ) : null}
                 {!isEvaluation &&
                 config?.status.disabled &&
                 config.status.reason ? (
-                  <p className="text-meta text-ink-secondary">
+                  <p className="text-ink-secondary text-[13px]">
                     {config.status.reason}
                   </p>
                 ) : null}
                 {needsEvaluation || owed > 0 ? (
                   <div className="mt-0.5 flex flex-wrap gap-1.5">
                     {locked ? (
-                      <Badge
-                        variant="overdue"
-                        className="h-auto min-h-[26px] py-1 whitespace-normal"
+                      <Chip
+                        tone="danger"
+                        size="sm"
+                        className="py-[3px] whitespace-normal"
                       >
-                        <Lock aria-hidden />
                         {fill(
                           t(
                             isPluralOne(blockedPets.length, locale)
@@ -355,16 +347,14 @@ export function ServiceStep({
                             pets: blockedPets.map((pet) => pet.name).join(", "),
                           },
                         )}
-                      </Badge>
+                      </Chip>
                     ) : needsEvaluation ? (
-                      <Badge variant="pending">
-                        <ClipboardCheck aria-hidden />
+                      <Chip tone="warning" size="sm" className="py-[3px]">
                         {t("evaluationRequired")}
-                      </Badge>
+                      </Chip>
                     ) : null}
                     {owed > 0 ? (
-                      <Badge variant="cancelled">
-                        <FileSignature aria-hidden />
+                      <Chip tone="neutral" size="sm" className="py-[3px]">
                         {fill(
                           t(
                             isPluralOne(owed, locale)
@@ -373,14 +363,15 @@ export function ServiceStep({
                           ),
                           { count: owed },
                         )}
-                      </Badge>
+                      </Chip>
                     ) : null}
                   </div>
                 ) : null}
                 {locked ? (
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="quiet"
+                    size="mock-32"
                     className="mt-1.5 self-start"
                     onClick={(event) => {
                       event.stopPropagation();
@@ -390,8 +381,8 @@ export function ServiceStep({
                   >
                     {evaluationChosen ? (
                       <>
-                        <Check aria-hidden />
                         {t("wizEvaluationRequested")}
+                        <span aria-hidden>✓</span>
                       </>
                     ) : (
                       t("wizRequestEvaluation")
@@ -399,14 +390,7 @@ export function ServiceStep({
                   </Button>
                 ) : null}
               </div>
-              {on ? (
-                <span
-                  aria-hidden
-                  className="bg-primary text-primary-foreground absolute top-3.5 right-3.5 flex size-6 items-center justify-center rounded-full"
-                >
-                  <Check className="size-3.5" strokeWidth={3} />
-                </span>
-              ) : null}
+              {on ? <Tick size={24} className="top-3.5 right-3.5" /> : null}
             </div>
           );
         })}

@@ -2,7 +2,9 @@
 
 import { CircleCheck, CircleX, Clock3, TriangleAlert } from "lucide-react";
 
+import { useLook } from "@/components/look/look-context";
 import { Badge } from "@/components/ui/badge";
+import { Chip } from "@/components/ui/chip";
 import type { EvaluationResult } from "@/lib/evaluations/questions";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import { cn } from "@/lib/utils";
@@ -30,6 +32,16 @@ const STYLE: Record<
   not_approved: { variant: "overdue", icon: CircleX },
 };
 
+const TONE: Record<
+  EvaluationResult,
+  "success" | "warning" | "info" | "danger"
+> = {
+  approved: "success",
+  approved_with_restrictions: "warning",
+  needs_re_evaluation: "info",
+  not_approved: "danger",
+};
+
 export function EvaluationResultChip({
   result,
   className,
@@ -38,8 +50,22 @@ export function EvaluationResultChip({
   className?: string;
 }) {
   const { t } = useStaffText("evaluations");
+  const mock = useLook()?.names.includes("eval-module") ?? false;
   const style = STYLE[result];
   const Icon = style.icon;
+  // The evaluations mock (2026-10-02, CLAUDE.md § "Client mocks decide the
+  // look"): the word on its tint, no glyph — the word carries the meaning.
+  if (mock) {
+    return (
+      <Chip
+        tone={TONE[result]}
+        size="sm"
+        className={cn("px-[9px] py-[3px] font-bold", className)}
+      >
+        {t(`result_${result}`)}
+      </Chip>
+    );
+  }
   return (
     <Badge
       variant={style.variant}

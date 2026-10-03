@@ -1,7 +1,5 @@
 "use client";
 
-import { X } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { doseCountWords } from "@/lib/medications/describe";
 import { fill } from "@/lib/medications/dose";
@@ -59,42 +57,44 @@ export function MedicationEditor({
   return (
     <section
       aria-label={title}
-      className="border-line bg-card shadow-card overflow-hidden rounded-2xl border"
+      className="border-line bg-card overflow-hidden rounded-[20px] border"
     >
-      <header className="border-line flex items-center justify-between gap-3 border-b px-4 py-4 sm:px-6">
-        <h4 className="text-section text-body-ink min-w-0 wrap-break-word">
+      <header className="flex items-center justify-between gap-3 border-b border-(--row-line) px-4 py-5 sm:px-6">
+        <h4 className="text-body-ink min-w-0 text-[17px] font-semibold wrap-break-word">
           {title}
         </h4>
-        <Button
+        <button
           type="button"
-          variant="ghost"
-          size="icon"
           aria-label={
             editor.original
               ? fill(t("medsCancelEdit"), { name: editor.original.name })
               : t("medsDiscardNew")
           }
           onClick={step.discard}
+          className="text-ink-tertiary focus-visible:outline-primary flex size-9 shrink-0 items-center justify-center rounded-[10px] text-[22px] focus-visible:outline-2"
         >
-          <X className="size-5" aria-hidden />
-        </Button>
+          <span aria-hidden>×</span>
+        </button>
       </header>
 
-      <div className="divide-line divide-y">
+      <div className="divide-y divide-(--row-line)">
         <EditorMedication step={step} />
         <EditorSchedule step={step} />
         <EditorMethod step={step} />
         <EditorSupply step={step} petName={petName} />
       </div>
 
-      <footer className="border-line flex flex-wrap items-center justify-between gap-3 border-t px-4 py-4 sm:px-6">
-        <span className="text-meta text-ink-tertiary" aria-live="polite">
+      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-(--row-line) bg-(--stepper-bg) px-4 py-4 sm:px-6">
+        <span className="text-ink-tertiary text-[13px]" aria-live="polite">
           {hint}
         </span>
         <Button
           type="button"
+          variant="flat"
+          size="care-lg"
           onClick={step.save}
           disabled={step.problem !== null}
+          className="[&:disabled:not([data-loading])]:bg-(--care-cta-off) [&:disabled:not([data-loading])]:text-white"
         >
           {t("medsSaveMedication")}
         </Button>

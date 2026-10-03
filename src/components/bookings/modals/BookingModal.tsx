@@ -740,7 +740,7 @@ export function BookingModal({
   // landed searched nobody. The caller's list still counts (a client page
   // passes its own client), and a client made from inside the form with
   // "+ New client" is added at once, before any list has re-read.
-  const { data: liveClients } = useQuery({
+  const { data: liveClients, isPending: liveClientsPending } = useQuery({
     ...clientQueries.all(),
     enabled: !isCustomerMode,
   });
@@ -4961,6 +4961,18 @@ export function BookingModal({
     !isDone && currentStepId !== "confirm" && calculatePrice.subtotal > 0
       ? formatMoney(estimate.total, locale)
       : null;
+  // The evaluation mock's footer line between Back and the action: the time
+  // picked, then the total on Review (2026-10-02).
+  const evaluationFootNote =
+    !evaluationFlow || isDone
+      ? null
+      : currentStepId === "confirm"
+        ? `${t("total")} ${formatMoney(estimate.total, locale)}`
+        : currentStepId === "details" &&
+            (currentSubSteps[currentSubStep]?.id ?? 0) === 0
+          ? (evaluationWhen ?? null)
+          : null;
+  const wizardFlavour = evaluationFlow ? "evaluation" : "booking";
   const hasProgress = currentStep > 0 || !!selectedService;
   const requestClose = () => {
     if (isDone) {
@@ -4989,7 +5001,9 @@ export function BookingModal({
         : t("wizBookingCreated");
   // What was created, as it was when Create was pressed.
   const doneStatusValue = createdBooking?.status ?? confirmModel.status;
-  const doneStatus = <StatusChip status={doneStatusValue} />;
+  const doneStatus = (
+    <StatusChip status={doneStatusValue} className="px-3 py-1 text-[13px]" />
+  );
   const doneMissing = createdBooking?.missing ?? 0;
   const doneText = isCustomerMode
     ? passRedemption
@@ -5022,6 +5036,7 @@ export function BookingModal({
   return (
     <>
       <WizardDialog
+        portal={isCustomerMode ? "customer" : "facility"}
         open={open && !creatingClient}
         onOpenChange={(nextOpen) => {
           if (!nextOpen) requestClose();
@@ -5037,6 +5052,7 @@ export function BookingModal({
           steps={stepViews}
           subSteps={railSubSteps}
           navLabel={t("wizSteps")}
+          flavour={wizardFlavour}
         >
           {/* The client's design shows the stay and its doses BESIDE the
             Medications step; here it sits in the rail, under the steps,
@@ -5083,6 +5099,8 @@ export function BookingModal({
             title={shownHeader.title}
             subtitle={shownHeader.subtitle}
             chip={headerChip}
+            flavour={wizardFlavour}
+            titleHidden={isDone && wizardFlavour === "evaluation"}
           />
           <div
             ref={scrollAreaRef}
@@ -5092,6 +5110,7 @@ export function BookingModal({
             {isDone ? (
               <SuccessScreen
                 attention={doneStatusValue === "pending_agreements"}
+                flavour={wizardFlavour}
                 title={doneTitle}
                 status={doneStatus}
                 text={doneText}
@@ -5128,6 +5147,7 @@ export function BookingModal({
                   <ClientPetStep
                     isCustomerMode={isCustomerMode}
                     clients={clients}
+                    clientsLoading={!isCustomerMode && liveClientsPending}
                     selectedClient={selectedClient}
                     selectedPetIds={selectedPetIds}
                     setSelectedPetIds={setSelectedPetIds}
@@ -5769,6 +5789,8 @@ export function BookingModal({
               onNext={onFooterNext}
               nextDisabled={nextDisabled}
               busy={atLastStep && (submitting || estimateBusy)}
+              flavour={wizardFlavour}
+              note={evaluationFootNote}
             />
           )}
         </div>

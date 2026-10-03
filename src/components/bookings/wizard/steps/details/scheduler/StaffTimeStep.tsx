@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { PhotoPlaceholder } from "@/components/ui/photo-placeholder";
 import { Segmented } from "@/components/ui/segmented";
 import { useSettings } from "@/hooks/use-settings";
 import { useStaffAvailability } from "@/lib/api/staff-availability";
@@ -246,9 +247,11 @@ export function StaffTimeStep({
   return (
     <div className="flex flex-col gap-[18px]">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <h3 className="text-section text-body-ink">{words.title}</h3>
-          <p className="text-meta text-ink-tertiary">{subtitle}</p>
+        <div className="flex min-w-0 flex-col gap-[3px]">
+          <h3 className="text-body-ink text-[17px] font-semibold">
+            {words.title}
+          </h3>
+          <p className="text-ink-tertiary text-[13.5px]">{subtitle}</p>
         </div>
         <Segmented
           name="wizard-groomer-mode"
@@ -267,12 +270,12 @@ export function StaffTimeStep({
       </div>
 
       {mode === "earliest" && earliest ? (
-        <div className="border-line bg-card flex flex-wrap items-center gap-4 rounded-xl border px-5 py-4">
+        <div className="bg-acc-soft flex flex-wrap items-center gap-4 rounded-[20px] px-5 py-4">
           <div className="flex min-w-[220px] flex-1 flex-col gap-0.5">
-            <span className="text-micro text-ink-tertiary uppercase">
+            <span className="text-acc-soft-text text-[11.5px] font-bold tracking-[0.07em] uppercase">
               {t("wizEarliestOpening")}
             </span>
-            <span className="text-body-strong text-body-ink">
+            <span className="text-body-ink text-[15.5px] font-semibold">
               {fill(
                 t(
                   nameOf(earliest.offer.staffId)
@@ -291,6 +294,8 @@ export function StaffTimeStep({
           </div>
           <Button
             type="button"
+            size="mock-40"
+            className="[--sh-cta:0_8px_20px_-8px_var(--acc-glow)]"
             onClick={() => pick(earliest.date, earliest.offer)}
           >
             {t("wizTakeThisSlot")}
@@ -301,9 +306,11 @@ export function StaffTimeStep({
       {mode === "choose" ? (
         <div className="flex flex-col gap-2.5">
           {able.length === 0 && !isPending ? (
-            <p className="text-meta text-ink-secondary">{words.noneOnline}</p>
+            <p className="text-ink-secondary text-[13.5px]">
+              {words.noneOnline}
+            </p>
           ) : (
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,260px),1fr))] gap-3">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,240px),1fr))] gap-2.5">
               {able
                 .filter((g) => !isCustomer || g.name)
                 .map((g) => {
@@ -323,24 +330,22 @@ export function StaffTimeStep({
                           groomerId: g.id,
                         });
                       }}
-                      className="border-line-strong bg-card hover:border-ink-disabled focus-visible:outline-primary flex min-w-0 items-center gap-3 rounded-xl border px-4 py-3.5 text-left transition-[box-shadow,border-color] duration-120 ease-[ease] focus-visible:outline-2 focus-visible:outline-offset-2 data-[on=true]:border-transparent data-[on=true]:shadow-[inset_0_0_0_2px_var(--primary)] motion-reduce:transition-none"
+                      className="mk-pick bg-card focus-visible:outline-primary flex min-w-0 items-center gap-3 rounded-[18px] px-4 py-3.5 text-left focus-visible:outline-2 focus-visible:outline-offset-2"
                     >
-                      <span
-                        aria-hidden
-                        className="bg-surface-inset text-body-ink flex size-10 shrink-0 items-center justify-center rounded-full text-[13px] font-bold"
-                      >
-                        {initialsOf(g.name ?? "")}
-                      </span>
-                      <span className="flex min-w-0 flex-col">
-                        <span className="text-body-strong text-body-ink">
+                      <PhotoPlaceholder
+                        shape="circle"
+                        initials={initialsOf(g.name ?? "")}
+                      />
+                      <span className="flex min-w-0 flex-col gap-px">
+                        <span className="text-body-ink text-[14.5px] font-semibold">
                           {g.name}
                         </span>
                         {g.role ? (
-                          <span className="text-meta text-ink-tertiary truncate">
+                          <span className="text-ink-tertiary truncate text-[12.5px]">
                             {g.role}
                           </span>
                         ) : null}
-                        <span className="text-meta text-ink-secondary">
+                        <span className="text-acc-deep text-[12px] font-semibold">
                           {next
                             ? fill(t("wizNextOpening"), {
                                 date: formatWeekdayDate(next.date, locale),
@@ -355,7 +360,7 @@ export function StaffTimeStep({
             </div>
           )}
           {unable.length > 0 ? (
-            <p className="text-meta text-ink-tertiary">
+            <p className="text-ink-tertiary text-[12.5px]">
               {fill(
                 t(unable.length > 1 ? "wizGroomersCannot" : "wizGroomerCannot"),
                 {
@@ -370,11 +375,11 @@ export function StaffTimeStep({
         </div>
       ) : null}
 
-      <div className="border-line bg-card flex flex-col gap-4 rounded-2xl border p-4 sm:p-[18px]">
+      <div className="border-line bg-card flex flex-col gap-4 rounded-[22px] border p-[18px]">
         <div
           role="radiogroup"
           aria-label={t("wizGroomDay")}
-          className="grid grid-cols-7 gap-1.5 max-sm:grid-cols-[repeat(7,minmax(64px,1fr))] max-sm:overflow-x-auto"
+          className="grid grid-cols-7 gap-1.5 pb-0.5 max-sm:grid-cols-[repeat(7,minmax(60px,1fr))] max-sm:overflow-x-auto"
         >
           {dates.map((date) => {
             const closed = shut(date) || (days.length > 0 && !working(date));
@@ -390,6 +395,7 @@ export function StaffTimeStep({
                 aria-disabled={closed || undefined}
                 data-on={on}
                 data-closed={closed || undefined}
+                data-full={(!closed && !isPending && open === 0) || undefined}
                 onClick={() =>
                   !closed &&
                   onChange({
@@ -398,15 +404,15 @@ export function StaffTimeStep({
                     groomerId: mode === "choose" ? chosenId : null,
                   })
                 }
-                className="border-line text-body-ink focus-visible:outline-primary data-[closed=true]:bg-surface-inset data-[closed=true]:text-ink-disabled data-[on=true]:bg-primary data-[on=true]:text-primary-foreground flex min-h-[72px] flex-col items-center justify-center gap-0.5 rounded-lg border px-1 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 data-[closed=true]:cursor-not-allowed data-[on=true]:border-transparent"
+                className="border-line bg-card text-body-ink focus-visible:outline-primary data-[on=true]:border-primary data-[on=true]:bg-primary data-[on=true]:text-primary-foreground flex flex-col items-center gap-0.5 rounded-[14px] border-[1.5px] px-1 py-[9px] focus-visible:outline-2 focus-visible:outline-offset-2 data-[closed=true]:cursor-not-allowed data-[closed=true]:opacity-45 data-[full=true]:opacity-45"
               >
-                <span className="text-micro uppercase">
+                <span className="text-[11px] font-semibold uppercase opacity-80">
                   {formatWeekday(day.getDay(), locale, "short")}
                 </span>
-                <span className="text-section tabular-nums">
+                <span className="text-[17px] font-bold tabular-nums">
                   {day.getDate()}
                 </span>
-                <span className="text-meta">
+                <span className="text-[10.5px] font-semibold opacity-85">
                   {closed
                     ? t("wizClosed")
                     : isPending
@@ -420,35 +426,37 @@ export function StaffTimeStep({
           })}
         </div>
 
-        <div className="border-line flex flex-col gap-3 border-t pt-4">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <span className="text-body-strong text-body-ink">
+        <div className="border-line-soft flex flex-col gap-2.5 border-t pt-3.5">
+          <div className="flex flex-wrap justify-between gap-2">
+            <span className="text-body-ink text-[14px] font-semibold">
               {fill(chosen ? t("wizSlotsWith") : words.slotsAll, {
                 date: formatWeekdayDate(shownDate, locale),
                 groomer: shortPersonName(chosen?.name ?? ""),
               })}
             </span>
-            <span className="text-meta text-ink-tertiary">
+            <span className="text-ink-tertiary text-[12.5px]">
               {fill(t("wizEachSlotFits"), {
                 total: formatDuration(total, locale),
               })}
             </span>
           </div>
           {isError ? (
-            <p className="text-meta text-destructive">
+            <p className="text-bad py-2.5 text-[13.5px]">
               {t("wizTimesNotLoaded")}
             </p>
           ) : mode === "choose" && !chosen ? (
-            <p className="text-meta text-ink-tertiary">{words.chooseFirst}</p>
+            <p className="text-ink-tertiary py-2.5 text-[13.5px]">
+              {words.chooseFirst}
+            </p>
           ) : slots.length === 0 ? (
-            <p className="text-meta text-ink-tertiary">
+            <p className="text-ink-tertiary py-2.5 text-[13.5px]">
               {isPending ? t("wizFindingTimes") : t("wizNoOpeningsDay")}
             </p>
           ) : (
             <div
               role="radiogroup"
               aria-label={t("wizGroomTime")}
-              className="grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-2"
+              className="grid grid-cols-[repeat(auto-fill,minmax(128px,1fr))] gap-2 max-sm:grid-cols-[repeat(auto-fill,minmax(96px,1fr))]"
             >
               {slots.map((offer) => {
                 const on =
@@ -463,13 +471,13 @@ export function StaffTimeStep({
                     aria-checked={on}
                     data-on={on}
                     onClick={() => pick(shownDate, offer)}
-                    className="border-line text-body-ink focus-visible:outline-primary data-[on=true]:bg-primary data-[on=true]:text-primary-foreground flex min-h-10 flex-col items-center justify-center rounded-lg border px-1.5 py-[9px] focus-visible:outline-2 focus-visible:outline-offset-2 data-[on=true]:border-transparent max-lg:min-h-12"
+                    className="border-line-strong bg-card text-body-ink focus-visible:outline-primary data-[on=true]:border-primary data-[on=true]:bg-primary data-[on=true]:text-primary-foreground flex flex-col items-center gap-px rounded-[14px] border px-1.5 py-[9px] focus-visible:outline-2 focus-visible:outline-offset-2"
                   >
-                    <span className="text-body-strong tabular-nums">
+                    <span className="text-[14px] font-semibold tabular-nums">
                       {time(offer.start)}
                     </span>
                     {!chosen && nameOf(offer.staffId) ? (
-                      <span className="text-meta">
+                      <span className="text-[11.5px] opacity-80">
                         {shortPersonName(nameOf(offer.staffId) ?? "")}
                       </span>
                     ) : null}

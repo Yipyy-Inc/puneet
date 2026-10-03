@@ -29,7 +29,7 @@ export function ConfirmCard({
     <section
       aria-labelledby={label && id ? id : undefined}
       className={cn(
-        "border-line bg-card overflow-hidden rounded-2xl border",
+        "border-line bg-card overflow-hidden rounded-[22px] border",
         className,
       )}
     >
@@ -37,10 +37,13 @@ export function ConfirmCard({
         <div
           className={cn(
             "flex items-center justify-between gap-3 px-5",
-            flush ? "border-line border-b py-4" : "pt-4",
+            flush ? "border-line-soft border-b py-4" : "pt-4",
           )}
         >
-          <h3 id={id} className="text-micro text-ink-secondary uppercase">
+          <h3
+            id={id}
+            className="text-ink-secondary text-[12px] font-semibold tracking-[0.08em] uppercase"
+          >
             {label}
           </h3>
           {aside}

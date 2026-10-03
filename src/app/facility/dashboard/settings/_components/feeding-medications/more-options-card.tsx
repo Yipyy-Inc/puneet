@@ -1,7 +1,5 @@
 "use client";
 
-import { CircleAlert } from "lucide-react";
-
 import { ChoicePill } from "@/components/ui/choice-pill";
 import { Switch } from "@/components/ui/switch";
 import type { MedDayRule } from "@/types/base";
@@ -70,10 +68,13 @@ export function MoreOptionsCard<Part extends string>({
     >
       <div className="flex min-w-0 flex-col gap-2.5 px-5 py-4 sm:px-6">
         <span className="flex min-w-0 flex-col gap-0.5">
-          <span id={`${id}-days`} className="text-body-strong text-body-ink">
+          <span
+            id={`${id}-days`}
+            className="text-body-ink text-[15px] font-medium"
+          >
             {t("daysTitle")}
           </span>
-          <span className="text-meta text-ink-tertiary">{t("daysHelp")}</span>
+          <span className="text-ink-tertiary text-[13px]">{t("daysHelp")}</span>
         </span>
         <div
           role="group"
@@ -93,23 +94,22 @@ export function MoreOptionsCard<Part extends string>({
           ))}
         </div>
         {dayRules.length === 0 ? (
-          <p className="text-meta text-destructive flex items-center gap-1.5">
-            <CircleAlert className="size-4 shrink-0" aria-hidden />
-            {t("invalidDays")}
-          </p>
+          <p className="text-bad text-[13px]">{t("invalidDays")}</p>
         ) : null}
       </div>
       <div className="border-line flex min-w-0 flex-col gap-2.5 border-t px-5 py-4 sm:px-6">
         <span className="flex min-w-0 flex-col gap-0.5">
-          <span className="text-body-strong text-body-ink">
+          <span className="text-body-ink text-[15px] font-medium">
             {t("partsTitle")}
           </span>
-          <span className="text-meta text-ink-tertiary">{t("partsHelp")}</span>
+          <span className="text-ink-tertiary text-[13px]">
+            {t("partsHelp")}
+          </span>
         </span>
         <ul className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
           {parts.map((part) => (
             <li key={part}>
-              <label className="text-body text-body-ink flex min-h-10 cursor-pointer items-center gap-3 max-lg:min-h-12">
+              <label className="text-body-ink flex cursor-pointer items-center gap-3 py-1.5 text-[15px]">
                 <Switch
                   checked={show[part]}
                   onCheckedChange={(on) => onShow({ ...show, [part]: on })}

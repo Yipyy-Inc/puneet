@@ -1,7 +1,5 @@
 "use client";
 
-import { CircleCheck, TriangleAlert } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { fill } from "@/lib/medications/dose";
 import { useShellText } from "@/lib/shell/use-shell-text";
@@ -33,10 +31,10 @@ export function FeedingPlanCard({
   return (
     <section
       aria-label={fill(t("feedPlanTitle"), { pet: petName })}
-      className="border-line bg-card shadow-card overflow-hidden rounded-2xl border"
+      className="border-line bg-card overflow-hidden rounded-[20px] border"
     >
-      <header className="border-line flex flex-wrap items-center justify-between gap-3 border-b px-4 py-4 sm:px-6">
-        <h4 className="text-section text-body-ink min-w-0 wrap-break-word">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-(--row-line) px-4 py-5 sm:px-6">
+        <h4 className="text-body-ink min-w-0 text-[17px] font-semibold wrap-break-word">
           {fill(t("feedPlanTitle"), { pet: petName })}
         </h4>
         <Button
@@ -44,15 +42,15 @@ export function FeedingPlanCard({
           variant="ghost"
           aria-label={fill(t("feedRemovePlanAria"), { pet: petName })}
           onClick={step.removePlan}
-          className="text-destructive"
+          size="care-sm"
+          className="text-bad font-normal"
         >
           {t("feedRemovePlan")}
         </Button>
       </header>
 
       {included ? (
-        <p className="text-meta text-success mx-4 mt-5 flex items-center gap-2 sm:mx-6">
-          <CircleCheck className="size-4 shrink-0" aria-hidden />
+        <p className="bg-wash-success text-success mx-4 mt-5 rounded-[12px] px-4 py-3 text-[14px] font-medium sm:mx-6">
           {t(
             step.service === "daycare"
               ? "feedIncludedDaycare"
@@ -62,13 +60,12 @@ export function FeedingPlanCard({
       ) : null}
 
       {step.dateless ? (
-        <p className="text-meta text-warning mx-4 mt-5 flex items-center gap-2 sm:mx-6">
-          <TriangleAlert className="size-4 shrink-0" aria-hidden />
+        <p className="mx-4 mt-5 rounded-[10px] bg-(--note-bg) px-3 py-2.5 text-[13px] text-(--note-ink) sm:mx-6">
           {t("feedNoDaysWarning")}
         </p>
       ) : null}
 
-      <div className="divide-line divide-y">
+      <div className="divide-y divide-(--row-line)">
         <PlanMealTimes step={step} petName={petName} />
         <PlanFoods step={step} petName={petName} />
         <PlanHowEats step={step} petName={petName} />

@@ -1,17 +1,13 @@
 "use client";
 
-import { Flag, RefreshCw } from "lucide-react";
-
 import { useEvaluationServiceName } from "@/components/evaluations/use-evaluation-service-name";
-import { Badge } from "@/components/ui/badge";
+import { PetTile } from "@/components/evaluations/pet-tile";
 import { Button } from "@/components/ui/button";
-import { PetAvatar } from "@/components/ui/pet-avatar";
+import { Chip } from "@/components/ui/chip";
 import type { TodayVisit } from "@/lib/evaluations/board-types";
 import { formatTimeInZone } from "@/lib/i18n/format";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import { cn } from "@/lib/utils";
-
-import { ServiceGlyph } from "./service-glyph";
 
 // ============================================================================
 // One pet of one evaluation booked today — the client's mock (2026-10-02):
@@ -73,50 +69,50 @@ export function VisitCard({
       id={`evaluation-visit-${visit.bookingRef}-${visit.pet.ref}`}
       data-highlighted={highlighted ? "true" : undefined}
       className={cn(
-        "bg-card border-line flex min-w-0 flex-col gap-3 rounded-3xl border p-4",
+        "bg-card border-line flex min-w-0 flex-col gap-3 rounded-[20px] border p-4",
         "data-[highlighted=true]:shadow-[inset_0_0_0_2px_var(--primary)]",
       )}
     >
-      <div className="flex min-w-0 items-start gap-3">
-        <PetAvatar name={visit.pet.name} src={visit.pet.imageUrl} size="lg" />
+      <div className="flex min-w-0 items-center gap-3">
+        <PetTile
+          id={visit.pet.id}
+          name={visit.pet.name}
+          src={visit.pet.imageUrl}
+          size={48}
+        />
         <div className="min-w-0 flex-1">
-          <p className="text-body-strong text-body-ink truncate">
+          <p className="text-body-ink truncate text-[16px] font-bold">
             {visit.pet.name}
           </p>
-          <p className="text-meta text-ink-secondary text-pretty">
+          <p className="text-ink-tertiary text-[12.5px] text-pretty">
             {[visit.pet.breed, visit.client.name].filter(Boolean).join(" · ")}
           </p>
         </div>
-        <p className="text-body-strong text-body-ink shrink-0 tabular-nums">
+        <p className="text-body-ink shrink-0 text-[13px] font-bold tabular-nums">
           {formatTimeInZone(visit.startAt, locale, timeZone)}
         </p>
       </div>
 
       <div className="flex flex-wrap gap-1.5">
         {visit.unlocks.map((service) => (
-          <Badge
+          <Chip
             key={service}
-            variant="cancelled"
-            className="h-auto min-h-[26px] py-1"
+            tone="info"
+            size="xs"
+            className="px-[9px] py-[3px]"
           >
-            <ServiceGlyph service={service} />
             {serviceName(service)}
-          </Badge>
+          </Chip>
         ))}
-        <Badge variant="cancelled" className="h-auto min-h-[26px] py-1">
-          {visit.reason === "re_evaluation" ? (
-            <RefreshCw aria-hidden />
-          ) : (
-            <Flag aria-hidden />
-          )}
+        <Chip tone="neutral" size="xs" className="px-[9px] py-[3px]">
           {t(`reason_${visit.reason}`)}
-        </Badge>
+        </Chip>
       </div>
 
-      <div className="border-line mt-auto flex min-w-0 flex-wrap items-center justify-between gap-3 border-t pt-3">
+      <div className="mt-auto flex min-w-0 flex-wrap items-center justify-between gap-2 border-t border-(--row-line) pt-3">
         <p
           className={cn(
-            "text-meta min-w-0 flex-1 text-pretty",
+            "min-w-0 flex-1 text-[12.5px] text-pretty",
             evaluation?.returnedComment && !finished
               ? "text-warning"
               : "text-ink-secondary",
@@ -127,7 +123,9 @@ export function VisitCard({
         {evaluation && finished ? (
           <Button
             type="button"
-            variant="outline"
+            variant="quiet"
+            size="mock-38"
+            className="px-4 font-bold"
             onClick={() => onOpen(evaluation.id)}
             aria-label={fill("viewFor", { pet: visit.pet.name })}
           >
@@ -136,7 +134,8 @@ export function VisitCard({
         ) : mayRun ? (
           <Button
             type="button"
-            className="yy-cta"
+            size="mock-38"
+            className="px-4 font-bold [--sh-cta:none]"
             disabled={busy}
             onClick={evaluation ? () => onOpen(evaluation.id) : onStart}
             aria-label={fill(evaluation ? "continueFor" : "startFor", {

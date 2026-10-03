@@ -1,8 +1,6 @@
 "use client";
 
-import { Wallet } from "lucide-react";
-
-import { Badge } from "@/components/ui/badge";
+import { Chip } from "@/components/ui/chip";
 import { initialsOf } from "@/lib/bookings/wizard/client-search";
 import type { EstimateTotals } from "@/lib/bookings/wizard/estimate-totals";
 import type { QuoteLine } from "@/lib/bookings/quote/assemble";
@@ -34,38 +32,37 @@ export function EstimateCard({
   return (
     <section
       aria-labelledby="wizard-estimate"
-      className="border-line bg-card flex flex-col gap-3.5 rounded-2xl border p-5"
+      className="border-line bg-card flex flex-col gap-3.5 rounded-[22px] border p-5"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col gap-0.5">
-          <span id="wizard-estimate" className="text-meta text-ink-tertiary">
+          <span id="wizard-estimate" className="text-ink-tertiary text-[13px]">
             {t("estimatedTotal")}
           </span>
-          <span className="text-heading text-[30px]/[1.15] font-bold tracking-[-0.02em] tabular-nums">
+          <span className="text-heading text-[30px] font-bold tracking-[-0.02em] tabular-nums">
             {money(totals.total)}
           </span>
         </div>
         {deposit && deposit.amount > 0 ? (
-          <Badge variant="pending" className="tabular-nums">
-            <Wallet aria-hidden />
+          <Chip tone="warning" size="sm" className="px-2.5 py-1 tabular-nums">
             {fill(t("wizDepositChip"), { amount: money(deposit.amount) })}
-          </Badge>
+          </Chip>
         ) : null}
       </div>
 
       {lines.length > 0 ? (
-        <ul className="border-line flex flex-col gap-2.5 border-t pt-3">
+        <ul className="border-line-soft flex flex-col gap-2.5 border-t pt-3">
           {lines.map((line) => (
             <li key={line.key} className="flex justify-between gap-2.5">
               <div className="flex min-w-0 flex-col">
-                <span className="text-body text-body-ink">{line.label}</span>
+                <span className="text-body-ink text-[14px]">{line.label}</span>
                 {line.detail ? (
-                  <span className="text-meta text-ink-tertiary tabular-nums">
+                  <span className="text-[12px] text-(--dow-ink) tabular-nums">
                     {line.detail}
                   </span>
                 ) : null}
               </div>
-              <span className="text-body text-body-ink font-medium whitespace-nowrap tabular-nums">
+              <span className="text-body-ink text-[14px] font-medium whitespace-nowrap tabular-nums">
                 {line.amount === 0
                   ? t("priceFree")
                   : line.amount < 0
@@ -77,7 +74,7 @@ export function EstimateCard({
         </ul>
       ) : null}
 
-      <dl className="border-line text-meta flex flex-col gap-1.5 border-t pt-3 tabular-nums">
+      <dl className="border-line-soft flex flex-col gap-1.5 border-t pt-3 text-[13.5px] tabular-nums">
         <TotalRow label={t("subtotal")} value={money(totals.subtotal)} />
         {totals.taxes.map((tax) => {
           // As many decimals as the rate has: "GST 5%", "QST 9.975%".
@@ -150,18 +147,20 @@ export function ClientSummaryCard({
   const t = useShellText("booking");
   const since = client.createdAt ? client.createdAt.slice(0, 4) : null;
   return (
-    <section className="border-line bg-card flex flex-col gap-2.5 rounded-2xl border px-5 py-[18px]">
+    <section className="border-line bg-card flex flex-col gap-2.5 rounded-[22px] border px-5 py-[18px]">
       <div className="flex items-center gap-3">
         <span
           aria-hidden
-          className="bg-surface-inset text-body-ink flex size-[42px] shrink-0 items-center justify-center rounded-full text-[14px] font-bold"
+          className="bg-acc-soft text-acc-soft-text flex size-[42px] shrink-0 items-center justify-center rounded-full text-[14px] font-bold"
         >
           {initialsOf(client.name)}
         </span>
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="text-body-strong text-body-ink">{client.name}</span>
+          <span className="text-body-ink text-[15px] font-semibold">
+            {client.name}
+          </span>
           {since ? (
-            <span className="text-meta text-ink-tertiary">
+            <span className="text-ink-tertiary text-[12.5px]">
               {fill(t("wizClientSince"), { year: since })}
             </span>
           ) : null}
@@ -170,13 +169,13 @@ export function ClientSummaryCard({
           <button
             type="button"
             onClick={onEdit}
-            className="text-meta text-primary hover:text-primary-hover focus-visible:outline-primary inline-flex min-h-10 items-center rounded-full px-1 font-semibold focus-visible:outline-2 max-lg:min-h-12"
+            className="text-acc-deep focus-visible:outline-primary inline-flex min-h-10 items-center rounded-full px-1 text-[13px] font-semibold focus-visible:outline-2 max-lg:min-h-12"
           >
             {t("edit")}
           </button>
         ) : null}
       </div>
-      <div className="text-meta text-ink-secondary flex flex-col gap-0.5 wrap-break-word">
+      <div className="text-ink-secondary flex flex-col gap-[3px] text-[13px] wrap-break-word">
         {client.phone ? <span>{client.phone}</span> : null}
         {client.email ? <span>{client.email}</span> : null}
         {cardLabel ? (

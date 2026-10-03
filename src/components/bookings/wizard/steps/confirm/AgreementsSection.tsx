@@ -1,15 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Check,
-  CircleCheck,
-  Clock3,
-  Mail,
-  MessageSquare,
-  Send,
-  TriangleAlert,
-} from "lucide-react";
+
 import { toast } from "sonner";
 
 import { WaiverContentRenderer } from "@/components/additional-features/waivers/WaiverContentRenderer";
@@ -17,8 +9,8 @@ import {
   SignaturePad,
   type SignatureResult,
 } from "@/components/shared/SignaturePad";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/ui/chip";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import type { WaiverBlock } from "@/data/additional-features";
@@ -80,14 +72,16 @@ export function AgreementsSection({
 
   return (
     <div className="flex flex-col gap-2.5 py-3">
-      <p className="text-body-strong text-body-ink">{t("wizAgreements")}</p>
+      <p className="text-body-ink text-[14.5px] font-semibold">
+        {t("wizAgreements")}
+      </p>
       {applicable.map((waiver) => {
         const unsigned = pendingIds.has(waiver.id);
         const isOpen = open === waiver.id;
         return (
           <div
             key={waiver.id}
-            className="border-line bg-surface-inset flex flex-col gap-2.5 rounded-lg border px-3.5 py-3"
+            className="flex flex-col gap-2.5 rounded-[14px] border border-(--agr-line) bg-(--agr-bg) px-3.5 py-3"
           >
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
               {/* The name keeps a line of its own on a phone: the chip and
@@ -97,37 +91,36 @@ export function AgreementsSection({
                   aria-hidden
                   className={
                     unsigned
-                      ? "bg-warning-dot size-[7px] shrink-0 rounded-full"
-                      : "bg-success-dot size-[7px] shrink-0 rounded-full"
+                      ? "size-2 shrink-0 rounded-full bg-(--dot-warn,var(--warning-dot))"
+                      : "size-2 shrink-0 rounded-full bg-(--dot-ok,var(--success-dot))"
                   }
                 />
-                <span className="text-body text-body-ink min-w-0 font-medium wrap-break-word">
+                <span className="text-body-ink min-w-0 text-[14px] font-medium wrap-break-word">
                   {waiver.name}
                 </span>
               </span>
               <span className="ml-auto flex flex-wrap items-center gap-2">
                 {!unsigned ? (
-                  <Badge variant="confirmed">
-                    <CircleCheck aria-hidden />
+                  <Chip tone="success" size="sm" className="px-2.5 py-[3px]">
                     {justSigned.includes(waiver.id)
                       ? t("wizSignedJustNow")
                       : t("wizSigned")}
-                  </Badge>
+                  </Chip>
                 ) : !isCustomer && linkSent ? (
-                  <Badge variant="checkedIn">
-                    <Send aria-hidden />
+                  <Chip tone="info" size="sm" className="px-2.5 py-[3px]">
                     {t("wizLinkSent")}
-                  </Badge>
+                  </Chip>
                 ) : (
-                  <Badge variant="pending">
-                    <Clock3 aria-hidden />
+                  <Chip tone="warning" size="sm" className="px-2.5 py-[3px]">
                     {t("wizNotSigned")}
-                  </Badge>
+                  </Chip>
                 )}
                 {unsigned && clientRef !== undefined ? (
                   <Button
                     type="button"
-                    variant={isCustomer ? "default" : "outline"}
+                    variant={isCustomer ? "default" : "quiet"}
+                    size="mock-32"
+                    className="[--sh-cta:none]"
                     onClick={() => setOpen(isOpen ? null : waiver.id)}
                     aria-expanded={isOpen}
                   >
@@ -159,13 +152,9 @@ export function AgreementsSection({
       {!isCustomer && pending.length > 0 ? (
         <div
           role="note"
-          className="border-warning bg-card flex flex-col gap-2.5 rounded-lg border p-3.5"
+          className="flex flex-col gap-2.5 rounded-[14px] border border-(--note-line) bg-(--note-bg) p-3.5"
         >
-          <p className="text-meta text-body-ink flex gap-2 text-pretty">
-            <TriangleAlert
-              aria-hidden
-              className="text-warning mt-0.5 size-4 shrink-0"
-            />
+          <p className="text-meta flex gap-2 text-pretty text-(--note-ink)">
             <span>
               {fill(t("wizNotSignedYet"), { name: clientFirstName })}{" "}
               <strong className="font-semibold">{t("wizPendingWord")}</strong>{" "}
@@ -210,11 +199,10 @@ function LinkButton({
   onSend: () => void;
 }) {
   const t = useShellText("booking");
-  const Glyph = via === "email" ? Mail : MessageSquare;
   if (sentTo) {
     return (
-      <span className="text-meta text-success inline-flex min-h-10 items-center gap-1.5 font-semibold max-lg:min-h-12">
-        <Check aria-hidden className="size-4" />
+      <span className="border-line-strong bg-card text-success inline-flex h-9 items-center rounded-full border px-4 text-[13px] font-semibold">
+        ✓{" "}
         {fill(t(via === "email" ? "wizEmailedTo" : "wizTextedTo"), {
           to: sentTo,
         })}
@@ -224,12 +212,13 @@ function LinkButton({
   return (
     <Button
       type="button"
-      variant="outline"
+      variant="quiet"
+      size="mock-36"
+      className="text-[13px]"
       disabled={disabled}
       loading={busy}
       onClick={onSend}
     >
-      <Glyph aria-hidden />
       {t(via === "email" ? "wizEmailSigningLink" : "wizTextSigningLink")}
     </Button>
   );
@@ -268,7 +257,7 @@ function SignPanel({
       <div
         tabIndex={0}
         aria-label={waiver.name}
-        className="border-line bg-card text-meta text-ink-secondary max-h-[110px] overflow-auto rounded-xl border px-3.5 py-3"
+        className="border-line bg-card text-ink-secondary max-h-[110px] overflow-auto rounded-[12px] border px-3.5 py-3 text-[13px] leading-[1.55]"
       >
         <WaiverContentRenderer
           blocks={waiver.blocks as WaiverBlock[]}
@@ -278,7 +267,7 @@ function SignPanel({
       </div>
       <label
         htmlFor={consentId}
-        className="text-meta text-body-ink flex cursor-pointer items-center gap-2.5"
+        className="text-body-ink flex cursor-pointer items-center gap-2.5 text-[13.5px]"
       >
         <Checkbox
           id={consentId}
@@ -308,12 +297,13 @@ function SignPanel({
           onChange={(event) => setName(event.target.value)}
           placeholder={t("wizTypeFullName")}
           aria-label={t("wizTypeFullName")}
-          className="min-w-[200px] flex-1 italic"
+          className="h-[42px] min-w-[200px] flex-1 text-[14px] italic max-lg:h-[42px]"
         />
         <Button
           type="button"
           disabled={!ready}
           loading={sign.isPending}
+          className="[&:disabled:not([data-loading])]:bg-line h-[42px] px-5 text-[14px] [--sh-cta:none] max-lg:h-[42px]"
           onClick={() =>
             sign.mutate(
               {

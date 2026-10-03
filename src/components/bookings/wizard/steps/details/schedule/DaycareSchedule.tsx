@@ -212,7 +212,7 @@ export function DaycareSchedule({
 
   const dayTypes = (
     <div className="flex flex-col gap-2.5">
-      <p className="text-micro text-ink-tertiary uppercase">
+      <p className="text-ink-tertiary text-[11.5px] font-semibold tracking-[0.07em] uppercase">
         {t("wizDayType")}
       </p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -268,12 +268,12 @@ export function DaycareSchedule({
                   }
                 }
               }}
-              className="border-line-strong bg-card hover:border-ink-disabled focus-visible:outline-primary flex min-h-12 flex-col gap-0.5 rounded-xl border px-3.5 py-3 text-left transition-[box-shadow,border-color] duration-120 ease-[ease] focus-visible:outline-2 focus-visible:outline-offset-2 data-[on=true]:border-transparent data-[on=true]:shadow-[inset_0_0_0_2px_var(--primary)] motion-reduce:transition-none"
+              className="mk-opt focus-visible:outline-primary flex min-h-12 flex-col gap-0.5 rounded-[16px] px-3.5 py-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2"
             >
-              <span className="text-body-strong text-body-ink">
+              <span className="text-body-ink text-[14.5px] font-semibold">
                 {option.name}
               </span>
-              <span className="text-meta text-ink-tertiary tabular-nums">
+              <span className="text-ink-tertiary text-[12.5px] tabular-nums">
                 {option.maxDurationHours != null
                   ? fill(t("wizDayTypeSub"), {
                       price: formatMoney(option.price, locale, {
@@ -290,7 +290,7 @@ export function DaycareSchedule({
         })}
       </div>
       {offered.length === 0 && menu ? (
-        <p className="text-meta text-ink-secondary">{t("wizNoDayType")}</p>
+        <p className="text-ink-secondary text-[13px]">{t("wizNoDayType")}</p>
       ) : null}
       {halfHours ? (
         <div
@@ -309,6 +309,7 @@ export function DaycareSchedule({
                 onPart(value);
                 reset(value);
               }}
+              className="px-4"
             >
               {value === "am" ? t("wizMorningAm") : t("wizAfternoonPm")}
             </ChoicePill>

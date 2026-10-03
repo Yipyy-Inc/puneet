@@ -35,7 +35,8 @@ export function ConfirmationStep({
       <RadioCards
         labelledBy="ev-confirm-title"
         value={autoConfirm ? "auto" : "review"}
-        className="grid-cols-[repeat(auto-fit,minmax(min(100%,200px),1fr))]"
+        compact
+        className="grid-cols-[repeat(auto-fit,minmax(min(100%,200px),1fr))] gap-2"
         options={[
           {
             value: "review",
@@ -56,10 +57,10 @@ export function ConfirmationStep({
           htmlFor="ev-deposit"
           className="flex min-w-[180px] flex-1 flex-col gap-0.5"
         >
-          <span className="text-body-strong text-body-ink">
+          <span className="text-body-ink text-[14px] font-semibold">
             {t("depositTake")}
           </span>
-          <span className="text-meta text-ink-tertiary">
+          <span className="text-ink-tertiary text-[12.5px]">
             {t(deposit.percent === 100 ? "depositFullHelp" : "depositHalfHelp")}
           </span>
         </label>

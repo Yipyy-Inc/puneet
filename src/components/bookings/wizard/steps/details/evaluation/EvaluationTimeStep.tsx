@@ -1,7 +1,5 @@
 "use client";
 
-import { Clock, Star } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { useEvaluationAvailability } from "@/lib/api/evaluation-availability";
 import { isoDay } from "@/lib/bookings/wizard/calendar-month";
@@ -119,14 +117,20 @@ export function EvaluationTimeStep({
   return (
     <div className="flex flex-col gap-4">
       {earliest ? (
-        <div className="border-line bg-card flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border px-5 py-3.5">
-          <span className="text-micro text-primary-hover uppercase">
+        // The evaluation mock's panel (2026-10-02): the accent's palest tint.
+        <div className="flex flex-wrap items-center gap-2.5 rounded-[16px] border border-(--acc-line) bg-(--acc-pale) px-4 py-3">
+          <span className="text-acc-soft-text text-[11px] font-bold tracking-[0.07em] uppercase">
             {t("wizEarliestOpening")}
           </span>
-          <span className="text-body-strong text-body-ink min-w-0 flex-1">
+          <span className="text-body-ink min-w-0 flex-1 text-[14.5px] font-bold">
             {formatWeekdayDate(earliest.date, locale)}
           </span>
-          <Button type="button" onClick={() => pickDay(earliest.date)}>
+          <Button
+            type="button"
+            size="mock-34"
+            className="font-bold [--sh-cta:none]"
+            onClick={() => pickDay(earliest.date)}
+          >
             {t("wizEvJumpThere")}
           </Button>
         </div>
@@ -135,7 +139,7 @@ export function EvaluationTimeStep({
       <div
         role="radiogroup"
         aria-label={t("wizEvDay")}
-        className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1.5"
+        className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1.5 [scrollbar-width:none]"
       >
         {days.map((day) => {
           const closed = day.status === "closed";
@@ -155,15 +159,18 @@ export function EvaluationTimeStep({
               data-on={on}
               data-closed={blocked || undefined}
               onClick={() => !blocked && pickDay(day.date)}
-              className="border-line text-body-ink focus-visible:outline-primary data-[closed=true]:bg-surface-inset data-[closed=true]:text-ink-disabled data-[on=true]:bg-primary data-[on=true]:text-primary-foreground bg-card flex min-h-[72px] w-[74px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl border px-1 py-2.5 focus-visible:outline-2 focus-visible:outline-offset-2 data-[closed=true]:cursor-not-allowed data-[on=true]:border-transparent"
+              className="group border-line-strong text-body-ink focus-visible:outline-primary data-[closed=true]:bg-surface-inset-2 data-[closed=true]:text-ink-disabled data-[on=true]:border-primary data-[on=true]:bg-primary data-[on=true]:text-primary-foreground bg-card flex w-[74px] shrink-0 flex-col items-center gap-0.5 rounded-[16px] border py-2.5 focus-visible:outline-2 focus-visible:outline-offset-2 data-[closed=true]:cursor-not-allowed"
             >
-              <span className="text-micro normal-case">
+              <span className="text-[11.5px] font-semibold">
                 {formatWeekday(date.getDay(), locale, "short")}
               </span>
-              <span className="text-section tabular-nums">
+              <span className="text-[20px] font-extrabold tabular-nums">
                 {date.getDate()}
               </span>
-              <span className="text-micro normal-case">
+              <span
+                data-free={(!blocked && !on) || undefined}
+                className="data-[free=true]:text-success text-[10.5px] font-bold group-data-[on=true]:text-white/85"
+              >
                 {closed
                   ? t("wizClosed")
                   : open > 0
@@ -176,11 +183,7 @@ export function EvaluationTimeStep({
       </div>
 
       {dropOff && data ? (
-        <p className="border-line bg-card text-meta text-body-ink flex gap-2.5 rounded-xl border px-4 py-3">
-          <Clock
-            aria-hidden
-            className="text-ink-secondary mt-0.5 size-4 shrink-0"
-          />
+        <p className="text-meta rounded-[14px] border border-(--note-line) bg-(--note-bg) px-3.5 py-3 text-(--note-ink)">
           {fill(t("wizEvDropOffNote"), {
             from: time(dropOff.start),
             to: time(dropOff.end),
@@ -190,15 +193,15 @@ export function EvaluationTimeStep({
       ) : null}
 
       {isError ? (
-        <p className="text-meta text-destructive">{t("wizTimesNotLoaded")}</p>
+        <p className="text-bad text-[13.5px]">{t("wizTimesNotLoaded")}</p>
       ) : groups.length === 0 ? (
-        <p className="text-meta text-ink-tertiary">
+        <p className="text-ink-tertiary text-[13.5px]">
           {isPending ? t("wizFindingTimes") : t("wizNoOpeningsDay")}
         </p>
       ) : (
         groups.map(({ group, starts }) => (
           <div key={group} className="flex flex-col gap-2">
-            <span className="text-micro text-ink-tertiary uppercase">
+            <span className="text-ink-tertiary text-[11px] font-bold tracking-[0.07em]">
               {groupLabel(group)}
             </span>
             <div
@@ -221,17 +224,17 @@ export function EvaluationTimeStep({
                     data-on={on}
                     data-off={!takes || undefined}
                     onClick={() => takes && shown && pickStart(shown, start)}
-                    className="border-line text-body-ink focus-visible:outline-primary data-[off=true]:bg-surface-inset data-[off=true]:text-ink-disabled data-[on=true]:bg-primary data-[on=true]:text-primary-foreground bg-card flex min-h-[50px] flex-col items-center justify-center gap-px rounded-xl border px-1.5 py-1.5 focus-visible:outline-2 focus-visible:outline-offset-2 data-[off=true]:cursor-not-allowed data-[on=true]:border-transparent max-lg:min-h-12"
+                    className="border-line-strong text-body-ink focus-visible:outline-primary data-[off=true]:bg-surface-inset-2 data-[off=true]:text-ink-disabled data-[on=true]:border-primary data-[on=true]:bg-primary data-[on=true]:text-primary-foreground bg-card group flex min-h-[50px] flex-col items-center justify-center gap-px rounded-[14px] border px-1.5 py-1.5 focus-visible:outline-2 focus-visible:outline-offset-2 data-[off=true]:cursor-not-allowed"
                   >
-                    <span className="text-body-strong tabular-nums">
+                    <span className="text-[15px] font-bold tabular-nums">
                       {time(start.start)}
                     </span>
                     {full ? (
-                      <span className="text-micro normal-case">
+                      <span className="text-[11px] font-semibold">
                         {t("wizFull")}
                       </span>
                     ) : !takes && evaluatorId ? (
-                      <span className="text-micro normal-case">
+                      <span className="text-[11px] font-semibold">
                         {fill(t("wizEvNotFree"), {
                           name: shortPersonName(
                             evaluatorName(evaluatorId) ?? "",
@@ -240,8 +243,8 @@ export function EvaluationTimeStep({
                       </span>
                     ) : showLeft ? (
                       <span
-                        data-low={start.left === 1 || undefined}
-                        className="text-micro data-[low=true]:text-warning normal-case"
+                        data-low={(start.left === 1 && !on) || undefined}
+                        className="text-ink-tertiary data-[low=true]:text-warning text-[11px] font-semibold group-data-[on=true]:text-white/80"
                       >
                         {fill(t("wizEvLeft"), {
                           left: start.left,
@@ -259,7 +262,7 @@ export function EvaluationTimeStep({
 
       {data?.picksEvaluator && data.evaluators.length > 0 ? (
         <div className="flex flex-col gap-2 pt-1">
-          <span className="text-micro text-ink-tertiary uppercase">
+          <span className="text-ink-tertiary text-[11px] font-bold tracking-[0.07em] uppercase">
             {t("wizEvEvaluator")}
           </span>
           <div
@@ -284,24 +287,22 @@ export function EvaluationTimeStep({
                   aria-checked={on}
                   data-on={on}
                   onClick={() => pickEvaluator(evaluator.id)}
-                  className="border-line-strong bg-card hover:border-ink-disabled focus-visible:outline-primary flex min-h-12 min-w-0 items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-[box-shadow,border-color] duration-120 ease-[ease] focus-visible:outline-2 focus-visible:outline-offset-2 data-[on=true]:border-transparent data-[on=true]:shadow-[inset_0_0_0_2px_var(--primary)] motion-reduce:transition-none"
+                  className="border-line-strong bg-card focus-visible:outline-primary data-[on=true]:border-primary flex min-w-0 items-center gap-2.5 rounded-[14px] border-[1.5px] px-3 py-2.5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 data-[on=true]:bg-(--acc-pale)"
                 >
                   <span
                     aria-hidden
-                    className="bg-surface-inset text-body-ink flex size-[34px] shrink-0 items-center justify-center rounded-full text-[12px] font-bold"
+                    className="bg-surface-inset-2 text-body-ink flex size-[34px] shrink-0 items-center justify-center rounded-full text-[12px] font-bold"
                   >
-                    {evaluator.id === null ? (
-                      <Star className="size-4" />
-                    ) : (
-                      initialsOf(evaluator.name ?? "")
-                    )}
+                    {evaluator.id === null
+                      ? "★"
+                      : initialsOf(evaluator.name ?? "")}
                   </span>
                   <span className="flex min-w-0 flex-col">
-                    <span className="text-body-strong text-body-ink truncate">
+                    <span className="text-body-ink truncate text-[14px] font-semibold">
                       {evaluator.name}
                     </span>
                     {evaluator.role ? (
-                      <span className="text-meta text-ink-tertiary truncate">
+                      <span className="text-ink-tertiary truncate text-[12px]">
                         {evaluator.role}
                       </span>
                     ) : null}

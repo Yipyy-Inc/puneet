@@ -1,8 +1,5 @@
 "use client";
 
-import { CircleCheck, Info, TriangleAlert } from "lucide-react";
-
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDecimal } from "@/lib/i18n/format";
@@ -47,12 +44,7 @@ function SupplyStatus({
     `${formatDecimal(n, locale, 2)} ${unitWord(t, draft.unit, n, locale, draft.customUnit)}`;
 
   if (check.kind === "unscheduled") {
-    return (
-      <Badge variant="cancelled" className="h-auto min-h-9 whitespace-normal">
-        <Info aria-hidden />
-        {t("medsSupplyUnscheduled")}
-      </Badge>
-    );
+    return <Status tone="neutral">{t("medsSupplyUnscheduled")}</Status>;
   }
   const rounded =
     spec.fraction && check.exact !== check.need
@@ -62,28 +54,43 @@ function SupplyStatus({
       : "";
   if (check.kind === "short") {
     return (
-      <Badge variant="pending" className="h-auto min-h-9 whitespace-normal">
-        <TriangleAlert aria-hidden />
+      <Status tone="short">
         {fill(t("medsSupplyShort"), {
           short: words(check.short),
           need: formatDecimal(check.need, locale, 2),
         })}
-      </Badge>
+      </Status>
     );
   }
   if (check.kind === "enough") {
     return (
-      <Badge variant="confirmed" className="h-auto min-h-9 whitespace-normal">
-        <CircleCheck aria-hidden />
+      <Status tone="enough">
         {fill(t("medsSupplyEnough"), { need: words(check.need), rounded })}
-      </Badge>
+      </Status>
     );
   }
   return (
-    <Badge variant="cancelled" className="h-auto min-h-9 whitespace-normal">
-      <Info aria-hidden />
+    <Status tone="neutral">
       {fill(t("medsSupplyNeeded"), { need: words(check.need), rounded })}
-    </Badge>
+    </Status>
+  );
+}
+
+/** The mock's supply line: a 10px-cornered wash, its words in the tone's ink. */
+function Status({
+  tone,
+  children,
+}: {
+  tone: "neutral" | "short" | "enough";
+  children: React.ReactNode;
+}) {
+  return (
+    <p
+      data-tone={tone}
+      className="text-ink-secondary data-[tone=enough]:bg-wash-success data-[tone=enough]:text-success rounded-[10px] bg-(--care-track) px-3 py-2 text-[14px] font-medium data-[tone=short]:bg-(--note-bg) data-[tone=short]:text-(--note-ink)"
+    >
+      {children}
+    </p>
   );
 }
 
@@ -114,7 +121,7 @@ export function EditorSupply({
         <div className="flex min-w-0 flex-col gap-2.5">
           <FieldLabel htmlFor="meds-supply">{t("medsSupplyLabel")}</FieldLabel>
           <div className="flex flex-wrap items-center gap-3.5">
-            <div className="border-line-strong bg-card has-focus-visible:border-primary flex min-h-10 items-center gap-2 rounded-full border px-4 max-lg:min-h-12">
+            <div className="border-line-strong bg-card has-focus-visible:border-primary flex h-12 items-center gap-2 rounded-[12px] border px-3.5">
               <input
                 id="meds-supply"
                 type="number"
@@ -130,9 +137,9 @@ export function EditorSupply({
                 onChange={(event) =>
                   step.update({ supply: event.target.value })
                 }
-                className="text-body-ink text-body-strong w-16 [appearance:textfield] border-0 bg-transparent tabular-nums outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                className="text-body-ink w-16 [appearance:textfield] border-0 bg-transparent text-[16px] tabular-nums outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               />
-              <span className="text-body text-ink-tertiary">
+              <span className="text-ink-tertiary text-[15px]">
                 {unitWord(t, draft.unit, 2, locale, draft.customUnit)}
               </span>
             </div>
@@ -142,7 +149,7 @@ export function EditorSupply({
       ) : null}
 
       {rules.label ? (
-        <div className="border-line flex items-start gap-3 rounded-xl border px-4 py-3.5">
+        <div className="border-line flex items-start gap-3 rounded-[12px] border px-4 py-3.5">
           <Checkbox
             id="meds-label-confirmed"
             checked={draft.labelConfirmed}
@@ -155,10 +162,10 @@ export function EditorSupply({
             htmlFor="meds-label-confirmed"
             className="flex cursor-pointer flex-col gap-0.5"
           >
-            <span className="text-body-strong text-body-ink">
+            <span className="text-body-ink text-[15px] font-medium">
               {t("medsLabelConfirm")}
             </span>
-            <span className="text-meta text-ink-tertiary">
+            <span className="text-ink-tertiary text-[13px]">
               {t("medsLabelConfirmHelp")}
             </span>
           </label>
@@ -186,7 +193,7 @@ export function EditorSupply({
         <div className="flex min-w-0 flex-col gap-2">
           <FieldLabel htmlFor="meds-notes">
             {t("medsNotesLabel")}{" "}
-            <span className="text-ink-tertiary font-normal">
+            <span className="font-normal text-(--care-micro)">
               {t("medsOptional")}
             </span>
           </FieldLabel>
@@ -197,12 +204,13 @@ export function EditorSupply({
             value={draft.notes}
             placeholder={fill(t("medsNotesPlaceholder"), { pet: petName })}
             onChange={(event) => step.update({ notes: event.target.value })}
+            className="rounded-[12px] px-3.5 py-3 text-[15px] leading-[22.5px]"
           />
         </div>
       ) : null}
 
       {show.saveToProfile ? (
-        <div className="border-line flex items-start gap-3 rounded-xl border px-4 py-3.5">
+        <div className="flex items-start gap-3 rounded-[12px] bg-(--care-card-on) px-4 py-3.5">
           <Checkbox
             id="meds-save-profile"
             checked={draft.saveToProfile}
@@ -215,10 +223,10 @@ export function EditorSupply({
             htmlFor="meds-save-profile"
             className="flex cursor-pointer flex-col gap-0.5"
           >
-            <span className="text-body-strong text-body-ink">
+            <span className="text-acc-soft-text text-[15px] font-medium">
               {t("medsSaveToProfile")}
             </span>
-            <span className="text-meta text-ink-tertiary">
+            <span className="text-acc-deep text-[13px]">
               {t("medsSaveToProfileHelp")}
             </span>
           </label>

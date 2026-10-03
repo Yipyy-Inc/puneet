@@ -1,24 +1,13 @@
 "use client";
 
-import {
-  Bed,
-  CircleCheck,
-  ClipboardCheck,
-  Clock3,
-  GraduationCap,
-  PawPrint,
-  Scissors,
-  Sun,
-  type LucideIcon,
-} from "lucide-react";
-
-import { Badge } from "@/components/ui/badge";
+import { Chip } from "@/components/ui/chip";
 import { PetAvatar } from "@/components/ui/pet-avatar";
 import {
   joinNames,
   type PreviewStatus,
 } from "@/lib/bookings/wizard/confirm-view";
 import { useShellText } from "@/lib/shell/use-shell-text";
+import { cn } from "@/lib/utils";
 import type { Pet } from "@/types/pet";
 
 // ============================================================================
@@ -26,17 +15,8 @@ import type { Pet } from "@/types/pet";
 // for, the status the booking will be created in, and when — in one card.
 // ============================================================================
 
-const KIND_GLYPH: Record<string, LucideIcon> = {
-  boarding: Bed,
-  daycare: Sun,
-  grooming: Scissors,
-  training: GraduationCap,
-  evaluation: ClipboardCheck,
-};
-
 export function ConfirmHero({
   pets,
-  service,
   kindLabel,
   status,
   line,
@@ -47,33 +27,36 @@ export function ConfirmHero({
   status: PreviewStatus;
   line: string;
 }) {
-  const Glyph = KIND_GLYPH[service] ?? PawPrint;
   return (
-    <div className="border-line bg-card flex flex-wrap items-center gap-4 rounded-2xl border px-[22px] py-5">
-      <div className="flex shrink-0 pl-1">
-        {pets.map((pet, index) => (
-          <PetAvatar
+    <div className="border-line bg-card flex flex-wrap items-center gap-4 rounded-[22px] border px-[22px] py-5">
+      <div className="flex shrink-0">
+        {pets.map((pet) => (
+          // The mock's hero circles: 56px, a 2px accent ring, white between.
+          <span
             key={pet.id}
-            name={pet.name}
-            src={pet.imageUrl}
-            size="lg"
-            className={index > 0 ? "-ml-2.5" : undefined}
-          />
+            className="border-primary -mr-2.5 rounded-full border-2 shadow-[0_0_0_3px_var(--card)]"
+          >
+            <PetAvatar
+              name={pet.name}
+              src={pet.imageUrl}
+              size="mk-52"
+              surface="accent"
+            />
+          </span>
         ))}
       </div>
-      <div className="flex min-w-[220px] flex-1 flex-col gap-1.5 pl-1">
+      <div className="flex min-w-[220px] flex-1 flex-col gap-[5px] pl-3">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-heading text-[24px]/[1.2] font-bold tracking-[-0.02em] max-sm:text-[20px]">
+          <span className="text-heading text-[24px] font-bold tracking-[-0.02em] max-sm:text-[20px]">
             {joinNames(pets.map((pet) => pet.name))}
           </span>
-          <Badge variant="inService">
-            <Glyph aria-hidden />
+          <Chip tone="violet" size="md" className="py-[3px]">
             {kindLabel}
-          </Badge>
+          </Chip>
           <StatusChip status={status} />
         </div>
         {line ? (
-          <p className="text-body text-ink-secondary tabular-nums">{line}</p>
+          <p className="text-ink-secondary text-[14px] tabular-nums">{line}</p>
         ) : null}
       </div>
     </div>
@@ -81,36 +64,29 @@ export function ConfirmHero({
 }
 
 /** The status the booking will be created in, as the done screen repeats it. */
-export function StatusChip({ status }: { status: PreviewStatus }) {
+export function StatusChip({
+  status,
+  className,
+}: {
+  status: PreviewStatus;
+  className?: string;
+}) {
   const t = useShellText("booking");
-  if (status === "pending_agreements") {
-    return (
-      <Badge variant="pending">
-        <Clock3 aria-hidden />
-        {t("wizStatusPendingAgreements")}
-      </Badge>
-    );
-  }
-  if (status === "request") {
-    return (
-      <Badge variant="checkedIn">
-        <Clock3 aria-hidden />
-        {t("wizStatusRequest")}
-      </Badge>
-    );
-  }
-  if (status === "deposit_due") {
-    return (
-      <Badge variant="checkedIn">
-        <CircleCheck aria-hidden />
-        {t("wizStatusDepositDue")}
-      </Badge>
-    );
-  }
+  const tone =
+    status === "pending_agreements"
+      ? "warning"
+      : status === "request" || status === "deposit_due"
+        ? "info"
+        : "success";
   return (
-    <Badge variant="confirmed">
-      <CircleCheck aria-hidden />
-      {t("wizStatusConfirmed")}
-    </Badge>
+    <Chip tone={tone} size="md" className={cn("py-[3px]", className)}>
+      {status === "pending_agreements"
+        ? t("wizStatusPendingAgreements")
+        : status === "request"
+          ? t("wizStatusRequest")
+          : status === "deposit_due"
+            ? t("wizStatusDepositDue")
+            : t("wizStatusConfirmed")}
+    </Chip>
   );
 }

@@ -1,7 +1,6 @@
 "use client";
 
-import { Info, Pill, Plus } from "lucide-react";
-
+import { LookScope } from "@/components/look/look-context";
 import { Button } from "@/components/ui/button";
 import { ChoicePill } from "@/components/ui/choice-pill";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -72,155 +71,169 @@ export function MedicationsStep({
   ].filter(Boolean);
 
   return (
-    <div className="flex min-w-0 flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-3.5">
-          <div className="border-line bg-card flex size-12 shrink-0 items-center justify-center rounded-xl border">
-            <Pill className="text-heading size-6" aria-hidden />
+    <LookScope name="care-step">
+      <div className="flex min-w-0 flex-col gap-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3.5">
+            <div
+              aria-hidden
+              className="border-line bg-card grid size-12 shrink-0 place-items-center rounded-[14px] border"
+            >
+              <span className="border-primary h-3 w-[26px] -rotate-45 rounded-[6px] border-2 bg-[linear-gradient(90deg,var(--primary)_50%,transparent_50%)]" />
+            </div>
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <h3 className="text-heading text-[24px] font-semibold tracking-[-0.01em]">
+                {t("medications")}
+              </h3>
+              <p className="text-ink-tertiary text-[15px]">
+                {t(
+                  step.required
+                    ? "medsStepSubtitleRequired"
+                    : "medsStepSubtitle",
+                )}
+              </p>
+            </div>
           </div>
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <h3 className="text-section text-heading">{t("medications")}</h3>
-            <p className="text-body text-ink-secondary">
-              {t(
-                step.required ? "medsStepSubtitleRequired" : "medsStepSubtitle",
-              )}
-            </p>
-          </div>
+          <span className="border-line bg-card text-ink-tertiary shrink-0 rounded-full border px-3 py-2 text-[13px]">
+            {stepLabel}
+          </span>
         </div>
-        <span className="border-line bg-card text-meta text-ink-secondary shrink-0 rounded-full border px-3 py-1.5">
-          {stepLabel}
-        </span>
-      </div>
 
-      {notices.length > 0 ? (
-        <p className="text-meta text-ink-tertiary">{notices.join(" ")}</p>
-      ) : null}
+        {notices.length > 0 ? (
+          <p className="text-ink-tertiary text-[13px]">{notices.join(" ")}</p>
+        ) : null}
 
-      {step.pets.length > 0 ? (
-        <div
-          role="radiogroup"
-          aria-label={t("medsPetTabs")}
-          className="flex flex-wrap gap-2"
-        >
-          {step.pets.map((candidate) => {
-            const active = candidate.id === step.activePetId;
-            return (
-              <ChoicePill
-                key={candidate.id}
-                type="radio"
-                name="meds-pet"
-                value={String(candidate.id)}
-                checked={active}
-                onChange={() => step.selectPet(candidate.id)}
-                className="pr-2"
-              >
-                <span>{candidate.name}</span>
-                <span
-                  data-active={active}
-                  className="bg-surface-inset text-ink-secondary data-[active=true]:bg-primary data-[active=true]:text-primary-foreground text-meta rounded-full px-2 py-0.5 font-semibold whitespace-nowrap tabular-nums"
+        {step.pets.length > 0 ? (
+          <div
+            role="radiogroup"
+            aria-label={t("medsPetTabs")}
+            className="flex flex-wrap gap-2"
+          >
+            {step.pets.map((candidate) => {
+              const active = candidate.id === step.activePetId;
+              return (
+                <ChoicePill
+                  key={candidate.id}
+                  type="radio"
+                  name="meds-pet"
+                  value={String(candidate.id)}
+                  checked={active}
+                  onChange={() => step.selectPet(candidate.id)}
+                  className="gap-2.5 pr-2 pl-4"
                 >
-                  {candidate.none
-                    ? t("medsNoneChip")
+                  <span>{candidate.name}</span>
+                  <span
+                    data-active={active}
+                    className="bg-surface-inset-2 text-ink-tertiary data-[active=true]:bg-primary data-[active=true]:text-primary-foreground rounded-full px-2 py-1 text-[12px] leading-none font-semibold whitespace-nowrap tabular-nums"
+                  >
+                    {candidate.none
+                      ? t("medsNoneChip")
+                      : fill(
+                          t(
+                            isPluralOne(candidate.count, locale)
+                              ? "medsCountOne"
+                              : "medsCountOther",
+                          ),
+                          { count: candidate.count },
+                        )}
+                  </span>
+                </ChoicePill>
+              );
+            })}
+          </div>
+        ) : null}
+
+        {pet ? (
+          <div className="flex min-w-0 flex-col gap-4">
+            {pet.saved.map((item) => (
+              <MedicationCard
+                key={item.id}
+                item={item}
+                stay={step.stay}
+                settings={step.settings}
+                dateless={step.dateless.has(item.id)}
+                photo={Boolean(step.labelPhotos?.photoFor(item.id))}
+                editDisabled={step.editBlocked}
+                onEdit={() => step.edit(item.id)}
+                onRemove={() => step.remove(item.id)}
+              />
+            ))}
+
+            {step.editor ? (
+              <MedicationEditor step={step} petName={petName} />
+            ) : (
+              <div className="bg-card flex flex-col items-start gap-3.5 rounded-[16px] border-[1.5px] border-dashed border-(--care-dash) px-6 py-7">
+                <p className="text-body-ink text-[16px] font-semibold">
+                  {pet.saved.length > 0
+                    ? t("medsAllSavedTitle")
+                    : fill(t("medsEmptyTitle"), { pet: petName })}
+                </p>
+                <p className="text-ink-tertiary text-[14px]">
+                  {pet.saved.length > 0
+                    ? t("medsAllSavedText")
                     : fill(
                         t(
-                          isPluralOne(candidate.count, locale)
-                            ? "medsCountOne"
-                            : "medsCountOther",
+                          step.required
+                            ? "medsEmptyTextRequired"
+                            : "medsEmptyText",
                         ),
-                        { count: candidate.count },
+                        { pet: petName },
                       )}
-                </span>
-              </ChoicePill>
-            );
-          })}
-        </div>
-      ) : null}
-
-      {pet ? (
-        <div className="flex min-w-0 flex-col gap-4">
-          {pet.saved.map((item) => (
-            <MedicationCard
-              key={item.id}
-              item={item}
-              stay={step.stay}
-              settings={step.settings}
-              dateless={step.dateless.has(item.id)}
-              photo={Boolean(step.labelPhotos?.photoFor(item.id))}
-              editDisabled={step.editBlocked}
-              onEdit={() => step.edit(item.id)}
-              onRemove={() => step.remove(item.id)}
-            />
-          ))}
-
-          {step.editor ? (
-            <MedicationEditor step={step} petName={petName} />
-          ) : (
-            <div className="border-line-strong bg-card flex flex-col items-start gap-3.5 rounded-xl border-[1.5px] border-dashed p-6">
-              <p className="text-body-strong text-body-ink">
-                {pet.saved.length > 0
-                  ? t("medsAllSavedTitle")
-                  : fill(t("medsEmptyTitle"), { pet: petName })}
-              </p>
-              <p className="text-body text-ink-secondary">
-                {pet.saved.length > 0
-                  ? t("medsAllSavedText")
-                  : fill(
-                      t(
-                        step.required
-                          ? "medsEmptyTextRequired"
-                          : "medsEmptyText",
-                      ),
-                      { pet: petName },
-                    )}
-              </p>
-              <div className="flex flex-wrap items-center gap-2.5">
-                <Button type="button" onClick={step.add}>
-                  <Plus className="size-4" aria-hidden />
-                  {t("medsAddMedication")}
-                </Button>
-                {step.required && pet.saved.length === 0 ? (
-                  <ChoicePill
-                    type="checkbox"
-                    value="none"
-                    checked={pet.none}
-                    onChange={() => step.setNone(pet.id, !pet.none)}
+                </p>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <Button
+                    type="button"
+                    variant="flat"
+                    size="care"
+                    className="gap-1"
+                    onClick={step.add}
                   >
-                    {fill(t("medsTakesNone"), { pet: petName })}
-                  </ChoicePill>
+                    <span aria-hidden>+</span>
+                    {t("medsAddMedication")}
+                  </Button>
+                  {step.required && pet.saved.length === 0 ? (
+                    <ChoicePill
+                      type="checkbox"
+                      value="none"
+                      checked={pet.none}
+                      onChange={() => step.setNone(pet.id, !pet.none)}
+                    >
+                      {fill(t("medsTakesNone"), { pet: petName })}
+                    </ChoicePill>
+                  ) : null}
+                </div>
+                {step.required && pet.saved.length === 0 && !pet.none ? (
+                  <p className="text-ink-secondary text-[13px]">
+                    {fill(t("medsRequiredHint"), { pet: petName })}
+                  </p>
                 ) : null}
               </div>
-              {step.required && pet.saved.length === 0 && !pet.none ? (
-                <p className="text-meta text-ink-secondary flex items-start gap-2">
-                  <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
-                  {fill(t("medsRequiredHint"), { pet: petName })}
-                </p>
-              ) : null}
-            </div>
-          )}
+            )}
 
-          {!step.editor && pet.saved.length > 0 ? (
-            <button
-              type="button"
-              onClick={step.add}
-              className="border-line-strong bg-card text-primary hover:bg-surface-inset focus-visible:outline-primary text-body-strong flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-dashed px-4 focus-visible:outline-2 focus-visible:outline-offset-2"
-            >
-              <Plus className="size-5" aria-hidden />
-              {fill(t("medsAddAnother"), { pet: petName })}
-            </button>
-          ) : null}
+            {!step.editor && pet.saved.length > 0 ? (
+              <button
+                type="button"
+                onClick={step.add}
+                className="bg-card text-primary focus-visible:outline-primary flex h-13 w-full items-center justify-center gap-1 rounded-[14px] border-[1.5px] border-dashed border-(--care-add-line) px-4 text-[15px] font-semibold focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                <span aria-hidden>+</span>
+                {fill(t("medsAddAnother"), { pet: petName })}
+              </button>
+            ) : null}
 
-          {step.settings.rules.vetContact && pet.count > 0 ? (
-            <VetContactFields
-              petId={pet.id}
-              petName={petName}
-              vet={pet.vet}
-              onChange={(patch) => step.setVet(pet.id, patch)}
-            />
-          ) : null}
-        </div>
-      ) : null}
+            {step.settings.rules.vetContact && pet.count > 0 ? (
+              <VetContactFields
+                petId={pet.id}
+                petName={petName}
+                vet={pet.vet}
+                onChange={(patch) => step.setVet(pet.id, patch)}
+              />
+            ) : null}
+          </div>
+        ) : null}
 
-      <MedicationSchedulePreview step={step} className="lg:hidden" />
-    </div>
+        <MedicationSchedulePreview step={step} className="lg:hidden" />
+      </div>
+    </LookScope>
   );
 }

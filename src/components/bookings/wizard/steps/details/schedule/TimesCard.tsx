@@ -1,8 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Clock } from "lucide-react";
-
 // ============================================================================
 // The card beside the calendar (the client's mock, 2026-10-01). Until the
 // dates are picked it says what will appear; then the stay or the days in a
@@ -31,37 +29,41 @@ export function TimesCard({
   note: string;
 }) {
   return (
-    <section className="border-line bg-card shadow-card flex flex-col gap-[18px] rounded-2xl border p-5">
+    <section className="border-line bg-card flex flex-col gap-[18px] rounded-[22px] border p-5 shadow-(--sh-card)">
       {top}
       {empty ? (
         <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
           <span
             aria-hidden
-            className="border-line-strong text-ink-tertiary flex size-11 items-center justify-center rounded-full border-2"
+            className="text-ink-disabled flex size-11 items-center justify-center rounded-full border-2 border-(--empty-ring) text-[18px]"
           >
-            <Clock className="size-5" />
+            ◷
           </span>
-          <p className="text-body-strong text-body-ink">{empty.title}</p>
-          <p className="text-meta text-ink-tertiary max-w-[280px] text-pretty">
+          <p className="text-body-ink text-[14.5px] font-semibold">
+            {empty.title}
+          </p>
+          <p className="text-ink-tertiary max-w-[280px] text-[13px] text-pretty">
             {empty.text}
           </p>
         </div>
       ) : (
         <div className="flex flex-col gap-[18px]">
-          <div className="border-line flex items-end justify-between gap-3 border-b pb-4">
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="text-micro text-ink-tertiary uppercase">
+          <div className="border-line-soft flex items-end justify-between gap-3 border-b pb-4">
+            <div className="flex min-w-0 flex-col gap-[3px]">
+              <span className="text-ink-tertiary text-[11.5px] font-semibold tracking-[0.07em] uppercase">
                 {kicker}
               </span>
-              <span className="text-body-strong text-body-ink">{range}</span>
+              <span className="text-body-ink text-[15.5px] font-semibold">
+                {range}
+              </span>
             </div>
-            <span className="text-heading text-[26px]/[1.15] font-bold tracking-[-0.02em] whitespace-nowrap tabular-nums">
+            <span className="text-heading text-[26px] font-bold tracking-[-0.02em] whitespace-nowrap tabular-nums">
               {count}
             </span>
           </div>
           {children}
           {note ? (
-            <p className="bg-surface-inset text-meta text-ink-secondary rounded-xl px-3 py-2.5 text-pretty">
+            <p className="text-ink-tertiary rounded-[12px] bg-(--row-hover) px-3 py-2.5 text-[12px] text-pretty">
               {note}
             </p>
           ) : null}

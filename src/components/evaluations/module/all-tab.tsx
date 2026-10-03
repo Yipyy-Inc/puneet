@@ -1,12 +1,10 @@
 "use client";
 
-import { CalendarClock, LoaderCircle } from "lucide-react";
-
 import { EvaluationResultChip } from "@/components/evaluations/result-chip";
 import { useEvaluationServiceName } from "@/components/evaluations/use-evaluation-service-name";
-import { Badge } from "@/components/ui/badge";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
-import { PetAvatar } from "@/components/ui/pet-avatar";
+import { PetTile } from "@/components/evaluations/pet-tile";
+import { Chip } from "@/components/ui/chip";
 import type { AllRow, EvaluationsBoard } from "@/lib/evaluations/board-types";
 import { isPass } from "@/lib/evaluations/questions";
 import {
@@ -45,14 +43,19 @@ export function AllTab({
       sortable: true,
       sortValue: (row) => row.pet.name.toLowerCase(),
       render: (row) => (
-        <div className="flex min-w-0 items-center gap-3">
-          <PetAvatar name={row.pet.name} src={row.pet.imageUrl} size="md" />
+        <div className="flex min-w-0 items-center gap-2.5">
+          <PetTile
+            id={row.pet.id}
+            name={row.pet.name}
+            src={row.pet.imageUrl}
+            size={34}
+          />
           <div className="min-w-0">
-            <p className="text-body-strong text-body-ink truncate">
+            <p className="text-body-ink truncate font-semibold">
               {row.pet.name}
             </p>
             {row.pet.breed ? (
-              <p className="text-meta text-ink-secondary truncate">
+              <p className="text-ink-tertiary truncate text-[12px]">
                 {row.pet.breed}
               </p>
             ) : null}
@@ -74,15 +77,17 @@ export function AllTab({
         row.result ? (
           <EvaluationResultChip result={row.result} />
         ) : row.state === "scheduled" ? (
-          <Badge variant="cancelled">
-            <CalendarClock aria-hidden />
+          <Chip
+            tone="neutral"
+            size="sm"
+            className="px-[9px] py-[3px] font-bold"
+          >
             {t("stateScheduled")}
-          </Badge>
+          </Chip>
         ) : (
-          <Badge variant="inService">
-            <LoaderCircle aria-hidden />
+          <Chip tone="info" size="sm" className="px-[9px] py-[3px] font-bold">
             {t("stateInProgress")}
-          </Badge>
+          </Chip>
         ),
     },
     {
@@ -106,7 +111,7 @@ export function AllTab({
       render: (row) => {
         if (row.state === "scheduled" && row.scheduledAt) {
           return (
-            <span className="text-ink-secondary">
+            <span className="text-ink-secondary text-[12.5px]">
               {fill("scheduledAt", {
                 day: formatWeekdayDate(
                   new Date(`${dayOf(row.scheduledAt)}T12:00:00`),
@@ -119,9 +124,13 @@ export function AllTab({
         }
         const approved =
           row.result && isPass(row.result) ? row.approvedServices : [];
-        return approved.length > 0
-          ? formatList(approved.map(serviceName), locale)
-          : "—";
+        return (
+          <span className="text-ink-secondary text-[12.5px]">
+            {approved.length > 0
+              ? formatList(approved.map(serviceName), locale)
+              : "—"}
+          </span>
+        );
       },
     },
   ];

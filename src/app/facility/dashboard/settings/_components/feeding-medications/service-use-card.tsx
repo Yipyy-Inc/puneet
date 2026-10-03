@@ -45,9 +45,11 @@ function Row({
           }
           aria-label={fill(t("serviceSwitch"), { service: row.name })}
         />
-        <span className="flex min-w-0 flex-col">
-          <span className="text-body-strong text-body-ink">{row.name}</span>
-          <span className="text-meta text-ink-tertiary">{row.sub}</span>
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <span className="text-body-ink text-[15px] font-medium">
+            {row.name}
+          </span>
+          <span className="text-ink-tertiary text-[13px]">{row.sub}</span>
         </span>
       </label>
       {on ? (
@@ -124,15 +126,15 @@ export function ServiceUseCard({
       </div>
       {other.length > 0 ? (
         <>
-          <div className="border-line flex flex-col gap-0.5 border-t px-5 pt-4 pb-1 sm:px-6">
-            <span className="text-micro text-ink-tertiary uppercase">
+          <div className="bg-surface-inset flex flex-col gap-0.5 border-t border-(--inset-2) px-5 pt-3.5 pb-1.5 sm:px-6">
+            <span className="text-[12px] font-semibold tracking-[0.08em] text-(--care-micro) uppercase">
               {t("otherServicesTitle")}
             </span>
-            <span className="text-meta text-ink-tertiary">
+            <span className="text-ink-tertiary text-[13px]">
               {t("otherServicesHelp")}
             </span>
           </div>
-          <div className="flex flex-col">
+          <div className="bg-surface-inset flex flex-col">
             {other.map((row) => (
               <Row
                 key={row.service}

@@ -1,7 +1,5 @@
 "use client";
 
-import { Plus, X } from "lucide-react";
-
 import {
   EditorSection,
   FieldLabel,
@@ -31,9 +29,6 @@ import type { FeedingStepState } from "./use-feeding-step";
 // MEAL TIMES: when the pet eats — the meal times with one tap, custom times —
 // and which days of the stay.
 // ============================================================================
-
-const SELECTED_RING =
-  "shadow-[inset_0_0_0_2px_var(--primary)] text-primary-hover";
 
 /** 0 = Sunday, read from the calendar day itself, in UTC. */
 function weekdayOf(day: string): number {
@@ -115,7 +110,7 @@ export function PlanMealTimes({
         <FieldLabel
           id="feed-meals-label"
           aside={
-            <span className="text-meta text-ink-tertiary" aria-live="polite">
+            <span className="text-ink-tertiary text-[13px]" aria-live="polite">
               {summary}
             </span>
           }
@@ -143,7 +138,7 @@ export function PlanMealTimes({
                   settings,
                 )}
               </span>
-              <span className="text-meta text-ink-tertiary font-normal tabular-nums">
+              <span className="text-[13px] font-normal tabular-nums opacity-70">
                 {formatTimeOfDay(slot.time, locale)}
               </span>
             </ChoicePill>
@@ -151,7 +146,7 @@ export function PlanMealTimes({
           {custom.map((meal) => (
             <span
               key={meal.id}
-              className={`${SELECTED_RING} bg-card flex min-h-10 items-center gap-1 rounded-full pr-1 pl-3 max-lg:min-h-12`}
+              className="border-primary bg-acc-soft text-acc-soft-text flex min-h-11 items-center gap-1 rounded-full border-[1.5px] pr-1.5 pl-3"
             >
               <input
                 type="time"
@@ -160,7 +155,7 @@ export function PlanMealTimes({
                 onChange={(event) =>
                   step.setMealTime(meal.id, event.target.value)
                 }
-                className="focus-visible:outline-primary text-body bg-transparent font-semibold tabular-nums focus-visible:outline-2"
+                className="focus-visible:outline-primary bg-transparent text-[15px] font-medium tabular-nums focus-visible:outline-2"
               />
               <button
                 type="button"
@@ -168,18 +163,18 @@ export function PlanMealTimes({
                   time: formatTimeOfDay(meal.time, locale),
                 })}
                 onClick={() => step.removeMeal(meal.id)}
-                className="hover:bg-surface-inset focus-visible:outline-primary flex size-8 items-center justify-center rounded-full focus-visible:outline-2 max-lg:size-10"
+                className="focus-visible:outline-primary flex size-[30px] items-center justify-center rounded-full text-[18px] focus-visible:outline-2"
               >
-                <X className="size-4" aria-hidden />
+                <span aria-hidden>×</span>
               </button>
             </span>
           ))}
           <button
             type="button"
             onClick={step.addCustomMeal}
-            className="border-line-strong text-ink-secondary hover:bg-surface-inset focus-visible:outline-primary text-body flex min-h-10 items-center gap-2 rounded-full border-[1.5px] border-dashed px-4 font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 max-lg:min-h-12"
+            className="text-ink-tertiary focus-visible:outline-primary flex min-h-11 items-center gap-1 rounded-full border-[1.5px] border-dashed border-(--care-dash-2) bg-transparent px-4 text-[15px] focus-visible:outline-2 focus-visible:outline-offset-2"
           >
-            <Plus className="size-4" aria-hidden />
+            <span aria-hidden>+</span>
             {t("medsAddCustomTime")}
           </button>
         </div>
@@ -213,12 +208,12 @@ export function PlanMealTimes({
                       : [...current.certainDays, day].sort(),
                   }))
                 }
-                className="h-auto min-h-15 w-16 flex-col justify-center gap-0 rounded-xs px-0"
+                className="h-[60px] w-16 flex-col justify-center gap-0 rounded-[14px] px-0"
               >
-                <span className="text-micro uppercase">
+                <span className="text-[12px] opacity-75">
                   {formatWeekday(weekdayOf(day), locale)}
                 </span>
-                <span className="text-section tabular-nums">
+                <span className="text-[17px] font-semibold tabular-nums">
                   {Number(day.slice(8))}
                 </span>
               </ChoicePill>

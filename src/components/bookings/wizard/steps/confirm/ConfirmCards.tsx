@@ -39,12 +39,12 @@ export function DetailsCard({
         {rows.map((row) => (
           <div
             key={row.key}
-            className="border-line flex items-baseline gap-4 border-b py-3 last:border-b-0"
+            className="flex items-baseline gap-4 border-b border-(--row-line) py-3 last:border-b-0"
           >
-            <dt className="text-meta text-ink-tertiary w-[90px] shrink-0 sm:w-[120px]">
+            <dt className="text-ink-tertiary w-[90px] shrink-0 text-[13.5px] sm:w-[120px]">
               {row.label}
             </dt>
-            <dd className="text-body text-body-ink min-w-0 flex-1 text-right font-medium text-pretty">
+            <dd className="text-body-ink min-w-0 flex-1 text-right text-[14px] font-medium text-pretty">
               {row.value}
             </dd>
             {row.onEdit ? (
@@ -52,7 +52,7 @@ export function DetailsCard({
                 type="button"
                 onClick={row.onEdit}
                 aria-label={`${t("edit")} — ${row.label}`}
-                className="text-meta text-primary hover:text-primary-hover focus-visible:outline-primary -my-2 inline-flex min-h-10 shrink-0 items-center rounded-full px-1 font-semibold focus-visible:outline-2 max-lg:min-h-12"
+                className="text-acc-deep focus-visible:outline-primary -my-2 inline-flex min-h-10 shrink-0 items-center rounded-full px-1 text-[12.5px] font-semibold focus-visible:outline-2 max-lg:min-h-12"
               >
                 {t("edit")}
               </button>
@@ -118,8 +118,8 @@ function ToggleRow({
         htmlFor={id}
         className="flex min-w-0 flex-1 cursor-pointer flex-col"
       >
-        <span className="text-body-strong text-body-ink">{title}</span>
-        <span className="text-meta text-ink-tertiary">{hint}</span>
+        <span className="text-body-ink text-[14px] font-semibold">{title}</span>
+        <span className="text-ink-tertiary text-[12.5px]">{hint}</span>
       </label>
       <Switch id={id} checked={checked} onCheckedChange={onChange} />
     </div>
@@ -141,7 +141,7 @@ export function SpecialRequestsCard({
       <div className="flex flex-col gap-2.5 px-5 py-4">
         <label
           htmlFor="booking-special-requests"
-          className="text-micro text-ink-secondary uppercase"
+          className="text-ink-secondary text-[12px] font-semibold tracking-[0.08em] uppercase"
         >
           {t("specialRequests")}
         </label>
@@ -151,7 +151,7 @@ export function SpecialRequestsCard({
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           rows={3}
-          className="min-h-20"
+          className="border-line-strong min-h-20 rounded-[14px] bg-(--stepper-bg) px-3.5 py-3 text-[14px]"
         />
       </div>
     </ConfirmCard>

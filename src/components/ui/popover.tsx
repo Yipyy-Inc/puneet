@@ -3,6 +3,7 @@
 import * as React from "react";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 
+import { useLookStamp } from "@/components/look/look-context";
 import { cn } from "@/lib/utils";
 
 function Popover({
@@ -23,6 +24,7 @@ function PopoverContent({
   sideOffset = 4,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Content>) {
+  const stamp = useLookStamp(props.style);
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Content
@@ -34,6 +36,7 @@ function PopoverContent({
           className,
         )}
         {...props}
+        {...stamp}
       />
     </PopoverPrimitive.Portal>
   );

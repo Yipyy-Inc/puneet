@@ -64,25 +64,27 @@ export function QuestionCard({
   return (
     <section
       aria-labelledby={labelId}
-      className="bg-card border-line flex min-w-0 flex-col gap-3 rounded-2xl border p-4"
+      className="bg-card border-line flex min-w-0 flex-col gap-2 rounded-[18px] border px-4 py-3.5"
     >
-      <div className="flex min-w-0 items-start gap-2.5">
+      <div className="flex min-w-0 items-start gap-2">
         {answered ? (
           <CircleCheck
-            className="text-success mt-0.5 size-5 shrink-0"
+            className="text-success mt-px size-[19px] shrink-0"
             aria-label={t("answered")}
           />
         ) : (
           <Circle
-            className="text-ink-disabled mt-0.5 size-5 shrink-0"
+            className="text-ink-disabled mt-px size-[19px] shrink-0"
             aria-label={t("notAnswered")}
           />
         )}
         <div className="min-w-0">
-          <h3 id={labelId} className="text-body-strong text-body-ink">
+          <h3 id={labelId} className="text-body-ink text-[15px] font-bold">
             {label}
           </h3>
-          {hint ? <p className="text-meta text-ink-secondary">{hint}</p> : null}
+          {hint ? (
+            <p className="text-ink-tertiary text-[12.5px]">{hint}</p>
+          ) : null}
         </div>
       </div>
 
@@ -93,6 +95,7 @@ export function QuestionCard({
           maxLength={500}
           disabled={disabled}
           onChange={(event) => onAnswer(event.target.value)}
+          className="h-[46px] rounded-[14px] px-3.5 text-[14px] max-lg:h-[46px]"
         />
       ) : (
         <div
@@ -115,13 +118,15 @@ export function QuestionCard({
                 data-on={on}
                 disabled={disabled}
                 onClick={() => onAnswer(option)}
-                className="bg-card border-line-strong hover:border-ink-disabled focus-visible:outline-primary flex min-h-12 min-w-0 flex-col justify-center gap-0.5 rounded-xl border px-3 py-2 text-left focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed data-[on=true]:border-transparent data-[on=true]:shadow-[inset_0_0_0_2px_var(--primary)]"
+                className="bg-card border-line-strong text-body-ink focus-visible:outline-primary data-[on=true]:border-body-ink data-[on=true]:bg-body-ink group flex min-h-12 min-w-0 flex-col justify-center rounded-[14px] border-[1.5px] px-3 py-2 text-left focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed data-[on=true]:text-white"
               >
-                <span className="text-body-strong text-body-ink">
+                <span className="text-[14px] font-bold">
                   {optionLabel(t, question, option)}
                 </span>
                 {help ? (
-                  <span className="text-meta text-ink-secondary">{help}</span>
+                  <span className="text-ink-tertiary text-[12px] font-medium group-data-[on=true]:text-white/75">
+                    {help}
+                  </span>
                 ) : null}
               </button>
             );

@@ -1,7 +1,5 @@
 "use client";
 
-import { Plus } from "lucide-react";
-
 import { OptionCards } from "@/components/booking/care/option-cards";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,8 +99,8 @@ export function HouseFoodCard({
     >
       {house.on ? (
         <>
-          <div className="flex min-w-0 flex-col gap-2.5 px-5 py-4 sm:px-6">
-            <span className="text-body-strong text-body-ink">
+          <div className="flex min-w-0 flex-col gap-2.5 border-b border-(--inset-2) px-5 py-[18px] sm:px-6">
+            <span className="text-body-ink text-[14px] font-medium">
               {t("houseCharge")}
             </span>
             <OptionCards<HouseFoodPricing>
@@ -134,7 +132,7 @@ export function HouseFoodCard({
 
           <div
             aria-hidden
-            className="border-line text-micro text-ink-tertiary hidden grid-cols-[3.25rem_minmax(0,2fr)_minmax(0,1fr)_minmax(0,9rem)_6rem] gap-3 border-t px-6 py-2.5 uppercase sm:grid"
+            className="bg-surface-inset hidden grid-cols-[3.25rem_minmax(0,2fr)_minmax(0,1fr)_minmax(0,9rem)_6rem] gap-3 border-b border-(--inset-2) px-6 py-2.5 text-[12px] font-semibold tracking-[0.06em] text-(--care-micro) uppercase sm:grid"
           >
             <span>{t("colOn")}</span>
             <span>{t("colFood")}</span>
@@ -164,15 +162,16 @@ export function HouseFoodCard({
                   key={food.id}
                   // Below 640px: the switch and its tag, the food, then its
                   // unit and price side by side (§6 rule 6).
-                  className="border-line flex min-w-0 flex-wrap items-center gap-3 border-t px-5 py-3.5 sm:grid sm:grid-cols-[3.25rem_minmax(0,2fr)_minmax(0,1fr)_minmax(0,9rem)_6rem] sm:px-6"
+                  className="flex min-w-0 flex-wrap items-center gap-3 border-b border-(--row-line) px-5 py-3 sm:grid sm:grid-cols-[3.25rem_minmax(0,2fr)_minmax(0,1fr)_minmax(0,9rem)_6rem] sm:px-6"
                 >
                   <div className="flex items-center gap-3 sm:block">
                     <Switch
+                      size="sm"
                       checked={food.on}
                       onCheckedChange={(on) => setFood(food.id, { on })}
                       aria-label={fill(t("houseFoodOn"), { name: shown })}
                     />
-                    <span className="text-meta text-ink-tertiary sm:hidden">
+                    <span className="text-ink-tertiary text-[13px] sm:hidden">
                       {t("colOn")}
                     </span>
                   </div>
@@ -198,6 +197,7 @@ export function HouseFoodCard({
                           setFood(food.id, { name: undefined });
                         }
                       }}
+                      className="h-[38px]! px-2.5! font-medium"
                     />
                     <Input
                       value={description}
@@ -209,6 +209,7 @@ export function HouseFoodCard({
                       onChange={(event) =>
                         setFood(food.id, { description: event.target.value })
                       }
+                      className="text-ink-secondary h-8! rounded-[8px]! border-(--inset-2) px-2.5! text-[13px]!"
                     />
                     <Select
                       value={food.type}
@@ -281,14 +282,14 @@ export function HouseFoodCard({
                   </div>
                   <div className="ml-auto flex min-h-10 items-center max-lg:min-h-12 max-sm:order-1 sm:ml-0 sm:justify-end">
                     {builtIn ? (
-                      <span className="text-micro text-ink-tertiary uppercase">
+                      <span className="text-ink-disabled text-[11px] font-semibold tracking-[0.04em] uppercase">
                         {t("defaultTag")}
                       </span>
                     ) : (
                       <Button
                         type="button"
                         variant="ghost"
-                        className="text-destructive hover:text-destructive"
+                        className="text-bad hover:text-bad font-normal"
                         aria-label={fill(t("removeNamed"), { name: shown })}
                         onClick={() => {
                           onChange((current) => ({
@@ -324,11 +325,12 @@ export function HouseFoodCard({
             })}
           </div>
 
-          <div className="border-line border-t px-5 py-3.5 sm:px-6">
+          <div className="px-5 pt-3 pb-[18px] sm:px-6">
             <Button
               type="button"
-              variant="outline"
-              className="border-dashed"
+              variant="quiet"
+              size="setup"
+              className="text-primary gap-1 border-[1.5px] border-dashed border-(--cs-line) font-semibold"
               disabled={house.foods.length >= 30}
               onClick={() => {
                 const food: HouseFood = {
@@ -347,7 +349,7 @@ export function HouseFoodCard({
                 }));
               }}
             >
-              <Plus aria-hidden />
+              <span aria-hidden>+</span>
               {t("addHouseFood")}
             </Button>
           </div>

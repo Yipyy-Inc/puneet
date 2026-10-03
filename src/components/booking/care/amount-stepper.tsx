@@ -1,15 +1,15 @@
 "use client";
 
-import { Minus, Plus } from "lucide-react";
-
 // ============================================================================
 // − amount +. A form counted in whole things shows its amount as words
 // ("1½"); a measured one (Liquid, Injection) can be typed exactly. The
 // buttons step by the form's own size and never go below one step.
 // ============================================================================
 
+// The care mocks' stepper (2026-10-02): a 44px box with 12px corners, its
+// buttons on a warm fill, a typed "−" and "+".
 const STEP_BUTTON =
-  "text-body-ink hover:bg-surface-inset focus-visible:outline-primary flex size-10 shrink-0 items-center justify-center focus-visible:outline-2 focus-visible:-outline-offset-2 max-lg:size-12";
+  "text-body-ink focus-visible:outline-primary flex size-11 shrink-0 items-center justify-center bg-(--stepper-bg) text-[20px] font-normal focus-visible:outline-2 focus-visible:-outline-offset-2";
 
 export function AmountStepper({
   amount,
@@ -37,14 +37,14 @@ export function AmountStepper({
   inputLabel: string;
 }) {
   return (
-    <div className="border-line-strong bg-card flex items-center overflow-hidden rounded-full border">
+    <div className="border-line-strong bg-card flex h-11 items-center overflow-hidden rounded-[12px] border">
       <button
         type="button"
         aria-label={decreaseLabel}
         onClick={onDown}
         className={STEP_BUTTON}
       >
-        <Minus className="size-4" aria-hidden />
+        <span aria-hidden>−</span>
       </button>
       {typed ? (
         <input
@@ -58,13 +58,13 @@ export function AmountStepper({
             const value = Number.parseFloat(event.target.value);
             onType(Number.isNaN(value) ? 0 : value);
           }}
-          className="text-body-strong text-body-ink w-16 [appearance:textfield] border-0 bg-transparent text-center tabular-nums outline-none focus-visible:underline [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          className="text-body-ink w-16 [appearance:textfield] border-0 bg-transparent text-center text-[17px] font-semibold tabular-nums outline-none focus-visible:underline [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
       ) : (
         <output
           aria-label={inputLabel}
           aria-live="polite"
-          className="text-body-strong text-body-ink min-w-14 text-center tabular-nums"
+          className="text-body-ink min-w-14 text-center text-[17px] font-semibold tabular-nums"
         >
           {label}
         </output>
@@ -75,7 +75,7 @@ export function AmountStepper({
         onClick={onUp}
         className={STEP_BUTTON}
       >
-        <Plus className="size-4" aria-hidden />
+        <span aria-hidden>+</span>
       </button>
     </div>
   );

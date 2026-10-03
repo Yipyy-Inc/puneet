@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trash2, X } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -140,19 +140,17 @@ export function StartTimesEditor({
           return (
             <span
               key={time}
-              className="bg-surface-inset text-body-strong text-body-ink flex min-h-10 items-center gap-1 rounded-full py-0.5 pr-1 pl-4 tabular-nums max-lg:min-h-12"
+              className="bg-surface-inset-2 text-body-ink flex h-[38px] items-center gap-1 rounded-full pr-1.5 pl-3.5 text-[14px] font-bold tabular-nums"
             >
               {label}
-              <Button
+              <button
                 type="button"
-                variant="ghost"
-                size="icon"
                 aria-label={fill(t("removeNamed"), { name: label })}
                 onClick={() => onChange(times.filter((x) => x !== time))}
-                className="size-8 max-lg:size-10"
+                className="text-ink-tertiary focus-visible:outline-primary grid size-[26px] place-items-center rounded-full text-[16px] font-normal focus-visible:outline-2"
               >
-                <X aria-hidden />
-              </Button>
+                <span aria-hidden>×</span>
+              </button>
             </span>
           );
         })}
@@ -161,12 +159,16 @@ export function StartTimesEditor({
           aria-label={t("newStartTime")}
           value={next}
           onChange={(event) => setNext(event.target.value)}
-          className="w-[130px] tabular-nums"
+          className="h-[38px] w-[130px] rounded-[12px] px-2.5 text-[14px] tabular-nums max-lg:h-[38px]"
         />
-        <Button type="button" variant="outline" onClick={add}>
-          <Plus aria-hidden />
+        <button
+          type="button"
+          onClick={add}
+          className="text-body-ink focus-visible:outline-primary flex h-[38px] items-center gap-1 rounded-full border-[1.5px] border-dashed border-(--empty-ring) px-3.5 text-[13.5px] font-semibold focus-visible:outline-2 focus-visible:outline-offset-2"
+        >
+          <span aria-hidden>+</span>
           {t("addStartTime")}
-        </Button>
+        </button>
       </div>
     </div>
   );

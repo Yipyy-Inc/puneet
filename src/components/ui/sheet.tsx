@@ -4,6 +4,7 @@ import * as React from "react";
 import * as SheetPrimitive from "@radix-ui/react-dialog";
 import { XIcon } from "lucide-react";
 
+import { useLookStamp } from "@/components/look/look-context";
 import { cn } from "@/lib/utils";
 import { useShellText } from "@/lib/shell/use-shell-text";
 
@@ -54,6 +55,7 @@ function SheetContent({
   side?: "top" | "right" | "bottom" | "left";
 }) {
   const t = useShellText("primitives");
+  const stamp = useLookStamp(props.style);
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -72,6 +74,7 @@ function SheetContent({
           className,
         )}
         {...props}
+        {...stamp}
       >
         {children}
         <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-3 right-3 flex size-8 items-center justify-center rounded-md opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">

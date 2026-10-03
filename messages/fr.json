@@ -2890,6 +2890,7 @@
         "noTax": "Sans taxe"
       },
       "trainingRates": {
+        "programPhotoSlot": "photo du programme",
         "notSaved": "Les programmes n’ont pas été enregistrés",
         "bookedAs": "Réservé comme",
         "formatLesson": "Cours individuel",
@@ -4251,6 +4252,7 @@
         "item": "article"
       },
       "lodging": {
+        "unitPhotoSlot": "photo de la chambre",
         "spaceType": "Type d'espace",
         "room": "Chambre / chenil",
         "area": "Aire",
@@ -4787,6 +4789,7 @@
         "previewCaption": "Créé automatiquement à partir des réponses",
         "cardEyebrow": "Bulletin d’évaluation",
         "cardFor": "{pet} · pour {owner}",
+        "cardPhotoSlot": "photo de l’évaluation",
         "cardPending": "En attente",
         "cardBy": "par {name}",
         "cardTemperament": "Tempérament",
@@ -10930,6 +10933,7 @@
       "wizSearchHintPlain": "Cherche dans les noms, courriels, numéros de téléphone et noms d’animaux.",
       "wizPetMatch": "Animal trouvé : {pets}",
       "wizNoPets": "Aucun animal",
+      "wizFindingClients": "Recherche des clients…",
       "wizNoClientMatch": "Aucun client ne correspond à « {query} ». Vérifiez l’orthographe ou créez un nouveau client.",
       "wizMoreMatches": "{shown} sur {total} affichés — continuez à taper pour préciser.",
       "wizClientLabel": "Client",
@@ -11401,7 +11405,9 @@
       "wizEvTermsCancel": "Annulation gratuite jusqu’à {hours} heures avant.",
       "wizEvTermsAgree": "J’ai lu et j’accepte",
       "wizEvDeposit": "Acompte",
-      "wizEvSummary": "Résumé"
+      "wizEvSummary": "Résumé",
+      "wizPhotoOf": "photo · {kind}",
+      "wizRoomPhoto": "photo de la chambre · fournie par l’établissement"
     },
     "meta": {
       "rootTitle": "Yipyy — Services pour animaux",
@@ -12928,6 +12934,7 @@
         "removeCardConfirm": "Retirer la carte"
       },
       "training": {
+        "coursePhotoSlot": "photo du cours",
         "training": "Dressage",
         "browseClassesEnrollYourPets": "Parcourez les cours, inscrivez vos animaux et gérez les séances de rattrapage",
         "searchByInstructorOrSeries": "Rechercher par instructeur ou par série…",

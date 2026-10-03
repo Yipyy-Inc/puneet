@@ -1,17 +1,9 @@
 "use client";
 
-import {
-  Check,
-  CircleAlert,
-  CircleCheck,
-  Clock3,
-  Lock,
-  TriangleAlert,
-} from "lucide-react";
-
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/ui/chip";
 import { PetAvatar } from "@/components/ui/pet-avatar";
+import { Tick } from "@/components/ui/tick";
 import { allergyOf, evaluationState } from "@/lib/bookings/wizard/pet-status";
 import { formatWeightFromLb, isPluralOne } from "@/lib/i18n/format";
 import { fill } from "@/lib/medications/dose";
@@ -70,24 +62,28 @@ export function PetPicker({
     <section aria-labelledby="wizard-pets" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-0.5">
-          <h3 id="wizard-pets" className="text-section text-body-ink">
+          <h3
+            id="wizard-pets"
+            className="text-body-ink text-[17px] font-semibold"
+          >
             {title}
           </h3>
-          <p className="text-meta text-ink-tertiary">{t("wizPetsHelp")}</p>
+          <p className="text-ink-tertiary text-[13.5px]">{t("wizPetsHelp")}</p>
         </div>
         {pets.length > 0 ? (
           <div className="flex items-center gap-2">
             {selectable.length > 1 ? (
               <Button
                 type="button"
-                variant="outline"
+                variant="quiet"
+                size="mock-34"
                 disabled={allChosen}
                 onClick={onSelectAll}
               >
                 {t("selectAll")}
               </Button>
             ) : null}
-            <span className="bg-surface-inset text-body-ink text-meta rounded-full px-3 py-1.5 font-medium tabular-nums">
+            <span className="bg-surface-inset-2 text-body-ink rounded-full px-3 py-1.5 text-[13px] font-medium tabular-nums">
               {fill(
                 t(
                   isPluralOne(chosen, locale)
@@ -102,9 +98,13 @@ export function PetPicker({
       </div>
 
       {pets.length === 0 ? (
-        <div className="border-line-strong flex flex-col items-center gap-1.5 rounded-2xl border border-dashed px-6 py-8 text-center">
-          <p className="text-body-strong text-body-ink">{emptyTitle}</p>
-          <p className="text-meta text-ink-tertiary text-pretty">{emptyText}</p>
+        <div className="border-line-strong flex flex-col items-center gap-1.5 rounded-[20px] border-[1.5px] border-dashed px-6 py-8 text-center">
+          <p className="text-body-ink text-[15px] font-semibold">
+            {emptyTitle}
+          </p>
+          <p className="text-ink-tertiary text-[13.5px] text-pretty">
+            {emptyText}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))] gap-3">
@@ -134,49 +134,47 @@ export function PetPicker({
                 onClick={() => {
                   if (!lock) onToggle(pet.id);
                 }}
-                className="border-line-strong bg-card hover:border-ink-disabled focus-visible:outline-primary data-[locked=true]:bg-surface-inset data-[locked=true]:hover:border-line-strong relative flex min-w-0 items-center gap-3.5 rounded-xl border p-4 text-left transition-[box-shadow,border-color] duration-120 ease-[ease] focus-visible:outline-2 focus-visible:outline-offset-2 data-[locked=true]:cursor-not-allowed data-[on=true]:border-transparent data-[on=true]:shadow-[inset_0_0_0_2px_var(--primary)] motion-reduce:transition-none"
+                className="mk-pick bg-card focus-visible:outline-primary data-[locked=true]:bg-surface-inset relative flex min-w-0 items-center gap-3.5 rounded-[18px] p-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 data-[locked=true]:cursor-not-allowed"
               >
-                <PetAvatar name={pet.name} src={pet.imageUrl} size="lg" />
-                <span className="flex min-w-0 flex-1 flex-col gap-0.5 pr-6">
-                  <span className="text-body-strong text-body-ink">
+                <PetAvatar
+                  name={pet.name}
+                  src={pet.imageUrl}
+                  size="mk-52"
+                  shape="rounded"
+                />
+                <span className="flex min-w-0 flex-1 flex-col gap-[3px] pr-6">
+                  <span className="text-body-ink text-[16px] font-semibold">
                     {pet.name}
                   </span>
                   {meta ? (
-                    <span className="text-meta text-ink-tertiary">{meta}</span>
+                    <span className="text-ink-tertiary text-[13px]">
+                      {meta}
+                    </span>
                   ) : null}
                   <span className="mt-1 flex flex-wrap gap-1.5">
                     {lock ? (
-                      <Badge variant="cancelled" title={lock.detail}>
-                        <Lock aria-hidden />
+                      <Chip tone="danger" title={lock.detail}>
                         {lock.label}
-                      </Badge>
+                      </Chip>
                     ) : null}
                     {showEvaluation ? (
                       <EvaluationChip state={evaluation} />
                     ) : null}
                     {allergy ? (
-                      <Badge variant="overdue" className="max-w-full">
-                        <TriangleAlert aria-hidden />
+                      <Chip tone="danger" className="max-w-full">
                         <span className="truncate">
                           {fill(t("wizAllergy"), { allergy })}
                         </span>
-                      </Badge>
+                      </Chip>
                     ) : null}
                   </span>
                   {lock?.detail ? (
-                    <span className="text-meta text-ink-secondary mt-1">
+                    <span className="text-ink-secondary mt-1 text-[13px]">
                       {lock.detail}
                     </span>
                   ) : null}
                 </span>
-                {on ? (
-                  <span
-                    aria-hidden
-                    className="bg-primary text-primary-foreground absolute top-3 right-3 flex size-[22px] items-center justify-center rounded-full"
-                  >
-                    <Check className="size-3.5" strokeWidth={3} />
-                  </span>
-                ) : null}
+                {on ? <Tick size={22} className="top-3 right-3" /> : null}
               </button>
             );
           })}
@@ -193,25 +191,14 @@ function EvaluationChip({
 }) {
   const t = useShellText("booking");
   if (state === "passed") {
-    return (
-      <Badge variant="confirmed">
-        <CircleCheck aria-hidden />
-        {t("wizEvaluated")}
-      </Badge>
-    );
+    return <Chip tone="success">{t("wizEvaluated")}</Chip>;
   }
   if (state === "failed") {
-    return (
-      <Badge variant="overdue">
-        <CircleAlert aria-hidden />
-        {t("evalFailed")}
-      </Badge>
-    );
+    return <Chip tone="danger">{t("evalFailed")}</Chip>;
   }
   return (
-    <Badge variant="pending">
-      <Clock3 aria-hidden />
+    <Chip tone="warning">
       {state === "expired" ? t("evalExpired") : t("wizNeedsEvaluation")}
-    </Badge>
+    </Chip>
   );
 }

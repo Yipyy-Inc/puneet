@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { ChoicePill } from "@/components/ui/choice-pill";
 import { Input } from "@/components/ui/input";
 import { optionLabel } from "@/lib/feeding/labels";
@@ -66,8 +64,11 @@ function OptionList({
   };
 
   return (
-    <div className="border-line flex min-w-0 flex-col gap-2.5 border-t px-5 py-4 first:border-t-0 sm:px-6">
-      <span id={`f-options-${list}`} className="text-body-strong text-body-ink">
+    <div className="flex min-w-0 flex-col gap-2.5 border-t border-(--row-line) px-5 py-[18px] first:border-t-0 sm:px-6">
+      <span
+        id={`f-options-${list}`}
+        className="text-body-ink text-[14px] font-medium"
+      >
         {title}
       </span>
       <div
@@ -100,10 +101,9 @@ function OptionList({
           return (
             <span key={row.id} className="inline-flex items-center gap-1">
               {pill}
-              <Button
+              <button
                 type="button"
-                variant="ghost"
-                size="icon"
+                className="bg-surface-inset-2 text-ink-tertiary focus-visible:outline-primary grid size-[22px] place-items-center rounded-full text-[15px] focus-visible:outline-2"
                 aria-label={fill(t("removeNamed"), { name })}
                 onClick={() => {
                   onChange((current) =>
@@ -122,8 +122,8 @@ function OptionList({
                   );
                 }}
               >
-                <X aria-hidden />
-              </Button>
+                <span aria-hidden>×</span>
+              </button>
             </span>
           );
         })}
@@ -139,7 +139,7 @@ function OptionList({
               add();
             }
           }}
-          className="w-48 max-w-full border-dashed"
+          className="h-10! w-[170px] max-w-full rounded-full! border-[1.5px] border-dashed border-(--care-dash-2) px-3.5! text-[14px]!"
         />
       </div>
     </div>

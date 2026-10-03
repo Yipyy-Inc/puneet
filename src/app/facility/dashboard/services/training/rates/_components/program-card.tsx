@@ -4,17 +4,11 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Photo } from "@/components/ui/photo";
 import { Switch } from "@/components/ui/switch";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { cn } from "@/lib/utils";
-import {
-  Edit,
-  GripVertical,
-  ImageOff,
-  Lock,
-  Star,
-  Trash2,
-  Users,
-} from "lucide-react";
+import { Edit, GripVertical, Lock, Star, Trash2, Users } from "lucide-react";
 import {
   SKILL_LEVEL_LABELS,
   type TrainingDiscipline,
@@ -52,6 +46,7 @@ export function ProgramCard({
   onEdit,
   onDelete,
 }: Props) {
+  const { t } = useStaffText("trainingRates");
   const {
     attributes,
     listeners,
@@ -78,22 +73,16 @@ export function ProgramCard({
       )}
     >
       {/* Cover ────────────────────────────────────────────────────────── */}
-      <div className="relative h-28 w-full overflow-hidden bg-slate-100">
-        {program.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={program.imageUrl}
-            alt=""
-            className="size-full object-cover"
-            onError={(ev) => {
-              (ev.target as HTMLImageElement).style.display = "none";
-            }}
-          />
-        ) : (
-          <div className="flex size-full items-center justify-center text-slate-300">
-            <ImageOff className="size-6" />
-          </div>
-        )}
+      <div className="relative h-28 w-full overflow-hidden">
+        {/* The program's photo — or, none or one that will not load, the
+            striped placeholder every missing photo shares (CLAUDE.md
+            § "Client mocks decide the look"). */}
+        <Photo
+          src={program.imageUrl}
+          shape="band"
+          label={t("programPhotoSlot")}
+          className="size-full"
+        />
 
         {/* Drag handle — top-left, on the cover. Listeners are scoped here
             so clicks elsewhere on the card don't accidentally start a drag. */}

@@ -4,6 +4,7 @@ import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { XIcon } from "lucide-react";
 
+import { useLookStamp } from "@/components/look/look-context";
 import { cn } from "@/lib/utils";
 import { useShellText } from "@/lib/shell/use-shell-text";
 
@@ -56,6 +57,7 @@ function DialogContent({
   showCloseButton?: boolean;
 }) {
   const t = useShellText("primitives");
+  const stamp = useLookStamp(props.style);
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
@@ -71,6 +73,7 @@ function DialogContent({
           className,
         )}
         {...props}
+        {...stamp}
       >
         {children}
         {showCloseButton && (

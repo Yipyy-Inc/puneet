@@ -14,6 +14,7 @@ import {
   AlertCircle,
   TreePine,
 } from "lucide-react";
+import { Photo } from "@/components/ui/photo";
 import { admittedSpecies } from "@/lib/capacity-engine";
 import { cn } from "@/lib/utils";
 import type {
@@ -201,19 +202,13 @@ export function PlayAreaCard({
             )}
           </button>
 
-          {area.imageUrl ? (
-            <div className="size-10 shrink-0 overflow-hidden rounded-lg border shadow-sm">
-              <img
-                src={area.imageUrl}
-                alt={area.name}
-                className="size-full object-cover"
-              />
-            </div>
-          ) : (
-            <div className="bg-primary/10 flex size-10 shrink-0 items-center justify-center rounded-lg">
-              <TreePine className="text-primary size-5" />
-            </div>
-          )}
+          {/* The area's photo, or the striped placeholder every missing
+              photo shares (CLAUDE.md § "Client mocks decide the look"). */}
+          <Photo
+            src={area.imageUrl}
+            shape="tile"
+            className="size-10 rounded-lg border shadow-sm"
+          />
 
           <div className="min-w-0 flex-1">
             <h3 className="truncate text-base font-semibold">{area.name}</h3>

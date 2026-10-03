@@ -82,16 +82,16 @@ export function ClientsPreview({
     >
       <h2
         id="ev-preview-title"
-        className="text-micro text-ink-tertiary uppercase"
+        className="text-ink-tertiary text-[11px] font-bold tracking-[0.07em] uppercase"
       >
         {t("previewTitle")}
       </h2>
-      <Card className="gap-3 p-4">
+      <Card className="border-line gap-3 rounded-[20px] p-4 shadow-none">
         <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="text-body-strong text-body-ink">
+          <span className="text-body-ink text-[15px] font-bold">
             {t(`mode_${mode}`)}
           </span>
-          <span className="text-meta text-ink-tertiary">{summary}</span>
+          <span className="text-ink-tertiary text-[12.5px]">{summary}</span>
         </div>
         <ol className="grid grid-cols-7 gap-1">
           {days.map((day) => {
@@ -101,12 +101,12 @@ export function ClientsPreview({
               <li
                 key={day.date}
                 data-open={open}
-                className="border-line text-ink-disabled data-[open=true]:text-body-ink data-[open=true]:bg-card bg-surface-inset flex min-w-0 flex-col items-center rounded-lg border py-1.5"
+                className="border-line text-ink-disabled data-[open=true]:text-body-ink data-[open=true]:bg-card bg-surface-inset-2 flex min-w-0 flex-col items-center rounded-[10px] border py-1.5"
               >
-                <span className="text-micro">
+                <span className="text-[10px] font-semibold">
                   {formatWeekday(date.getDay(), locale, "short")}
                 </span>
-                <span className="text-body-strong tabular-nums">
+                <span className="text-[15px] font-extrabold tabular-nums">
                   {date.getDate()}
                 </span>
               </li>
@@ -118,26 +118,29 @@ export function ClientsPreview({
             {times.map((slot) => (
               <li
                 key={slot.start}
-                className="border-line-strong text-meta text-body-ink flex min-h-9 items-center justify-center rounded-lg border font-semibold tabular-nums"
+                className="border-line-strong text-body-ink flex h-9 items-center justify-center rounded-[10px] border text-[13px] font-bold tabular-nums"
               >
                 {formatTimeOfDay(hhmmOf(slot.start), locale)}
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-meta text-ink-secondary">{t("previewNoTimes")}</p>
+          <p className="text-ink-secondary text-[13px]">
+            {t("previewNoTimes")}
+          </p>
         )}
         <Button
           type="button"
+          size="mock-42"
           onClick={onOpenWizard}
           disabled={wizardDisabled}
-          className="w-full"
+          className="w-full font-bold [--sh-cta:none]"
         >
           {t("openWizard")}
           <ArrowRight aria-hidden />
         </Button>
       </Card>
-      <p className="text-meta text-ink-tertiary px-1">
+      <p className="text-ink-tertiary px-1 text-[12.5px] leading-normal">
         {t("formLivesUnder")}{" "}
         <Link href={setupHref} className="text-primary font-semibold">
           {t("formLivesUnderLink")}

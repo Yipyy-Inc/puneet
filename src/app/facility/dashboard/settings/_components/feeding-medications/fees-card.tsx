@@ -51,7 +51,9 @@ export function FeesCard({
       onReset={onReset}
     >
       <div className="flex min-w-0 flex-col gap-3 px-5 py-4 sm:px-6">
-        <span className="text-body-strong text-body-ink">{t("adminFee")}</span>
+        <span className="text-body-ink text-[15px] font-medium">
+          {t("adminFee")}
+        </span>
         <OptionCards<MedFeeMode>
           label={t("adminFee")}
           value={fee.mode}
@@ -82,7 +84,7 @@ export function FeesCard({
                 locale={locale}
               />
             </div>
-            <span className="text-body text-ink-secondary">
+            <span className="text-ink-secondary text-[14px]">
               {t(UNIT_KEY[fee.mode])}
             </span>
           </div>
@@ -91,10 +93,10 @@ export function FeesCard({
       {injectionOffered ? (
         <div className="border-line flex flex-wrap items-center justify-between gap-4 border-t px-5 py-4 sm:px-6">
           <span className="flex min-w-0 flex-col gap-0.5">
-            <span className="text-body-strong text-body-ink">
+            <span className="text-body-ink text-[15px] font-medium">
               {t("injectionTitle")}
             </span>
-            <span className="text-meta text-ink-tertiary">
+            <span className="text-ink-tertiary text-[13px]">
               {t("injectionHelp")}
             </span>
           </span>

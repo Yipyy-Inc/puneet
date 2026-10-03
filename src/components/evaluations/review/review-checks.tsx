@@ -51,11 +51,16 @@ export function ReviewChecks({
   }
 
   return (
-    <section className="bg-card border-line flex flex-col gap-2 rounded-2xl border p-4">
-      <h3 className="text-body-strong text-body-ink">{t("beforeYouSend")}</h3>
+    <section className="bg-card border-line flex flex-col gap-2 rounded-[18px] border px-4 py-3.5">
+      <h3 className="text-body-ink text-[15px] font-bold">
+        {t("beforeYouSend")}
+      </h3>
       <ul className="flex flex-col gap-1.5">
         {checks.map((check) => (
-          <li key={check.key} className="text-body text-body-ink flex gap-2">
+          <li
+            key={check.key}
+            className="text-body-ink flex gap-2.5 text-[14px]"
+          >
             {check.ok ? (
               <CircleCheck
                 className="text-success mt-0.5 size-4 shrink-0"

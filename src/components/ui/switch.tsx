@@ -3,12 +3,25 @@
 import * as React from "react";
 import * as SwitchPrimitive from "@radix-ui/react-switch";
 
+import { useLook } from "@/components/look/look-context";
 import { cn } from "@/lib/utils";
 
 function Switch({
   className,
+  size = "md",
   ...props
-}: React.ComponentProps<typeof SwitchPrimitive.Root>) {
+}: React.ComponentProps<typeof SwitchPrimitive.Root> & {
+  /** `sm`: the setup mock's row switch (36×20); elsewhere ignored. */
+  size?: "md" | "sm";
+}) {
+  // Inside the booking wizard (CLAUDE.md § "Client mocks decide the look"):
+  // the mock's 40×24 track, an 18px knob 3px in, a warm grey when off.
+  const look = useLook();
+  const setup = look?.names.includes("care-setup") ?? false;
+  const mock =
+    !setup &&
+    ((look?.names.includes("booking") || look?.names.includes("eval-module")) ??
+      false);
   return (
     <SwitchPrimitive.Root
       data-slot="switch"
@@ -27,6 +40,13 @@ function Switch({
         // exactly the seated floor rule 7 rejects, and arrived at by accident.
         // 48 stated outright cannot drift with the border.
         `relative max-lg:before:absolute max-lg:before:top-1/2 max-lg:before:left-1/2 max-lg:before:size-12 max-lg:before:-translate-x-1/2 max-lg:before:-translate-y-1/2 max-lg:before:content-['']`,
+        mock &&
+          "h-6 w-10 border-[3px] shadow-none data-[state=unchecked]:bg-(--switch-off)",
+        // The setup page: 44×24 with an 18px knob, a row's 36×20 with 14px.
+        setup &&
+          (size === "sm"
+            ? "h-5 w-9 border-[3px] shadow-none data-[state=unchecked]:bg-(--switch-off)"
+            : "h-6 w-11 border-[3px] shadow-none data-[state=unchecked]:bg-(--switch-off)"),
         className,
       )}
       {...props}
@@ -35,6 +55,11 @@ function Switch({
         data-slot="switch-thumb"
         className={cn(
           `bg-background pointer-events-none block size-4 rounded-full shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-4 data-[state=unchecked]:translate-x-0`,
+          mock && "size-[18px] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.2)]",
+          setup &&
+            (size === "sm"
+              ? "size-3.5 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.2)]"
+              : "size-[18px] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.2)] data-[state=checked]:translate-x-5"),
         )}
       />
     </SwitchPrimitive.Root>

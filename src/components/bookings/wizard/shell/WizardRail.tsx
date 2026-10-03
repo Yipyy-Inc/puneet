@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { Plus } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -7,16 +6,26 @@ import { StepBadge } from "./StepBadge";
 import type { WizardStepView, WizardSubStepView } from "./types";
 
 // ============================================================================
-// The booking wizard's rail, from 1024px (the client's mock,
-// docs/Facility_01_-_Find_client.html): the title and who it is for, how far
-// through, the four steps with a line each, and the Details screens under
-// Details. Below 1024px the same steps are the top bar's pills
-// (WizardTopBar), so this is hidden there rather than squeezed.
+// The booking wizard's rail, from 1024px: the title and who it is for, how far
+// through, the steps with a line each, and the Details screens under Details.
+// Below 1024px the same steps are the top bar's pills (WizardTopBar), so this
+// is hidden there rather than squeezed.
 //
-// Finished steps and screens are buttons — clicking one goes back to it. The
-// open step is a solid primary card (an active nav item, §1); a step still
-// ahead is a dashed outline in tertiary ink, never faded (§6 rule 4).
+// It is drawn exactly as the client's mocks draw it (2026-10-02, CLAUDE.md §
+// "Client mocks decide the look"):
+//
+//   "booking"     docs/Facility_01_-_Find_client.html — the open step a solid
+//                 accent card with a coloured shadow, finished steps white
+//                 cards, steps ahead a dashed outline in faint ink; the open
+//                 Details screen on the accent's soft tint.
+//   "evaluation"  docs/Yipyy_Evaluation_Booking.html — a flat list: the open
+//                 step a white card with a faint shadow, the rest bare, done
+//                 steps a green tick.
+//
+// Finished steps and screens are buttons — clicking one goes back to it.
 // ============================================================================
+
+export type WizardFlavour = "booking" | "evaluation";
 
 export interface WizardRailProps {
   title: string;
@@ -28,6 +37,7 @@ export interface WizardRailProps {
   /** Details' screens, shown under its card once the booking is past Service. */
   subSteps: WizardSubStepView[];
   navLabel: string;
+  flavour?: WizardFlavour;
   /** Anything that belongs under the steps (the stay previews). */
   children?: ReactNode;
 }
@@ -41,20 +51,23 @@ export function WizardRail({
   steps,
   subSteps,
   navLabel,
+  flavour = "booking",
   children,
 }: WizardRailProps) {
   return (
     <aside className="border-line bg-surface-inset hidden w-[296px] shrink-0 flex-col border-r px-5 pt-7 pb-5 lg:flex">
       <div className="flex flex-col gap-1 px-1">
-        <p className="text-heading flex items-start gap-2.5 text-[21px]/[1.25] font-semibold tracking-[-0.01em]">
-          <Plus className="mt-0.5 size-5 shrink-0" aria-hidden />
+        <p className="text-heading flex items-center gap-2.5 text-[21px] font-semibold tracking-[-0.01em]">
+          <span aria-hidden className="text-[24px] leading-none font-normal">
+            +
+          </span>
           <span className="min-w-0 wrap-break-word">{title}</span>
         </p>
-        <p className="text-meta text-ink-tertiary">{subtitle}</p>
+        <p className="text-ink-tertiary text-[13.5px]">{subtitle}</p>
       </div>
 
       <div className="border-line mx-1 mt-5 mb-4 border-t pt-4">
-        <div className="text-micro text-ink-tertiary flex justify-between gap-3 uppercase">
+        <div className="text-ink-tertiary flex justify-between gap-3 text-[11px] font-semibold tracking-[0.07em] uppercase">
           <span>{stepLabel}</span>
           <span className="tabular-nums">{percentLabel}</span>
         </div>
@@ -73,7 +86,7 @@ export function WizardRail({
         <ol className="flex flex-col gap-2.5">
           {steps.map((step, index) => (
             <li key={step.id} className="flex flex-col gap-1">
-              <RailStep step={step} number={index + 1} />
+              <RailStep step={step} number={index + 1} flavour={flavour} />
               {step.id === "details" && subSteps.length > 0 ? (
                 <ol className="flex flex-col gap-0.5 pt-1 pb-0.5 pl-[26px]">
                   {subSteps.map((sub, subIndex) => (
@@ -92,22 +105,37 @@ export function WizardRail({
   );
 }
 
-function RailStep({ step, number }: { step: WizardStepView; number: number }) {
+function RailStep({
+  step,
+  number,
+  flavour,
+}: {
+  step: WizardStepView;
+  number: number;
+  flavour: WizardFlavour;
+}) {
+  const evaluation = flavour === "evaluation";
   const body = (
     <>
       <StepBadge
         state={step.state}
         label={number}
-        onPrimary={step.state === "current"}
+        size={evaluation ? "eval" : "step"}
+        tone={evaluation ? "eval" : "step"}
       />
       <span className="flex min-w-0 flex-col gap-0.5 text-left">
-        <span className="text-[15px]/[1.3] font-semibold">{step.title}</span>
         <span
           className={cn(
-            "text-meta line-clamp-2",
-            step.state === "current"
-              ? "text-primary-foreground"
-              : "text-ink-tertiary",
+            "font-semibold",
+            evaluation ? "text-[14.5px]" : "text-[15px]",
+          )}
+        >
+          {step.title}
+        </span>
+        <span
+          className={cn(
+            "truncate text-[12.5px]",
+            evaluation ? "text-ink-tertiary" : "opacity-82",
           )}
         >
           {step.summary}
@@ -115,14 +143,21 @@ function RailStep({ step, number }: { step: WizardStepView; number: number }) {
       </span>
     </>
   );
-  const className = cn(
-    "flex w-full items-start gap-3 rounded-2xl border px-4 py-[13px] transition-[transform,box-shadow,background-color] duration-200 motion-reduce:transition-none",
-    step.state === "current" &&
-      "border-primary bg-primary text-primary-foreground shadow-(--sh-cta)",
-    step.state === "done" && "border-line bg-card text-body-ink shadow-card",
-    step.state === "todo" &&
-      "border-line-strong text-ink-tertiary border-dashed bg-transparent",
-  );
+  const className = evaluation
+    ? cn(
+        "flex w-full items-start gap-3 rounded-xl border px-4 py-[13px]",
+        step.state === "current"
+          ? "border-line-strong bg-card shadow-(--sh-step-flat)"
+          : "border-transparent bg-transparent",
+      )
+    : cn(
+        "flex w-full items-start gap-3 rounded-xl border px-4 py-[13px] transition-[box-shadow,background-color] duration-200 motion-reduce:transition-none",
+        step.state === "current" &&
+          "border-primary bg-primary text-primary-foreground shadow-(--sh-step)",
+        step.state === "done" && "border-line-strong bg-card text-body-ink",
+        step.state === "todo" &&
+          "border-line-strong text-ink-disabled border-dashed bg-transparent",
+      );
   if (step.onSelect) {
     return (
       <button
@@ -130,7 +165,7 @@ function RailStep({ step, number }: { step: WizardStepView; number: number }) {
         onClick={step.onSelect}
         className={cn(
           className,
-          "focus-visible:outline-primary hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:hover:translate-y-0",
+          "focus-visible:outline-primary focus-visible:outline-2 focus-visible:outline-offset-2",
         )}
       >
         {body}
@@ -156,11 +191,11 @@ function RailSubStep({
 }) {
   const body = (
     <>
-      <StepBadge state={sub.state} label={number} size="sm" />
+      <StepBadge state={sub.state} label={number} size="sub" tone="sub" />
       <span className="flex min-w-0 flex-col text-left">
         <span>{sub.title}</span>
         {sub.summary && sub.state === "done" ? (
-          <span className="text-ink-tertiary text-meta line-clamp-2 font-normal">
+          <span className="text-ink-tertiary line-clamp-2 text-[12.5px] font-normal">
             {sub.summary}
           </span>
         ) : null}
@@ -168,9 +203,8 @@ function RailSubStep({
     </>
   );
   const className = cn(
-    "flex w-full items-center gap-2.5 rounded-xl px-3 py-[9px] text-[14px]",
-    sub.state === "current" &&
-      "bg-card text-primary-hover ring-primary font-semibold ring-1",
+    "flex w-full items-center gap-2.5 rounded-[12px] px-3 py-[9px] text-[14px]",
+    sub.state === "current" && "bg-acc-soft text-acc-soft-text font-semibold",
     sub.state === "done" && "text-body-ink font-medium",
     sub.state === "todo" && "text-ink-tertiary font-medium",
   );
@@ -181,7 +215,7 @@ function RailSubStep({
         onClick={sub.onSelect}
         className={cn(
           className,
-          "hover:bg-card focus-visible:outline-primary focus-visible:outline-2 focus-visible:outline-offset-2",
+          "focus-visible:outline-primary focus-visible:outline-2 focus-visible:outline-offset-2",
         )}
       >
         {body}

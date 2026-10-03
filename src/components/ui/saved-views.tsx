@@ -86,6 +86,11 @@ interface SavedViewsProps {
   onSaveView?: () => void;
   /** The accessible name for the `+`, as a full sentence (§5r). */
   saveLabel?: string;
+  /**
+   * `pills`: the evaluations mock's tabs — 14px/600, the count in a grey
+   * pill (a red one for work waiting). Mocked screens only.
+   */
+  variant?: "default" | "pills";
   className?: string;
 }
 
@@ -95,14 +100,21 @@ export function SavedViews({
   onSelect,
   onSaveView,
   saveLabel = "Save current filters as a view",
+  variant = "default",
   className,
 }: SavedViewsProps) {
+  const pills = variant === "pills";
   return (
     <div
       data-slot="saved-views"
       className={cn("w-full overflow-x-auto", className)}
     >
-      <div className="flex w-max min-w-min items-center gap-[22px]">
+      <div
+        className={cn(
+          "flex w-max min-w-min items-center",
+          pills ? "gap-0.5" : "gap-[22px]",
+        )}
+      >
         {views.map((view) => {
           const isActive = view.key === activeKey;
           return (
@@ -112,13 +124,19 @@ export function SavedViews({
               aria-pressed={isActive}
               onClick={() => onSelect(view.key)}
               className={cn(
-                `inline-flex h-12 shrink-0 cursor-pointer items-center gap-[7px] border-b-2 border-b-transparent whitespace-nowrap outline-none`,
+                pills
+                  ? `-mb-px inline-flex shrink-0 cursor-pointer items-center gap-2 border-b-2 border-b-transparent px-3.5 py-3 text-[14px] font-semibold whitespace-nowrap outline-none`
+                  : `inline-flex h-12 shrink-0 cursor-pointer items-center gap-[7px] border-b-2 border-b-transparent whitespace-nowrap outline-none`,
                 // Rule 3: one transition declaration on this element.
                 `transition-[color,border-color] duration-180 ease-[ease] motion-reduce:transition-none`,
                 `focus-visible:border-b-primary focus-visible:text-primary`,
-                isActive
-                  ? "border-b-primary text-primary text-[15px] font-bold"
-                  : "text-ink-secondary hover:text-primary text-[15px] font-semibold",
+                pills
+                  ? isActive
+                    ? "border-b-primary text-primary"
+                    : "text-ink-secondary hover:text-primary"
+                  : isActive
+                    ? "border-b-primary text-primary text-[15px] font-bold"
+                    : "text-ink-secondary hover:text-primary text-[15px] font-semibold",
               )}
             >
               {view.icon ? (
@@ -128,11 +146,15 @@ export function SavedViews({
               {view.count !== undefined && (
                 <span
                   className={cn(
-                    "text-ink-tertiary text-[13.5px] tabular-nums",
-                    isActive && "font-semibold",
+                    pills
+                      ? "bg-surface-inset-2 text-ink-secondary rounded-full px-[7px] py-0.5 text-[11px] tabular-nums"
+                      : "text-ink-tertiary text-[13.5px] tabular-nums",
+                    !pills && isActive && "font-semibold",
                     view.countTone === "error" &&
                       view.count > 0 &&
-                      "text-destructive font-semibold",
+                      (pills
+                        ? "bg-wash-error text-bad"
+                        : "text-destructive font-semibold"),
                   )}
                 >
                   {view.count.toLocaleString()}

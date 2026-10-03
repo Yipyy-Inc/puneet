@@ -1,7 +1,5 @@
 "use client";
 
-import { RotateCcw } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
@@ -39,29 +37,41 @@ export function SetupCard({
     <Card
       id={id}
       aria-labelledby={`${id}-title`}
-      className="scroll-mt-36 gap-0 overflow-hidden py-0"
+      // The setup mock's card (2026-10-02): a hairline, 20px corners, no
+      // shadow; a 17px title over a 14px line.
+      className="border-line scroll-mt-36 gap-0 overflow-hidden rounded-[20px] py-0 shadow-none"
     >
       {changed ? (
-        <div className="border-line flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3 sm:px-6">
-          <p className="text-meta text-ink-secondary flex min-w-0 items-start gap-2">
-            <RotateCcw className="mt-0.5 size-4 shrink-0" aria-hidden />
+        <div className="bg-acc-soft flex flex-wrap items-center justify-between gap-3 border-b border-(--cs-tint-line) px-5 py-2.5 sm:px-6">
+          <p className="text-acc-soft-text min-w-0 text-[13px]">
             {changedNote}
           </p>
-          <Button type="button" variant="outline" onClick={onReset}>
+          <Button
+            type="button"
+            variant="quiet"
+            size="setup-sm"
+            className="text-primary border-(--cs-line) font-semibold"
+            onClick={onReset}
+          >
             {resetLabel}
           </Button>
         </div>
       ) : null}
-      <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4 sm:px-6">
+      <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-5 sm:px-6">
         <div className="flex min-w-0 flex-col gap-1">
-          <h2 id={`${id}-title`} className="text-section text-heading">
+          <h2
+            id={`${id}-title`}
+            className="text-body-ink text-[17px] font-semibold"
+          >
             {title}
           </h2>
-          <p className="text-meta text-ink-tertiary">{help}</p>
+          <p className="text-ink-tertiary text-[14px]">{help}</p>
         </div>
         {aside}
       </div>
-      {children ? <div className="border-line border-t">{children}</div> : null}
+      {children ? (
+        <div className="border-t border-(--inset-2)">{children}</div>
+      ) : null}
     </Card>
   );
 }
@@ -76,7 +86,7 @@ export function SetupRow({
 }) {
   return (
     <div
-      className={`border-line flex min-w-0 flex-wrap items-center gap-3 border-t px-5 py-3.5 first:border-t-0 sm:px-6 ${className}`}
+      className={`flex min-w-0 flex-wrap items-center gap-3 border-t border-(--row-line) px-5 py-3.5 first:border-t-0 sm:px-6 ${className}`}
     >
       {children}
     </div>
@@ -86,7 +96,7 @@ export function SetupRow({
 /** The neutral "10 of 11 on" chip a card's header carries. */
 export function CountChip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="border-line text-meta text-ink-secondary shrink-0 rounded-full border px-3 py-1 font-semibold tabular-nums">
+    <span className="shrink-0 rounded-full bg-(--cs-count-bg) px-2.5 py-1.5 text-[13px] font-semibold text-(--cs-count-ink) tabular-nums">
       {children}
     </span>
   );

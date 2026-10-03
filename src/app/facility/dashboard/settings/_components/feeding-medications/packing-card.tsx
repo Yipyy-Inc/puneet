@@ -1,7 +1,5 @@
 "use client";
 
-import { Minus, Plus } from "lucide-react";
-
 import { ChoicePill } from "@/components/ui/choice-pill";
 import { packLabel } from "@/lib/feeding/labels";
 import { PACKS, type FoodPack } from "@/lib/feeding/vocabulary";
@@ -40,7 +38,7 @@ export function PackingCard({
   locale: AppLocale;
 }) {
   const stepButton =
-    "hover:bg-surface-inset focus-visible:outline-primary text-body-ink flex size-10 items-center justify-center disabled:text-ink-disabled focus-visible:outline-2 max-lg:size-12";
+    "focus-visible:outline-primary text-body-ink flex size-[42px] items-center justify-center bg-(--stepper-bg) text-[18px] disabled:text-ink-disabled focus-visible:outline-2";
   return (
     <SetupCard
       id="f-packing"
@@ -51,10 +49,10 @@ export function PackingCard({
       resetLabel={t("resetSection")}
       onReset={onReset}
     >
-      <div className="flex min-w-0 flex-col gap-2.5 px-5 py-4 sm:px-6">
+      <div className="flex min-w-0 flex-col gap-2.5 px-5 py-[18px] sm:px-6">
         <span
           id="f-packing-accepted"
-          className="text-body-strong text-body-ink"
+          className="text-body-ink text-[14px] font-medium"
         >
           {t("acceptedPacking")}
         </span>
@@ -82,15 +80,17 @@ export function PackingCard({
           ))}
         </div>
       </div>
-      <div className="border-line flex flex-wrap items-center justify-between gap-4 border-t px-5 py-4 sm:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-t border-(--row-line) px-5 py-4 sm:px-6">
         <span className="flex min-w-0 flex-col gap-0.5">
-          <span className="text-body-strong text-body-ink">
+          <span className="text-body-ink text-[15px] font-medium">
             {t("extraTitle")}
           </span>
-          <span className="text-meta text-ink-tertiary">{t("extraHelp")}</span>
+          <span className="text-ink-tertiary text-[13px]">
+            {t("extraHelp")}
+          </span>
         </span>
         <div className="flex items-center gap-2.5">
-          <div className="border-line-strong bg-card flex items-center overflow-hidden rounded-full border">
+          <div className="border-line-strong bg-card flex h-[42px] items-center overflow-hidden rounded-[12px] border">
             <button
               type="button"
               aria-label={t("extraFewer")}
@@ -98,11 +98,11 @@ export function PackingCard({
               onClick={() => onExtra(Math.max(0, extraMeals - 1))}
               className={stepButton}
             >
-              <Minus className="size-4" aria-hidden />
+              <span aria-hidden>−</span>
             </button>
             <span
               aria-live="polite"
-              className="text-body-strong text-body-ink min-w-10 text-center tabular-nums"
+              className="text-body-ink min-w-11 text-center text-[16px] font-semibold tabular-nums"
             >
               {extraMeals}
             </span>
@@ -113,10 +113,10 @@ export function PackingCard({
               onClick={() => onExtra(Math.min(MAX_EXTRA, extraMeals + 1))}
               className={stepButton}
             >
-              <Plus className="size-4" aria-hidden />
+              <span aria-hidden>+</span>
             </button>
           </div>
-          <span className="text-body text-ink-secondary">
+          <span className="text-ink-secondary text-[14px]">
             {t(
               isPluralOne(extraMeals, locale)
                 ? "extraMealOne"

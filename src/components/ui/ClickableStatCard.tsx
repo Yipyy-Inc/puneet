@@ -79,7 +79,7 @@ export function ClickableStatCard({
               isApplied
                 ? "text-white/80"
                 : isActive
-                  ? "text-primary-hover"
+                  ? "text-primary-ink"
                   : "text-ink-secondary",
             )}
           >
@@ -91,7 +91,7 @@ export function ClickableStatCard({
               isApplied
                 ? "text-white"
                 : isActive
-                  ? "text-primary-hover"
+                  ? "text-primary-ink"
                   : "text-body-ink",
               valueClassName,
             )}

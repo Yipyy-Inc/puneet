@@ -7,20 +7,28 @@
 
 export function EditorSection({
   label,
+  aside,
   children,
 }: {
   label: string;
+  /** A note at the end of the heading's line, as the mocks set one. */
+  aside?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-5 px-4 py-6 sm:px-6">
-      <p className="text-micro text-ink-tertiary uppercase">{label}</p>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="text-[12px] font-semibold tracking-[0.08em] text-(--care-micro) uppercase">
+          {label}
+        </p>
+        {aside}
+      </div>
       {children}
     </div>
   );
 }
 
-/** A field's label line: 13.5/600 above it (§5c). */
+/** A field's label line: the care mocks' 14/500 above it. */
 export function FieldLabel({
   htmlFor,
   id,
@@ -33,7 +41,7 @@ export function FieldLabel({
   /** Shown at the end of the line, like a summary. */
   aside?: React.ReactNode;
 }) {
-  const className = "text-body-ink text-meta font-semibold";
+  const className = "text-body-ink text-[14px] font-medium";
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-2">
       {htmlFor ? (

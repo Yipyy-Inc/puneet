@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -88,7 +87,7 @@ export function MethodsCard({
     >
       <div
         aria-hidden
-        className={`border-line text-micro text-ink-tertiary hidden gap-3 border-b px-6 py-2.5 uppercase sm:grid ${GRID}`}
+        className={`bg-surface-inset hidden gap-3 border-b border-(--inset-2) px-6 py-2.5 text-[12px] font-semibold tracking-[0.06em] text-(--care-micro) uppercase sm:grid ${GRID}`}
       >
         <span>{t("colOn")}</span>
         <span>{t("colMethod")}</span>
@@ -107,16 +106,17 @@ export function MethodsCard({
           return (
             <div
               key={row.id}
-              className={`border-line flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 border-t px-5 py-3 first:border-t-0 sm:grid sm:px-6 ${GRID}`}
+              className={`flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 border-t border-(--row-line) px-5 py-3 first:border-t-0 sm:grid sm:px-6 ${GRID}`}
             >
               <Switch
+                size="sm"
                 checked={row.on}
                 onCheckedChange={(on) => setRow(row.id, { on })}
                 aria-label={fill(t("methodOn"), { name })}
               />
               <span
                 data-on={row.on}
-                className="text-body-strong text-ink-tertiary data-[on=true]:text-body-ink min-w-0 flex-1 wrap-break-word"
+                className="data-[on=true]:text-body-ink min-w-0 flex-1 text-[15px] font-medium wrap-break-word text-(--care-micro)"
               >
                 {name}
               </span>
@@ -127,16 +127,17 @@ export function MethodsCard({
                 {sellable && row.on ? (
                   <label className="flex items-center gap-2">
                     <Switch
+                      size="sm"
                       checked={row.sell}
                       onCheckedChange={(sell) => setRow(row.id, { sell })}
                       aria-label={fill(t("sellLabel"), { name })}
                     />
-                    <span className="text-meta text-ink-tertiary sm:hidden">
+                    <span className="text-ink-tertiary text-[13px] sm:hidden">
                       {t("colSell")}
                     </span>
                   </label>
                 ) : (
-                  <span aria-hidden className="text-meta text-ink-tertiary">
+                  <span aria-hidden className="text-ink-tertiary text-[13px]">
                     —
                   </span>
                 )}
@@ -170,7 +171,7 @@ export function MethodsCard({
                   <Button
                     type="button"
                     variant="ghost"
-                    className="text-destructive hover:text-destructive"
+                    className="text-bad hover:text-bad font-normal"
                     aria-label={fill(t("removeNamed"), { name })}
                     onClick={() => {
                       onChange((current) =>
@@ -192,7 +193,7 @@ export function MethodsCard({
                     {t("remove")}
                   </Button>
                 ) : (
-                  <span className="text-micro text-ink-tertiary uppercase">
+                  <span className="text-[12px] font-semibold tracking-[0.06em] text-(--care-micro) uppercase">
                     {t("defaultTag")}
                   </span>
                 )}
@@ -201,7 +202,7 @@ export function MethodsCard({
           );
         })}
       </div>
-      <div className="border-line flex flex-wrap items-center gap-2 border-t px-5 py-3.5 sm:px-6">
+      <div className="flex flex-wrap items-center gap-2 border-t border-(--row-line) px-5 pt-3 pb-[18px] sm:px-6">
         <Input
           value={draft}
           maxLength={40}
@@ -218,12 +219,13 @@ export function MethodsCard({
         />
         <Button
           type="button"
-          variant="outline"
-          className="border-dashed"
+          variant="quiet"
+          size="setup"
+          className="text-primary gap-1 border-[1.5px] border-dashed border-(--cs-line) font-semibold"
           disabled={methods.length >= 40}
           onClick={add}
         >
-          <Plus aria-hidden />
+          <span aria-hidden>+</span>
           {t("addMethod")}
         </Button>
       </div>

@@ -3,6 +3,7 @@
 import * as React from "react";
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 
+import { useLookStamp } from "@/components/look/look-context";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 
@@ -48,6 +49,7 @@ function AlertDialogContent({
   className,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Content>) {
+  const stamp = useLookStamp(props.style);
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />
@@ -58,6 +60,7 @@ function AlertDialogContent({
           className,
         )}
         {...props}
+        {...stamp}
       />
     </AlertDialogPortal>
   );

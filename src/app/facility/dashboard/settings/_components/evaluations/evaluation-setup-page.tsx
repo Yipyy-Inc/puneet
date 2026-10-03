@@ -1,5 +1,6 @@
 "use client";
 
+import { LookScope } from "@/components/look/look-context";
 import { Button } from "@/components/ui/button";
 import { useOpenEvaluationWizard } from "@/components/evaluations/use-open-evaluation-wizard";
 import type { FacilityCalendar } from "@/lib/evaluations/facility-days";
@@ -67,61 +68,69 @@ export function EvaluationSetupPage({
   ];
 
   return (
-    <div className="flex min-w-0 flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex max-w-160 min-w-0 flex-col gap-1">
-          <p className="text-body text-ink-secondary text-pretty">
-            {t("intro")}
-          </p>
-          {setup.dirty ? (
-            <p className="text-meta text-ink-tertiary">{t("tryAfterSave")}</p>
-          ) : null}
+    // The evaluation mock's palette is the booking mock's, so the section
+    // takes the booking look (CLAUDE.md § "Client mocks decide the look").
+    <LookScope name="booking">
+      <div className="flex min-w-0 flex-col gap-6">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="flex max-w-160 min-w-0 flex-col gap-1">
+            <p className="text-ink-tertiary text-[14px] text-pretty">
+              {t("intro")}
+            </p>
+            {setup.dirty ? (
+              <p className="text-ink-tertiary text-[12.5px]">
+                {t("tryAfterSave")}
+              </p>
+            ) : null}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="quiet"
+              size="mock-42"
+              onClick={openWizard}
+              disabled={setup.dirty}
+            >
+              {t("tryWizard")}
+            </Button>
+            <Button
+              type="button"
+              size="mock-42"
+              className="px-5 font-bold [--sh-cta:none]"
+              onClick={() => void setup.save()}
+              disabled={!setup.dirty}
+              loading={setup.saving}
+            >
+              {t("save")}
+            </Button>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={openWizard}
-            disabled={setup.dirty}
-          >
-            {t("tryWizard")}
-          </Button>
-          <Button
-            type="button"
-            size="prominent"
-            onClick={() => void setup.save()}
-            disabled={!setup.dirty}
-            loading={setup.saving}
-          >
-            {t("save")}
-          </Button>
-        </div>
-      </div>
 
-      <div className="flex min-w-0 flex-wrap items-start gap-[18px]">
-        <div className="flex min-w-0 flex-[1_1_520px] flex-col gap-3.5">
-          <OfferModeStep setup={setup} t={t} />
-          <WhenStep setup={setup} t={t} locale={locale} />
-          <WhoWhatStep
-            setup={setup}
-            services={services}
-            vaccineNames={vaccineNames}
+        <div className="flex min-w-0 flex-wrap items-start gap-[18px]">
+          <div className="flex min-w-0 flex-[1_1_520px] flex-col gap-3.5">
+            <OfferModeStep setup={setup} t={t} />
+            <WhenStep setup={setup} t={t} locale={locale} />
+            <WhoWhatStep
+              setup={setup}
+              services={services}
+              vaccineNames={vaccineNames}
+              t={t}
+              locale={locale}
+            />
+            <ConfirmationStep setup={setup} t={t} />
+            <MoreOptionsCard setup={setup} t={t} />
+          </div>
+          <ClientsPreview
+            config={setup.draft.config}
+            calendar={calendar}
             t={t}
             locale={locale}
+            onOpenWizard={openWizard}
+            wizardDisabled={setup.dirty}
+            setupHref={setupHref}
           />
-          <ConfirmationStep setup={setup} t={t} />
-          <MoreOptionsCard setup={setup} t={t} />
         </div>
-        <ClientsPreview
-          config={setup.draft.config}
-          calendar={calendar}
-          t={t}
-          locale={locale}
-          onOpenWizard={openWizard}
-          wizardDisabled={setup.dirty}
-          setupHref={setupHref}
-        />
       </div>
-    </div>
+    </LookScope>
   );
 }

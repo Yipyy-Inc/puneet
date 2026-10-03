@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Clock } from "lucide-react";
 
 import { ChoicePill } from "@/components/ui/choice-pill";
 import { PetAvatar } from "@/components/ui/pet-avatar";
 import { Switch } from "@/components/ui/switch";
+import { Tick } from "@/components/ui/tick";
 import { isPackageEligibleForPet } from "@/lib/api/grooming";
 import {
   useGroomingMenu,
@@ -169,9 +169,11 @@ export function PackageStep({
 
   return (
     <div className="flex flex-col gap-[18px]">
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <h3 className="text-section text-body-ink">{t("wizChooseGroom")}</h3>
-        <p className="text-meta text-ink-tertiary">
+      <div className="flex min-w-0 flex-col gap-[3px]">
+        <h3 className="text-body-ink text-[17px] font-semibold">
+          {t("wizChooseGroom")}
+        </h3>
+        <p className="text-ink-tertiary text-[13.5px]">
           {multiPet
             ? t("wizChooseGroomEach")
             : fill(t("wizChooseGroomOne"), { pet: active?.name ?? "" })}
@@ -194,11 +196,16 @@ export function PackageStep({
                 value={String(pet.id)}
                 checked={active?.id === pet.id}
                 onChange={() => setActiveId(pet.id)}
-                className="pl-1.5"
+                className="min-h-[42px] pr-4 pl-1.5 text-[14px] max-lg:min-h-[42px]"
               >
-                <PetAvatar name={pet.name} src={pet.imageUrl} size="sm" />
+                <PetAvatar
+                  name={pet.name}
+                  src={pet.imageUrl}
+                  size="mk-30"
+                  surface="card"
+                />
                 <span>{pet.name}</span>
-                <span className="text-meta text-ink-tertiary font-normal">
+                <span className="text-[12.5px] font-normal opacity-80">
                   · {chosen ? chosen.name : t("wizGroomNotChosen")}
                 </span>
               </ChoicePill>
@@ -208,18 +215,18 @@ export function PackageStep({
       ) : null}
 
       {active ? (
-        <div className="bg-surface-inset flex flex-wrap items-center gap-x-3.5 gap-y-2 rounded-xl px-[18px] py-3.5">
+        <div className="bg-acc-soft flex flex-wrap items-center gap-x-3.5 gap-y-2 rounded-[18px] px-[18px] py-3.5">
           <ul className="flex min-w-0 flex-1 flex-wrap gap-2">
             {facts.map((fact) => (
               <li
                 key={fact}
-                className="bg-card text-meta text-body-ink rounded-full px-[11px] py-[5px] font-semibold"
+                className="bg-card text-body-ink rounded-full px-[11px] py-[5px] text-[13px] font-semibold"
               >
                 {fact}
               </li>
             ))}
           </ul>
-          <span className="text-meta text-ink-secondary font-medium">
+          <span className="text-acc-soft-text text-[12.5px] font-medium">
             {t("wizTierFromProfile")}
           </span>
         </div>
@@ -233,7 +240,7 @@ export function PackageStep({
           {[0, 1, 2, 3].map((i) => (
             <div
               key={i}
-              className="border-line bg-card yy-skel flex h-[180px] flex-col gap-3 rounded-2xl border px-5 py-[18px]"
+              className="border-line bg-card yy-skel flex h-[180px] flex-col gap-3 rounded-[22px] border-[1.5px] px-5 py-[18px]"
             >
               <span className="bg-surface-inset h-4 w-2/5 rounded-full" />
               <span className="bg-surface-inset h-3 w-3/5 rounded-full" />
@@ -241,7 +248,7 @@ export function PackageStep({
           ))}
         </div>
       ) : cards.length === 0 ? (
-        <p className="border-line-strong text-meta text-ink-secondary rounded-2xl border border-dashed px-6 py-8 text-center">
+        <p className="border-line-strong text-ink-secondary rounded-[20px] border-[1.5px] border-dashed px-6 py-8 text-center text-[13.5px]">
           {packages.length > 0 && active
             ? fill(t("wizNoGroomFor"), { pet: active.name })
             : t("wizNoGrooms")}
@@ -301,60 +308,55 @@ export function PackageStep({
                 data-on={on}
                 data-disabled={!eligible || undefined}
                 onClick={() => eligible && pick(pkg.id)}
-                className="border-line-strong bg-card hover:border-ink-disabled focus-visible:outline-primary data-[disabled=true]:bg-surface-inset data-[disabled=true]:hover:border-line-strong relative flex min-w-0 flex-col gap-3 rounded-2xl border px-5 py-[18px] text-left transition-[box-shadow,border-color] duration-120 ease-[ease] focus-visible:outline-2 focus-visible:outline-offset-2 data-[disabled=true]:cursor-not-allowed data-[on=true]:border-transparent data-[on=true]:shadow-[inset_0_0_0_2px_var(--primary)] motion-reduce:transition-none"
+                className="mk-pick bg-card focus-visible:outline-primary relative flex min-w-0 flex-col gap-3 rounded-[22px] px-5 py-[18px] text-left focus-visible:outline-2 focus-visible:outline-offset-2 data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-50"
               >
-                <span className="flex min-w-0 flex-col gap-[3px] pr-8">
-                  <span className="text-section text-body-ink">{pkg.name}</span>
+                <span className="flex min-w-0 flex-col gap-[3px] pr-[30px]">
+                  <span className="text-body-ink text-[16.5px] font-semibold">
+                    {pkg.name}
+                  </span>
                   {pkg.description ? (
-                    <span className="text-meta text-ink-tertiary line-clamp-2 text-pretty">
+                    <span className="text-ink-tertiary line-clamp-2 text-[13px] text-pretty">
                       {pkg.description}
                     </span>
                   ) : null}
                 </span>
                 <span className="flex items-end justify-between gap-2">
                   <span className="flex min-w-0 flex-col">
-                    <span className="text-heading text-[24px]/[1.15] font-bold tracking-[-0.02em] tabular-nums">
+                    <span className="text-body-ink text-[24px] font-bold tracking-[-0.02em] tabular-nums">
                       {groom ? money(groom.price) : money(pkg.basePrice)}
                     </span>
                     {note ? (
-                      <span className="text-meta text-ink-tertiary">
+                      <span className="text-ink-tertiary text-[12px]">
                         {note}
                       </span>
                     ) : null}
                   </span>
                   {groom ? (
-                    <span className="border-line text-meta text-body-ink inline-flex shrink-0 items-center gap-1.5 rounded-full border px-[11px] py-[5px] font-semibold tabular-nums">
-                      <Clock aria-hidden className="size-4" />
+                    <span className="text-body-ink inline-flex shrink-0 items-center rounded-full bg-(--tag-bg) px-[11px] py-[5px] text-[12.5px] font-semibold tabular-nums">
+                      <span aria-hidden>◷&nbsp;</span>
                       {formatDuration(groom.minutes, locale)}
                     </span>
                   ) : null}
                 </span>
                 {!eligible && active ? (
-                  <span className="text-meta text-warning font-semibold">
+                  <span className="text-[12.5px] font-semibold text-(--warm-ink)">
                     {fill(t("wizRoomNotFor"), { pet: active.name })}
                   </span>
                 ) : null}
                 {tierPrices(pkg).length > 0 ? (
-                  <span className="border-line flex gap-1 border-t pt-2.5">
+                  <span className="border-line-soft flex gap-1 border-t pt-2.5">
                     {tierPrices(pkg).map(({ size, price }) => (
                       <span
                         key={size}
                         data-here={size === activeSize || undefined}
-                        className="text-meta text-ink-tertiary data-[here=true]:bg-surface-inset data-[here=true]:text-body-ink flex-1 rounded-lg py-[5px] text-center font-medium tabular-nums data-[here=true]:font-bold"
+                        className="text-ink-tertiary data-[here=true]:bg-acc-soft data-[here=true]:text-acc-soft-text flex-1 rounded-[10px] py-[5px] text-center text-[12px] font-medium tabular-nums data-[here=true]:font-bold"
                       >
                         {SIZE_SHORT[size] ?? size} {money(price)}
                       </span>
                     ))}
                   </span>
                 ) : null}
-                {on ? (
-                  <span
-                    aria-hidden
-                    className="bg-primary text-primary-foreground absolute top-4 right-4 flex size-6 items-center justify-center rounded-full"
-                  >
-                    <Check className="size-4" strokeWidth={3} />
-                  </span>
-                ) : null}
+                {on ? <Tick size={24} className="top-4 right-4" /> : null}
               </button>
             );
           })}
@@ -362,12 +364,12 @@ export function PackageStep({
       )}
 
       {!isCustomer && active && activePackage ? (
-        <label className="border-line bg-card flex max-w-[560px] cursor-pointer items-center gap-3.5 rounded-xl border px-[18px] py-3.5">
+        <label className="border-line bg-card flex max-w-[560px] cursor-pointer items-center gap-3.5 rounded-[18px] border px-[18px] py-3.5">
           <span className="flex min-w-0 flex-1 flex-col">
-            <span className="text-body-strong text-body-ink">
+            <span className="text-body-ink text-[14px] font-semibold">
               {fill(t("wizHasMatting"), { pet: active.name })}
             </span>
-            <span className="text-meta text-ink-tertiary">
+            <span className="text-ink-tertiary text-[12.5px]">
               {activeMatting && activeMatting.amount > 0
                 ? activeMatting.minutes > 0
                   ? fill(t("wizMattingHint"), {
@@ -394,7 +396,7 @@ export function PackageStep({
       ) : null}
 
       {isCustomer ? (
-        <p className="text-meta text-ink-tertiary">
+        <p className="text-ink-tertiary text-[12.5px]">
           {t("wizGroomEstimateNote")}
         </p>
       ) : null}

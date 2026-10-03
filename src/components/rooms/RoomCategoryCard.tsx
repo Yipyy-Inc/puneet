@@ -13,9 +13,10 @@ import {
   PawPrint,
   AlertCircle,
   Building2,
-  ImageIcon,
 } from "lucide-react";
+import { Photo } from "@/components/ui/photo";
 import { admittedSpecies } from "@/lib/capacity-engine";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { cn } from "@/lib/utils";
 import type { RoomCategory, FacilityRoom, RoomRule } from "@/types/rooms";
 
@@ -23,65 +24,54 @@ import type { RoomCategory, FacilityRoom, RoomRule } from "@/types/rooms";
 
 type ColorKey = RoomCategory["color"];
 
-const COLOR_CONFIG: Record<
-  ColorKey,
-  { headerBg: string; badge: string; dot: string }
-> = {
+const COLOR_CONFIG: Record<ColorKey, { headerBg: string; badge: string }> = {
   amber: {
     headerBg:
       "bg-gradient-to-r from-amber-50/80  to-orange-50/30  dark:from-amber-950/30  dark:to-orange-950/10",
     badge:
       "bg-amber-100   text-amber-800   border-amber-200   dark:bg-amber-950/50   dark:text-amber-300   dark:border-amber-800",
-    dot: "bg-amber-400",
   },
   violet: {
     headerBg:
       "bg-gradient-to-r from-violet-50/80 to-purple-50/30  dark:from-violet-950/30 dark:to-purple-950/10",
     badge:
       "bg-violet-100  text-violet-800  border-violet-200  dark:bg-violet-950/50  dark:text-violet-300  dark:border-violet-800",
-    dot: "bg-violet-400",
   },
   blue: {
     headerBg:
       "bg-gradient-to-r from-blue-50/80   to-sky-50/30     dark:from-blue-950/30   dark:to-sky-950/10",
     badge:
       "bg-blue-100    text-blue-800    border-blue-200    dark:bg-blue-950/50    dark:text-blue-300    dark:border-blue-800",
-    dot: "bg-blue-400",
   },
   emerald: {
     headerBg:
       "bg-gradient-to-r from-emerald-50/80 to-green-50/30 dark:from-emerald-950/30 dark:to-green-950/10",
     badge:
       "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800",
-    dot: "bg-emerald-400",
   },
   rose: {
     headerBg:
       "bg-gradient-to-r from-rose-50/80   to-pink-50/30    dark:from-rose-950/30   dark:to-pink-950/10",
     badge:
       "bg-rose-100    text-rose-800    border-rose-200    dark:bg-rose-950/50    dark:text-rose-300    dark:border-rose-800",
-    dot: "bg-rose-400",
   },
   orange: {
     headerBg:
       "bg-gradient-to-r from-orange-50/80 to-amber-50/30  dark:from-orange-950/30 dark:to-amber-950/10",
     badge:
       "bg-orange-100  text-orange-800  border-orange-200  dark:bg-orange-950/50  dark:text-orange-300  dark:border-orange-800",
-    dot: "bg-orange-400",
   },
   indigo: {
     headerBg:
       "bg-gradient-to-r from-indigo-50/80 to-blue-50/30   dark:from-indigo-950/30 dark:to-blue-950/10",
     badge:
       "bg-indigo-100  text-indigo-800  border-indigo-200  dark:bg-indigo-950/50  dark:text-indigo-300  dark:border-indigo-800",
-    dot: "bg-indigo-400",
   },
   slate: {
     headerBg:
       "bg-gradient-to-r from-slate-50/80  to-gray-50/30   dark:from-slate-950/30  dark:to-gray-950/10",
     badge:
       "bg-slate-100   text-slate-800   border-slate-200   dark:bg-slate-950/50   dark:text-slate-300   dark:border-slate-800",
-    dot: "bg-slate-400",
   },
 };
 
@@ -168,18 +158,14 @@ export function RoomCategoryCard({
             )}
           </button>
 
-          {/* Category thumbnail */}
-          {category.imageUrl ? (
-            <div className="size-10 shrink-0 overflow-hidden rounded-lg border shadow-sm">
-              <img
-                src={category.imageUrl}
-                alt={category.name}
-                className="size-full object-cover"
-              />
-            </div>
-          ) : (
-            <div className={cn("size-3 shrink-0 rounded-full", colors.dot)} />
-          )}
+          {/* The category's photo, or the striped placeholder every
+              missing photo shares (CLAUDE.md § "Client mocks decide the
+              look") — a 12px colour dot stood in this 40px slot. */}
+          <Photo
+            src={category.imageUrl}
+            shape="tile"
+            className="size-10 rounded-lg border shadow-sm"
+          />
 
           <div className="min-w-0 flex-1">
             <h3 className="truncate text-base font-semibold">
@@ -315,6 +301,7 @@ function UnitTile({
   onToggle: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useStaffText("lodging");
   const capacity = room.capacity ?? defaultCapacity;
   const displayImage = room.imageUrl ?? categoryImageUrl;
   return (
@@ -324,34 +311,24 @@ function UnitTile({
         room.active ? "bg-card" : "bg-muted/30 opacity-60",
       )}
     >
-      {/* Room photo */}
-      {displayImage ? (
-        <div className="relative aspect-4/3">
-          <img
-            src={displayImage}
-            alt={room.name}
-            className="absolute inset-0 size-full object-cover"
+      {/* The room's photo — or, none or one that will not load, the
+          striped placeholder every missing photo shares (CLAUDE.md § "Client
+          mocks decide the look"). */}
+      <div className="relative aspect-4/3">
+        <Photo
+          src={displayImage}
+          shape="band"
+          label={t("unitPhotoSlot")}
+          className="absolute inset-0 size-full"
+        />
+        <div className="absolute top-1.5 right-1.5">
+          <Switch
+            checked={room.active}
+            onCheckedChange={onToggle}
+            className="scale-[0.65]"
           />
-          <div className="absolute top-1.5 right-1.5">
-            <Switch
-              checked={room.active}
-              onCheckedChange={onToggle}
-              className="scale-[0.65]"
-            />
-          </div>
         </div>
-      ) : (
-        <div className="bg-muted/40 relative flex aspect-4/3 items-center justify-center">
-          <ImageIcon className="text-muted-foreground/25 size-5" />
-          <div className="absolute top-1.5 right-1.5">
-            <Switch
-              checked={room.active}
-              onCheckedChange={onToggle}
-              className="scale-[0.65]"
-            />
-          </div>
-        </div>
-      )}
+      </div>
       <div className="p-2.5">
         <p className="truncate text-xs/tight font-semibold">{room.name}</p>
         <div className="mt-1 flex items-center justify-between">

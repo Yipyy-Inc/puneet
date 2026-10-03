@@ -154,8 +154,19 @@
   --color-surface-inset-2: var(--inset-2);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
+  /* A client mock's softest divider (2026-10-03). Only a look defines it;
+     anywhere else it is the default hairline. */
+  --color-line-soft: var(--line-soft, var(--line));
   --color-panel-dark: var(--panel-dark);
   --color-primary-hover: var(--primary-hover);
+  --color-primary-ink: var(--primary-ink);
+  /* The client-mock wizard's accent roles (accent-palette.ts). They resolve
+     inside `[data-look~="booking"]` only; nothing outside uses them. */
+  --color-acc: var(--acc);
+  --color-acc-text: var(--acc-text);
+  --color-acc-soft: var(--acc-soft);
+  --color-acc-soft-text: var(--acc-soft-text);
+  --color-acc-deep: var(--acc-deep);
   --color-primary-tint: var(--primary-tint);
   --color-primary-tint-2: var(--primary-tint-2);
 
@@ -838,6 +849,39 @@
   --sidebar-w: 266px; /* 68px icon rail 600-1023px, bottom bar ≤599px */
   --topbar-h: 60px;
 
+  /* The focus halo (§5k), a variable so a look scope can tint it. */
+  --ring-halo: rgba(22, 104, 227, 0.12);
+  /* Selected text: once `--primary-hover` did this job as well as the
+     button's hover fill. A look whose accent is light (the customer
+     wizard's yellow) needs the two apart. Same value here. */
+  --primary-ink: #0f58c6;
+
+  /* A missing photo (PhotoPlaceholder), as the client's mocks draw every one
+     — app-wide since 2026-10-02 (CLAUDE.md § "Client mocks decide the
+     look"). The label is decorative and aria-hidden. */
+  --stripe-a: #efede8;
+  --stripe-b: #f7f6f2;
+  --stripe-soft-a: #f1efea;
+  --stripe-warm-a: #ede9e2;
+  --stripe-warm-b: #e6e1d9;
+  --stripe-label: #9a9890;
+  --stripe-initials: #4b5563;
+}
+
+/* ============================================================================
+ * THE ALIASES, RECOMPUTED PER LOOK SCOPE (2026-10-02).
+ *
+ * A declaration like `--border: var(--line)` resolves ONCE, on the element
+ * that declares it, and children inherit the finished colour. Declared on
+ * :root alone, a screen that redefines --line for its own subtree (a
+ * client-mock look, `[data-look]`, below) would still get the root's
+ * borders, muted text and focus ring. Listing `[data-look]` here makes each
+ * scope root resolve them again from its own values. At :root nothing
+ * changes: the same declarations, on the same element.
+ * ========================================================================= */
+
+:root,
+[data-look] {
   /* ── shadcn-required semantic vars — mapped onto the Yipyy roles above,
      never a second definition of the same colour. See the table in the
      stage-1 commit message for why each landed where it did (--secondary
@@ -909,7 +953,7 @@
   :focus-visible {
     outline: 2px solid var(--primary);
     outline-offset: 2px;
-    box-shadow: 0 0 0 3px rgba(22, 104, 227, 0.12);
+    box-shadow: 0 0 0 3px var(--ring-halo);
   }
 }
 
@@ -2087,6 +2131,368 @@ button {
   :focus-visible {
     outline: 2px solid var(--primary);
     outline-offset: 0;
-    box-shadow: 0 0 0 3px rgba(22, 104, 227, 0.12);
+    box-shadow: 0 0 0 3px var(--ring-halo);
+  }
+}
+
+/* ============================================================================
+ * CLIENT-MOCK LOOK SCOPES — the two rules every scope needs (2026-10-02).
+ * CLAUDE.md § "Client mocks decide the look of the screens they cover".
+ *
+ * Text colour is inherited already COMPUTED from <body>, so a scope that
+ * redefines --body would still paint the root's ink without the first rule.
+ * The second makes the 46 hard-wired `focus-visible:outline-primary`
+ * utilities, and the base ring, follow the scope's --ring — the deep accent,
+ * because a light accent (the customer wizard's yellow is 1.8:1 on white)
+ * would make the focus ring invisible. Unlayered on purpose: an unlayered
+ * rule beats every utility, and these must.
+ * ========================================================================= */
+
+[data-look] {
+  color: var(--foreground);
+}
+
+[data-look] :focus-visible {
+  outline-color: var(--ring);
+}
+
+/* ============================================================================
+ * LOOK: booking — the booking wizard, both portals, as
+ * docs/Facility_01_-_Find_client.html draws it (INK, MUT, FAINT, LINE and the
+ * per-portal accent at the top of its script).
+ *
+ * The accent defaults to the staff portal's blue; the customer wizard sets
+ * the six --acc* variables inline from the facility's brand colour
+ * (accentPalette(), the mock's yellow when none is set), which beats this
+ * block. Links and the focus ring use the DEEP accent: the yellow is 1.8:1 on
+ * white, fine as a fill under ink, unreadable as an ink itself.
+ * ========================================================================= */
+
+[data-look~="booking"] {
+  --acc: #1d6ae5;
+  --acc-text: #ffffff;
+  --acc-soft: #e8f0fd;
+  --acc-soft-text: #1a4fb5;
+  --acc-deep: #1d6ae5;
+  --acc-glow: rgba(29, 106, 229, 0.45);
+
+  --primary: var(--acc);
+  --primary-foreground: var(--acc-text);
+  --primary-hover: var(--acc);
+  --primary-ink: var(--acc-deep);
+  --primary-tint: var(--acc-soft);
+  --primary-tint-2: #e6e4de;
+  --wash-primary: var(--acc-soft);
+
+  --heading: #1b2333;
+  --body: #1b2333;
+  --ink-secondary: #4b5563;
+  --ink-tertiary: #6b7280;
+  --ink-disabled: #a3a7ae;
+
+  --ground: #fbfaf7;
+  --card: #ffffff;
+  --inset: #f6f5f1;
+  --inset-2: #f1efea;
+  --line: #eceae4;
+  --line-strong: #e3e1db;
+  /* The mock's row rules inside a card — its chip fill drawn as a hairline. */
+  --line-soft: #f1efea;
+
+  --success: #1f7a45;
+  --wash-success: #e7f5ec;
+  --warning: #9a5b00;
+  --wash-warning: #fdf1dc;
+
+  --sh-cta: 0 10px 22px -10px var(--acc-glow);
+  --sh-cta-hover: 0 14px 26px -10px var(--acc-glow);
+  --sh-cta-active: 0 4px 10px -8px var(--acc-glow);
+
+  --ring: var(--acc-deep);
+  --ring-halo: var(--acc-soft);
+  --pet-ring: none;
+
+  /* The window: the mock's `box-shadow:0 30px 80px rgba(0,0,0,.28)`. */
+  --sh-frame: 0 30px 80px rgba(0, 0, 0, 0.28);
+  /* The rail: the open step's glow; a step ahead's grey badge; the
+     evaluation mock's flat rail lifts its open step this little. */
+  --sh-step: 0 10px 24px -12px var(--acc-glow);
+  --sh-step-flat: 0 2px 8px rgba(0, 0, 0, 0.05);
+  --step-todo: #eceae5;
+  /* The footer: Previous on the first step; the evaluation flow's action
+     before it can go. */
+  --quiet-disabled: #f4f3ef;
+  --next-disabled-flat: #a9c2ee;
+
+  /* Cards you pick (the mock's `card(sel)`): a hairline and a breath of
+     shadow; picked, the accent and its glow. Danger chips (locked, allergy)
+     and the list rows' hover are the mock's own. */
+  --sh-card: 0 1px 2px rgba(20, 20, 20, 0.04);
+  --sh-card-on: 0 10px 28px -14px var(--acc-glow);
+  --error: #b4321f;
+  --bad: #b4321f;
+  --wash-error: #fdece8;
+  --row-hover: #f8f7f3;
+  --warning-line: #e8c48a;
+  /* Room cards: the price pill, "Last one left" and too-small reasons, the
+     feature tags, a switch that is off. */
+  --price-pill: #1f2633;
+  --warm-ink: #b4561f;
+  --tag-bg: #f4f3ef;
+  --switch-off: #d9d6cf;
+  /* The calendar: weekday heads, a day that cannot be booked, the empty
+     times card's ring. */
+  --dow-ink: #9aa0a8;
+  --day-off: #c5c2bb;
+  --empty-ring: #d7d4cd;
+  /* An add-on's per-pet stepper: its pill and the pet's initial. */
+  --stepper-bg: #fbfaf7;
+  --avatar-muted: #eeece7;
+  /* Confirm: a detail row's divider; the fixed blue of a request and of
+     "deposit due"; the service kind's violet chip. */
+  --row-line: #f4f2ee;
+  --info-wash: #e8f0fd;
+  --info-ink: #1a4fb5;
+  /* The approval note on Confirm: a pale blue panel with a blue hairline. */
+  --info-line: #bfd3f6;
+  --info-note: #f1f6fe;
+  --violet-wash: #eeeafb;
+  --violet-ink: #4b3bb0;
+  /* The accent's palest panel and its hairline — the evaluation mock's
+     "Earliest opening" and a chosen evaluator (#F1F6FE, #BFD3F6 on the
+     facility's blue), taken from the accent so a customer's colour carries
+     them. */
+  --acc-pale: color-mix(in srgb, var(--acc-soft) 62%, #fff);
+  --acc-line: color-mix(in srgb, var(--acc) 29%, #fff);
+  /* Confirm's status dots: on file, and expiring. */
+  --dot-ok: #1f8a4c;
+  --dot-warn: #d98a0b;
+  /* Agreements: a row's panel; staff's "not signed yet" note; an unticked
+     box. */
+  --agr-bg: #faf9f6;
+  --agr-line: #f0eee9;
+  --note-bg: #fdf5e6;
+  --note-line: #f3ddb2;
+  --note-ink: #7a4a00;
+  --check-off: #c9c6bf;
+
+  /* The mock sets no line height: every line is the font's own (normal). */
+  line-height: normal;
+}
+
+/* The Feeding and Medications steps inside the booking wizard, as their own
+   mocks draw them (docs/Feeding_Step.html, docs/Medications_Step.html): their
+   inks, lines and fills, on the wizard's accent rather than the mocks' violet
+   (decided with the user, 2026-10-02). Nested inside `booking`. */
+[data-look~="care-step"] {
+  --heading: #1c1b22;
+  --body: #1c1b22;
+  --ink-secondary: #4a4752;
+  --ink-tertiary: #6b6874;
+  --ink-disabled: #a09da8;
+  /* A section's small capitals, "(optional)". */
+  --care-micro: #8a8792;
+  /* An unchosen chip's words. */
+  --care-chip-ink: #2a2830;
+  --line: #e7e4df;
+  --line-strong: #e3e0da;
+  --row-line: #efece7;
+  --inset: #fbfaf8;
+  --inset-2: #f0eeea;
+  /* A segmented switch's track; a stepper's buttons. */
+  --care-track: #f3f1ed;
+  --stepper-bg: #faf9f7;
+  /* The empty plan's dashed edge; "+ Custom time"'s. */
+  --care-dash: #d9d5ce;
+  --care-dash-2: #d2cec7;
+  --radio-off: #c9c5be;
+  --bad: #b4232c;
+  --success: #1e7a45;
+  --wash-success: #e7f5ec;
+  --note-bg: #fff4e0;
+  --note-ink: #8a5300;
+  /* "Storage: Pantry". */
+  --storage-bg: #eaf1fb;
+  --storage-ink: #1f4e8c;
+  /* The mocks tint a chosen card a little paler than a chosen chip, and draw
+     "+ Add another" with a dashed line of the accent at about a quarter.
+     Both taken from the accent, so the customer's colour carries them. */
+  --care-card-on: color-mix(in srgb, var(--acc-soft) 62%, #fff);
+  --care-add-line: color-mix(in srgb, var(--acc) 27%, #fff);
+  /* The stay panel's day rows. */
+  --care-row-2: #f0ede8;
+  /* An allergy that is marked: red, never the accent. */
+  --care-allergy-line: #c2414a;
+  --care-allergy-bg: #fdecec;
+  --care-allergy-ink: #9b1c24;
+  /* "Save medication" while it cannot be saved: a pale wash of the accent. */
+  --care-cta-off: color-mix(in srgb, var(--acc) 14%, #e7e4df);
+}
+
+/* Settings › Feeding & medications, as its mock draws it
+   (docs/Medication_and_Feeding_Instructions_setup_page_.html): the care
+   mocks' inks and lines on the page's own blue. */
+[data-look~="care-setup"] {
+  --primary: #1b6fea;
+  --primary-hover: #1b6fea;
+  --primary-ink: #1b6fea;
+  --primary-foreground: #fff;
+  --acc: #1b6fea;
+  --acc-text: #fff;
+  --acc-soft: #f3f8ff;
+  --acc-soft-text: #1f4e8c;
+  --acc-deep: #1b6fea;
+  /* The "changed from default" band's hairline; a chosen chip's edge. */
+  --cs-tint-line: #dce9fd;
+  --cs-line: #c9d9f5;
+  --heading: #1c1b22;
+  --body: #1c1b22;
+  --ink-secondary: #4a4752;
+  --ink-tertiary: #6b6874;
+  --ink-disabled: #a09da8;
+  --care-micro: #8a8792;
+  --line: #e7e4df;
+  --line-strong: #e3e0da;
+  --row-line: #f2efea;
+  --inset: #fbfaf8;
+  --inset-2: #efece7;
+  --care-track: #f3f1ed;
+  --stepper-bg: #faf9f7;
+  --switch-off: #d6d3cd;
+  --radio-off: #c9c5be;
+  --care-dash: #d6d3cd;
+  --care-dash-2: #d2cec7;
+  --care-card-on: #f3f8ff;
+  --bad: #b4232c;
+  --success: #1e7a45;
+  /* "10 of 11 on": a warm count. */
+  --cs-count-bg: #fff1e6;
+  --cs-count-ink: #a34a12;
+  /* The two tabs' dots. */
+  --cs-dot-feeding: #d9651f;
+  --cs-dot-meds: #5b3fd6;
+  --ring: #1b6fea;
+  --ring-halo: #dce9fd;
+  --pet-ring: none;
+}
+
+/* The page's fields: 42px, 10px corners, 15px type, as the mock draws them. */
+[data-look~="care-setup"] [data-slot="input"] {
+  height: 42px;
+  border-radius: 10px;
+  padding-inline: 12px;
+  font-size: 15px;
+}
+
+/* Operations › Evaluations, its dialogs, the report card and the customer
+   card page, as the evaluations mock draws them (docs/Yipyy%2BEvaluations.html,
+   2026-10-02): its navy ink, warm greys and blue. */
+[data-look~="eval-module"] {
+  --primary: #1a66e8;
+  --primary-hover: #124fb8;
+  --primary-ink: #1a66e8;
+  --primary-foreground: #fff;
+  --acc: #1a66e8;
+  --acc-text: #fff;
+  --acc-soft: #e5eefd;
+  --acc-soft-text: #1d4fb8;
+  --acc-deep: #1a66e8;
+  --acc-pale: #f3f7ff;
+  --acc-line: #dce7fb;
+  --heading: #0e2a47;
+  --body: #14213d;
+  --ink-secondary: #5e584f;
+  --ink-tertiary: #8a847b;
+  --ink-disabled: #b5afa6;
+  --line: #ece7df;
+  --line-strong: #e4ded4;
+  --row-line: #f5f2ec;
+  --inset: #fbfaf7;
+  --inset-2: #f1ede6;
+  --success: #1f7a4c;
+  --wash-success: #e6f4ec;
+  --warning: #a15c07;
+  --wash-warning: #fdf3e4;
+  --bad: #b42318;
+  --wash-error: #fdecec;
+  --info-wash: #e5eefd;
+  --info-ink: #1d4fb8;
+  --violet-wash: #eee8fc;
+  --violet-ink: #5530ad;
+  --ring: #1a66e8;
+  --ring-halo: #e5eefd;
+  --pet-ring: none;
+  /* A pet's tint, by pet: the mock's seven. */
+  --pt-1-bg: #fdf3e4;
+  --pt-1-ink: #a15c07;
+  --pt-2-bg: #e5eefd;
+  --pt-2-ink: #1d4fb8;
+  --pt-3-bg: #eee8fc;
+  --pt-3-ink: #5530ad;
+  --pt-4-bg: #dff3f2;
+  --pt-4-ink: #0f5b58;
+  --pt-5-bg: #e2f4ea;
+  --pt-5-ink: #1a6440;
+  --pt-6-bg: #fce7ee;
+  --pt-6-ink: #9b2049;
+  --pt-7-bg: #fde9de;
+  --pt-7-ink: #913610;
+  /* The mock's page and its dialogs' body: a warm ground. */
+  --ground: #f7f5f1;
+  /* The evaluator's progress fill. */
+  --em-progress: #2fa36b;
+  /* A chosen step: the accent's lightest tint. */
+  --em-step-on: #e8f0fe;
+}
+
+/* Its tables: small capitals on the quiet row, 13.5px cells, warm hairlines. */
+[data-look~="eval-module"] [data-slot="table-header"] {
+  background: var(--inset);
+}
+[data-look~="eval-module"] [data-slot="table-head"] {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-tertiary);
+}
+[data-look~="eval-module"] [data-slot="table-cell"] {
+  font-size: 13.5px;
+}
+[data-look~="eval-module"] [data-slot="table-row"] {
+  border-color: var(--row-line);
+}
+
+/* A card you pick, as the booking mock draws every one (pets, services,
+   rooms, packages, programs): 1.5px of line under a breath of shadow;
+   picked (`data-on="true"`), the accent with its glow. Mocked screens only —
+   CLAUDE.md § "Client mocks decide the look". */
+@utility mk-pick {
+  border: 1.5px solid var(--line);
+  box-shadow: var(--sh-card);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &[data-on="true"] {
+    border-color: var(--primary);
+    box-shadow: var(--sh-card-on);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+/* An option you choose, as the booking mock's `opt(sel)` draws a day type:
+   1.5px of line on white; chosen (`data-on="true"`), the accent's border on
+   its soft tint. Mocked screens only. */
+@utility mk-opt {
+  border: 1.5px solid var(--line);
+  background: var(--card);
+
+  &[data-on="true"] {
+    border-color: var(--primary);
+    background: var(--acc-soft);
   }
 }

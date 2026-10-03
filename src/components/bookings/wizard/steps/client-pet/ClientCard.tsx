@@ -1,11 +1,11 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Chip } from "@/components/ui/chip";
 import { initialsOf } from "@/lib/bookings/wizard/client-search";
+import { statusLabel } from "@/lib/i18n/labels";
 import { fill } from "@/lib/medications/dose";
-import { useShellText } from "@/lib/shell/use-shell-text";
+import { useShellLocale, useShellText } from "@/lib/shell/use-shell-text";
 import type { Client } from "@/types/client";
 
 // ============================================================================
@@ -13,6 +13,9 @@ import type { Client } from "@/types/client";
 // 2026-10-01): initials (people get initials, pets get photographs), the
 // name, how many visits, the account's status, how to reach them — and
 // "Change client", which goes back to the search with nothing chosen.
+// Drawn exactly as the mock draws it (2026-10-02, CLAUDE.md § "Client mocks
+// decide the look"): accent-tinted initials, an amber visits chip, a green
+// "Active".
 // ============================================================================
 
 export function ClientCard({
@@ -27,42 +30,57 @@ export function ClientCard({
   onChange?: () => void;
 }) {
   const t = useShellText("booking");
+  const locale = useShellLocale();
   const contact = [client.email, client.phone].filter(Boolean).join(" · ");
   return (
     <section aria-labelledby="wizard-client" className="flex flex-col gap-3">
-      <p id="wizard-client" className="text-micro text-ink-tertiary uppercase">
+      <p
+        id="wizard-client"
+        className="text-ink-tertiary text-[12px] font-semibold tracking-[0.07em] uppercase"
+      >
         {t("wizClientLabel")}
       </p>
-      <div className="border-line bg-card shadow-card flex flex-wrap items-center gap-4 rounded-2xl border px-5 py-[18px]">
+      <div className="border-line bg-card flex flex-wrap items-center gap-4 rounded-[20px] border px-5 py-[18px] shadow-(--sh-card)">
         <span
           aria-hidden
-          className="bg-surface-inset text-body-ink flex size-13 shrink-0 items-center justify-center rounded-full text-[17px] font-bold"
+          className="bg-acc-soft text-acc-soft-text flex size-13 shrink-0 items-center justify-center rounded-full text-[17px] font-bold"
         >
           {initialsOf(client.name)}
         </span>
-        <div className="flex min-w-[200px] flex-1 flex-col gap-1">
+        <div className="flex min-w-[200px] flex-1 flex-col gap-[3px]">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-section text-body-ink">{client.name}</span>
+            <span className="text-body-ink text-[17px] font-semibold">
+              {client.name}
+            </span>
             {visits ? (
-              <Badge
-                variant="outline"
-                className="border-line-strong text-ink-secondary h-[26px] px-2.5 text-[12.5px] font-semibold tabular-nums md:text-[12.5px]"
-              >
+              <Chip tone="warning-outline" size="sm" className="tabular-nums">
                 {fill(t(visits === 1 ? "wizVisitsOne" : "wizVisitsOther"), {
                   count: visits,
                 })}
-              </Badge>
+              </Chip>
             ) : null}
             {client.status ? (
-              <StatusBadge type="status" value={client.status} />
+              <Chip
+                tone={client.status === "active" ? "success" : "neutral"}
+                size="sm"
+              >
+                {statusLabel(locale, client.status)}
+              </Chip>
             ) : null}
           </div>
           {contact ? (
-            <p className="text-meta text-ink-tertiary break-all">{contact}</p>
+            <p className="text-ink-tertiary text-[13.5px] break-all">
+              {contact}
+            </p>
           ) : null}
         </div>
         {onChange ? (
-          <Button type="button" variant="outline" onClick={onChange}>
+          <Button
+            type="button"
+            variant="quiet"
+            size="mock-38"
+            onClick={onChange}
+          >
             {t("wizChangeClient")}
           </Button>
         ) : null}

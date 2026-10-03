@@ -13,8 +13,15 @@ export function CardSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="bg-card mx-3 flex flex-col gap-2 rounded-2xl px-3.5 py-3">
-      <h4 className={cn("text-micro uppercase", ink)}>{title}</h4>
+    <section className="bg-card flex flex-col gap-2 rounded-[16px] px-3.5 py-3">
+      <h4
+        className={cn(
+          "text-[10.5px] font-extrabold tracking-widest uppercase",
+          ink,
+        )}
+      >
+        {title}
+      </h4>
       {children}
     </section>
   );

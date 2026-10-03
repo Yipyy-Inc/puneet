@@ -59,25 +59,28 @@ export function TypeCardsCard<T extends string>({
       resetLabel={t("resetSection")}
       onReset={onReset}
     >
-      <div className="grid grid-cols-1 gap-2.5 px-5 py-4 sm:grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] sm:px-6">
+      <div className="grid grid-cols-1 gap-2.5 px-5 py-[18px] sm:grid-cols-[repeat(auto-fill,minmax(230px,1fr))] sm:px-6">
         {items.map((item) => {
           const checked = on.includes(item.id);
           return (
             <label
               key={item.id}
               data-on={checked}
-              className="border-line bg-card flex min-h-16 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3"
+              className="bg-surface-inset data-[on=true]:border-line-strong data-[on=true]:bg-card flex cursor-pointer items-center gap-3 rounded-[14px] border border-(--inset-2) px-4 py-3.5"
             >
-              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
                 <span
                   data-on={checked}
-                  className="text-body-strong text-ink-tertiary data-[on=true]:text-body-ink"
+                  className="data-[on=true]:text-body-ink text-[15px] font-medium text-(--care-micro)"
                 >
                   {item.label}
                 </span>
-                <span className="text-meta text-ink-tertiary">{item.sub}</span>
+                <span className="text-ink-tertiary text-[12px]">
+                  {item.sub}
+                </span>
               </span>
               <Switch
+                size="sm"
                 checked={checked}
                 onCheckedChange={(value) => toggle(item.id, value)}
                 aria-label={item.label}

@@ -1,8 +1,5 @@
 "use client";
 
-import { CircleCheck } from "lucide-react";
-
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ChoicePill } from "@/components/ui/choice-pill";
 import { formatMoney } from "@/lib/i18n/format";
@@ -110,10 +107,9 @@ export function EditorMethod({ step }: { step: MedicationStepState }) {
             >
               <span>{method.label}</span>
               {canProvide ? (
-                <Badge variant="confirmed">
-                  <CircleCheck aria-hidden />
+                <span className="bg-wash-success text-success rounded-full px-2 py-[3px] text-[12px] font-semibold whitespace-nowrap">
                   {t("medsFacilityCanProvide")}
-                </Badge>
+                </span>
               ) : null}
             </ChoicePill>
           );
@@ -145,14 +141,14 @@ export function EditorMethod({ step }: { step: MedicationStepState }) {
       ) : null}
 
       {supplied ? (
-        <div className="border-line flex flex-col gap-3.5 rounded-xl border p-4">
-          <p className="text-body-strong text-body-ink">
+        <div className="border-line bg-surface-inset flex flex-col gap-3.5 rounded-[16px] border p-[18px]">
+          <p className="text-body-ink text-[15px] font-semibold">
             {fill(t("medsWhoSupplies"), { items: items(2) })}
           </p>
           <OptionCards
             label={fill(t("medsWhoSupplies"), { items: items(2) })}
             value={draft.source}
-            columns="sm:grid-cols-[repeat(auto-fit,minmax(14rem,1fr))]"
+            columns="sm:grid-cols-[repeat(auto-fit,minmax(220px,1fr))]"
             options={[
               {
                 value: "own",
@@ -183,16 +179,16 @@ export function EditorMethod({ step }: { step: MedicationStepState }) {
             onChange={(source) => step.update({ source })}
           />
           {draft.source === "facility" ? (
-            <div className="border-line bg-card flex flex-col gap-2.5 rounded-xl border px-4 py-3.5">
+            <div className="border-line bg-card flex flex-col gap-2.5 rounded-[12px] border px-4 py-3.5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex min-w-0 flex-col gap-0.5">
-                  <span className="text-body-strong text-body-ink">
+                  <span className="text-body-ink text-[15px] font-semibold">
                     {fill(t("medsItemCount"), {
                       count: quantity,
                       items: items(quantity),
                     })}
                   </span>
-                  <span className="text-meta text-ink-tertiary">
+                  <span className="text-ink-tertiary text-[13px]">
                     {supplied.per === "day"
                       ? fill(t("medsCalcPerDay"), {
                           days: dayCount(t, days, locale),
@@ -208,26 +204,26 @@ export function EditorMethod({ step }: { step: MedicationStepState }) {
                 <div className="flex flex-col items-end gap-0.5">
                   <span
                     data-waived={draft.waived}
-                    className="text-body-ink text-section data-[waived=true]:text-ink-tertiary tabular-nums data-[waived=true]:line-through"
+                    className="text-body-ink data-[waived=true]:text-ink-disabled text-[20px] font-bold tabular-nums data-[waived=true]:line-through"
                   >
                     {formatMoney(total, locale)}
                   </span>
-                  <span className="text-meta text-ink-tertiary">
+                  <span className="text-ink-tertiary text-[12px]">
                     {draft.waived
                       ? t("medsWaivedByStaff")
                       : t("medsAddedToBooking")}
                   </span>
                 </div>
               </div>
-              <p className="text-meta text-success flex items-center gap-2">
+              <p className="text-success flex items-center gap-1.5 text-[13px]">
                 <span
                   aria-hidden
-                  className="bg-success-dot size-[7px] shrink-0 rounded-full"
+                  className="bg-success size-1.5 shrink-0 rounded-full"
                 />
                 {t("medsQuantityUpdates")}
               </p>
               {staff ? (
-                <div className="border-line flex items-center gap-2.5 border-t pt-2.5">
+                <div className="flex items-center gap-2.5 border-t border-(--row-line) pt-2">
                   <Checkbox
                     id="meds-waive"
                     checked={draft.waived}
@@ -237,7 +233,7 @@ export function EditorMethod({ step }: { step: MedicationStepState }) {
                   />
                   <label
                     htmlFor="meds-waive"
-                    className="text-body text-ink-secondary cursor-pointer"
+                    className="text-ink-secondary cursor-pointer text-[14px]"
                   >
                     {t("medsWaiveLabel")}
                   </label>

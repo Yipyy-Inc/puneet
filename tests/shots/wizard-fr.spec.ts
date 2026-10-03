@@ -23,8 +23,11 @@ import { ACCOUNTS, signIn } from "../e2e/_auth";
 test.use({ actionTimeout: 30_000 });
 
 const OUT = "C:/tmp/pwv/shots/wizard/fr";
+// 599 as well: §6 rule 7 tests a layout there, and a French label is longest
+// where the room is least.
 const WIDTHS = [
   { width: 1280, height: 900 },
+  { width: 599, height: 900 },
   { width: 390, height: 844 },
 ] as const;
 const B = fr.shell.booking;
@@ -126,6 +129,20 @@ async function toConfirm(page: Page, dialog: Locator, prefix: string) {
     const rooms = dialog.locator(
       '[data-wizard-body] button[aria-pressed]:not([aria-disabled="true"])',
     );
+    // The cards arrive after the heading — an availability read, slow on a
+    // cold compile — so wait for them, or the step is shot as skeletons and
+    // left with no room.
+    if (
+      await dialog
+        .getByRole("heading", { name: exact(B.wizChooseRoom) })
+        .isVisible()
+        .catch(() => false)
+    ) {
+      await rooms
+        .first()
+        .waitFor({ timeout: 30_000 })
+        .catch(() => undefined);
+    }
     if (
       (await dialog
         .getByRole("heading", { name: exact(B.wizChooseRoom) })

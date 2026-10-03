@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { TriangleAlert } from "lucide-react";
 
 import {
   EditorSection,
@@ -79,13 +78,9 @@ export function PlanAllergiesNotes({ step }: { step: FeedingStepState }) {
                 value={allergy}
                 checked={on}
                 onChange={() => toggle(allergy)}
+                // A marked allergy is red, as the mock draws it.
+                className="has-checked:border-(--care-allergy-line) has-checked:bg-(--care-allergy-bg) has-checked:text-(--care-allergy-ink)"
               >
-                {on ? (
-                  <TriangleAlert
-                    className="text-destructive size-4 shrink-0"
-                    aria-hidden
-                  />
-                ) : null}
                 {allergyLabel(t, allergy)}
               </ChoicePill>
             );
@@ -102,7 +97,7 @@ export function PlanAllergiesNotes({ step }: { step: FeedingStepState }) {
               }
             }}
             onBlur={add}
-            className="w-56 max-w-full"
+            className="h-11 w-[190px] max-w-full rounded-full border-[1.5px] border-dashed border-(--care-dash-2) px-4 text-[15px] max-lg:h-11"
           />
         </div>
       </div>
@@ -111,7 +106,7 @@ export function PlanAllergiesNotes({ step }: { step: FeedingStepState }) {
         <div className="flex min-w-0 flex-col gap-2">
           <FieldLabel htmlFor="feed-notes">
             {t("feedNotesLabel")}{" "}
-            <span className="text-ink-tertiary font-normal">
+            <span className="font-normal text-(--care-micro)">
               {t("medsOptional")}
             </span>
           </FieldLabel>
@@ -122,12 +117,13 @@ export function PlanAllergiesNotes({ step }: { step: FeedingStepState }) {
             value={plan.notes}
             placeholder={t("feedNotesPlaceholder")}
             onChange={(event) => step.update({ notes: event.target.value })}
+            className="rounded-[12px] px-3.5 py-3 text-[15px] leading-[22.5px]"
           />
         </div>
       ) : null}
 
       {show.saveToProfile ? (
-        <div className="border-line flex items-start gap-3 rounded-xl border px-4 py-3.5">
+        <div className="flex items-start gap-3 rounded-[12px] bg-(--care-card-on) px-4 py-3.5">
           <Checkbox
             id="feed-save-profile"
             checked={plan.saveToProfile}
@@ -140,10 +136,10 @@ export function PlanAllergiesNotes({ step }: { step: FeedingStepState }) {
             htmlFor="feed-save-profile"
             className="flex cursor-pointer flex-col gap-0.5"
           >
-            <span className="text-body-strong text-body-ink">
+            <span className="text-acc-soft-text text-[15px] font-medium">
               {t("medsSaveToProfile")}
             </span>
-            <span className="text-meta text-ink-tertiary">
+            <span className="text-acc-deep text-[13px]">
               {t("feedSaveToProfileHelp")}
             </span>
           </label>

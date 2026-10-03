@@ -66,6 +66,8 @@ export function WhoWhatStep({
               key={service.id}
               type="checkbox"
               checked={chips.has(service.id)}
+              tone="ink"
+              size="sm"
               onChange={() => {
                 const next = new Set(chips);
                 if (next.has(service.id)) next.delete(service.id);

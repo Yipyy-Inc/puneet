@@ -352,10 +352,7 @@ test.describe("what the booking FORM writes for a discounted booking", () => {
       .click();
     await dialog.getByRole("button", { name: /^next$/i }).click();
 
-    await dialog
-      .locator("button:has(svg.lucide-chevron-right)")
-      .first()
-      .click();
+    await dialog.getByRole("button", { name: "Next month" }).first().click();
     const [first, second] = nextMonthSecondTuesdayAndWednesday();
     await dialog
       .getByRole("button", { name: String(first), exact: true })

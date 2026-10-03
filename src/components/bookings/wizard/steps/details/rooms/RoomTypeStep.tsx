@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Bed, Check } from "lucide-react";
 
 import { KennelChangesField } from "@/components/bookings/modals/service-details/KennelChangesField";
-import { Badge } from "@/components/ui/badge";
+import { Chip } from "@/components/ui/chip";
 import { ChoicePill } from "@/components/ui/choice-pill";
 import { PetAvatar } from "@/components/ui/pet-avatar";
+import { Photo } from "@/components/ui/photo";
+import { Tick } from "@/components/ui/tick";
 import {
   Select,
   SelectContent,
@@ -321,8 +322,10 @@ export function RoomTypeStep({
     <div className="flex flex-col gap-[18px]">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-0.5">
-          <h3 className="text-section text-body-ink">{t("wizChooseRoom")}</h3>
-          <p className="text-meta text-ink-tertiary">
+          <h3 className="text-body-ink text-[17px] font-semibold">
+            {t("wizChooseRoom")}
+          </h3>
+          <p className="text-ink-tertiary text-[13.5px]">
             {start && end
               ? fill(t(multiPet ? "wizRoomsForStayEach" : "wizRoomsForStay"), {
                   from: formatDateShort(start, locale),
@@ -332,14 +335,14 @@ export function RoomTypeStep({
           </p>
         </div>
         {multiPet && shareable.length > 0 ? (
-          <label className="border-line bg-card flex cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-2.5">
+          <label className="border-line bg-card flex cursor-pointer items-center gap-3 rounded-[16px] border px-3.5 py-2.5">
             <span className="flex min-w-0 flex-col">
-              <span className="text-body-strong text-body-ink">
+              <span className="text-body-ink text-[13.5px] font-semibold">
                 {fill(t("wizShareRoom"), {
                   pets: pets.map((p) => p.name).join(" & "),
                 })}
               </span>
-              <span className="text-meta text-ink-tertiary">{shareHint}</span>
+              <span className="text-ink-tertiary text-[12px]">{shareHint}</span>
             </span>
             <Switch checked={value.share} onCheckedChange={toggleShare} />
           </label>
@@ -362,11 +365,16 @@ export function RoomTypeStep({
                 value={String(pet.id)}
                 checked={active?.id === pet.id}
                 onChange={() => setActiveId(pet.id)}
-                className="pl-1.5"
+                className="min-h-[42px] pr-4 pl-1.5 text-[14px] max-lg:min-h-[42px]"
               >
-                <PetAvatar name={pet.name} src={pet.imageUrl} size="sm" />
+                <PetAvatar
+                  name={pet.name}
+                  src={pet.imageUrl}
+                  size="mk-30"
+                  surface="card"
+                />
                 <span>{pet.name}</span>
-                <span className="text-meta text-ink-tertiary font-normal">
+                <span className="text-[12.5px] font-normal opacity-80">
                   · {card ? card.name : t("wizNoRoomYet")}
                 </span>
               </ChoicePill>
@@ -385,7 +393,7 @@ export function RoomTypeStep({
           {[0, 1, 2, 3].map((i) => (
             <div
               key={i}
-              className="border-line bg-card yy-skel flex flex-col overflow-hidden rounded-2xl border"
+              className="border-line bg-card yy-skel flex flex-col overflow-hidden rounded-[22px] border-[1.5px]"
             >
               <span className="bg-surface-inset h-[150px]" />
               <span className="flex flex-col gap-2.5 px-[18px] py-4">
@@ -396,11 +404,11 @@ export function RoomTypeStep({
           ))}
         </div>
       ) : cards.length === 0 && menu ? (
-        <div className="border-line-strong flex flex-col items-center gap-1.5 rounded-2xl border border-dashed px-6 py-8 text-center">
-          <p className="text-body-strong text-body-ink">
+        <div className="border-line-strong flex flex-col items-center gap-1.5 rounded-[20px] border-[1.5px] border-dashed px-6 py-8 text-center">
+          <p className="text-body-ink text-[15px] font-semibold">
             {t("noRoomCategoriesSetUp")}
           </p>
-          <p className="text-meta text-ink-tertiary">
+          <p className="text-ink-tertiary text-[13.5px]">
             {t("addCategoriesInBoardingRooms")}
           </p>
         </div>
@@ -434,23 +442,19 @@ export function RoomTypeStep({
                 data-on={on}
                 data-disabled={disabled || undefined}
                 onClick={() => pick(card)}
-                className="border-line-strong bg-card hover:border-ink-disabled focus-visible:outline-primary data-[disabled=true]:bg-surface-inset data-[disabled=true]:hover:border-line-strong relative flex min-w-0 flex-col overflow-hidden rounded-2xl border text-left transition-[box-shadow,border-color] duration-120 ease-[ease] focus-visible:outline-2 focus-visible:outline-offset-2 data-[disabled=true]:cursor-not-allowed data-[on=true]:border-transparent data-[on=true]:shadow-[inset_0_0_0_2px_var(--primary)] motion-reduce:transition-none"
+                // The booking mock's room card (2026-10-02): a picked one is the
+                // accent with its glow, one that does not suit the pet fades.
+                className="mk-pick bg-card focus-visible:outline-primary relative flex min-w-0 flex-col overflow-hidden rounded-[22px] text-left focus-visible:outline-2 focus-visible:outline-offset-2 data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-50"
               >
-                <span className="bg-surface-inset text-ink-tertiary relative flex h-[150px] items-center justify-center">
-                  {card.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- a facility's own photo may live on any host
-                    <img
-                      src={card.imageUrl}
-                      alt=""
-                      className="size-full object-cover"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  ) : (
-                    <Bed aria-hidden className="size-6" />
-                  )}
+                <span className="relative block h-[150px]">
+                  <Photo
+                    src={card.imageUrl}
+                    shape="band"
+                    label={t("wizRoomPhoto")}
+                    className="h-[150px]"
+                  />
                   {card.price !== null ? (
-                    <span className="bg-panel-dark absolute top-3 left-3 rounded-full px-2.5 py-1 text-[12.5px] font-semibold text-white tabular-nums">
+                    <span className="absolute top-3 left-3 rounded-full bg-(--price-pill) px-2.5 py-[5px] text-[12.5px] font-semibold text-white tabular-nums">
                       {fill(
                         t(
                           card.unit === "day"
@@ -468,7 +472,7 @@ export function RoomTypeStep({
                 </span>
                 <span className="flex flex-col gap-2 px-[18px] py-4">
                   <span className="flex items-baseline justify-between gap-2">
-                    <span className="text-section text-body-ink">
+                    <span className="text-body-ink text-[16.5px] font-semibold">
                       {card.name}
                     </span>
                     {card.free !== null &&
@@ -477,8 +481,8 @@ export function RoomTypeStep({
                       <span
                         className={
                           card.free <= 2
-                            ? "text-meta text-warning font-semibold whitespace-nowrap"
-                            : "text-meta text-success font-semibold whitespace-nowrap"
+                            ? "text-[12.5px] font-semibold whitespace-nowrap text-(--warm-ink)"
+                            : "text-success text-[12.5px] font-semibold whitespace-nowrap"
                         }
                       >
                         {card.free === 1
@@ -490,36 +494,30 @@ export function RoomTypeStep({
                       </span>
                     ) : null}
                   </span>
-                  <span className="text-meta text-ink-tertiary">
+                  <span className="text-ink-tertiary text-[13px]">
                     {sizeLineOf(card)}
                   </span>
                   {card.features.length > 0 ? (
                     <span className="flex flex-wrap gap-1.5">
                       {card.features.map((feature) => (
-                        <Badge
+                        <Chip
                           key={feature}
-                          variant="outline"
-                          className="text-ink-secondary border-line font-medium"
+                          tone="neutral"
+                          size="sm"
+                          className="bg-(--tag-bg) py-[3px] font-normal"
                         >
                           {feature}
-                        </Badge>
+                        </Chip>
                       ))}
                     </span>
                   ) : null}
                   {reason ? (
-                    <span className="text-meta text-warning font-semibold">
+                    <span className="text-[12.5px] font-semibold text-(--warm-ink)">
                       {reason}
                     </span>
                   ) : null}
                 </span>
-                {on ? (
-                  <span
-                    aria-hidden
-                    className="bg-primary text-primary-foreground absolute top-3 right-3 flex size-[26px] items-center justify-center rounded-full"
-                  >
-                    <Check className="size-4" strokeWidth={3} />
-                  </span>
-                ) : null}
+                {on ? <Tick size={26} className="top-3 right-3" /> : null}
               </button>
             );
           })}
@@ -531,7 +529,7 @@ export function RoomTypeStep({
       activeCard.lodgingIds.length > 1 &&
       active ? (
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-body-strong text-body-ink">
+          <span className="text-body-ink text-[13.5px] font-semibold">
             {t("wizLodgingType")}
           </span>
           <Select
@@ -585,7 +583,7 @@ export function RoomTypeStep({
       ) : null}
 
       {!isCustomer ? (
-        <p className="text-meta text-ink-tertiary">
+        <p className="text-ink-tertiary text-[12.5px]">
           {t("wizRoomsFromSettings")}
         </p>
       ) : null}

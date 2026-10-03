@@ -27,11 +27,18 @@ export function StepCard({
     <Card
       id={id}
       aria-labelledby={`${id}-title`}
-      className={cn("scroll-mt-24 gap-3.5 px-5 py-[18px] sm:px-6", className)}
+      // The evaluation mock's step card (2026-10-02): a hairline, 20px
+      // corners, no shadow; "STEP 1" over a 17px title.
+      className={cn(
+        "border-line scroll-mt-24 gap-3.5 rounded-[20px] p-[18px] shadow-none",
+        className,
+      )}
     >
       <div className="flex min-w-0 flex-col gap-0.5">
-        <span className="text-micro text-ink-tertiary uppercase">{step}</span>
-        <h2 id={`${id}-title`} className="text-section text-heading">
+        <span className="text-ink-tertiary text-[11px] font-bold tracking-[0.07em] uppercase">
+          {step}
+        </span>
+        <h2 id={`${id}-title`} className="text-body-ink text-[17px] font-bold">
           {title}
         </h2>
       </div>
@@ -49,7 +56,7 @@ export function FieldLabel({
   id?: string;
 }) {
   return (
-    <span id={id} className="text-meta text-body-ink font-semibold">
+    <span id={id} className="text-body-ink text-[13px] font-semibold">
       {children}
     </span>
   );
@@ -78,8 +85,8 @@ export function UnitField({
 }) {
   return (
     <label htmlFor={id} className="flex min-w-0 flex-col gap-1.5">
-      <span className="text-meta text-body-ink font-semibold">{label}</span>
-      <span className="border-line-strong bg-card has-focus-visible:outline-primary flex min-h-10 min-w-0 items-center gap-2 rounded-full border px-4 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 max-lg:min-h-12">
+      <span className="text-body-ink text-[12.5px] font-semibold">{label}</span>
+      <span className="border-line-strong bg-card has-focus-visible:outline-primary flex h-[42px] min-w-0 items-center gap-2 rounded-[12px] border px-3 has-focus-visible:outline-2 has-focus-visible:outline-offset-2">
         <input
           id={id}
           type="number"
@@ -91,9 +98,11 @@ export function UnitField({
             const next = Number(event.target.value);
             onChange(Number.isFinite(next) ? Math.max(min, next) : min);
           }}
-          className="text-body-strong text-body-ink min-w-0 flex-1 bg-transparent tabular-nums outline-none"
+          className="text-body-ink min-w-0 flex-1 bg-transparent text-[15px] font-bold tabular-nums outline-none"
         />
-        <span className="text-meta text-ink-tertiary shrink-0">{unit}</span>
+        <span className="text-ink-tertiary shrink-0 text-[12.5px] font-medium">
+          {unit}
+        </span>
       </span>
     </label>
   );

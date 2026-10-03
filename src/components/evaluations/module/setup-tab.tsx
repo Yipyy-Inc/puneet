@@ -21,8 +21,8 @@ import { RadioCards } from "@/components/evaluations/radio-cards";
 import { SwitchRow } from "@/components/evaluations/switch-row";
 import { useEvaluationCardSettings } from "@/components/evaluations/use-evaluation-card-settings";
 import { Playgroup } from "@/components/icons/yipyy-icons";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/ui/chip";
 import { ChoicePill } from "@/components/ui/choice-pill";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -89,21 +89,26 @@ export function SetupTab({ mayChange }: { mayChange: boolean }) {
 
   return (
     <div className="flex flex-wrap items-start gap-4">
-      <section className="bg-card border-line flex min-w-0 flex-[1_1_420px] flex-col gap-4 rounded-3xl border p-5">
-        <header className="flex items-start gap-3">
-          <Send className="text-primary mt-0.5 size-5 shrink-0" aria-hidden />
+      <section className="bg-card border-line flex min-w-0 flex-[1_1_420px] flex-col gap-3 rounded-[20px] border p-[18px]">
+        <header className="flex items-center gap-2.5">
+          <Send className="text-primary size-5 shrink-0" aria-hidden />
           <div className="min-w-0">
-            <h2 id="ev-delivery" className="text-section text-heading">
+            <h2
+              id="ev-delivery"
+              className="text-body-ink text-[16px] font-bold"
+            >
               {t("deliveryTitle")}
             </h2>
-            <p className="text-meta text-ink-secondary">{t("deliveryHelp")}</p>
+            <p className="text-ink-tertiary text-[12.5px]">
+              {t("deliveryHelp")}
+            </p>
           </div>
         </header>
 
         <RadioCards
           labelledBy="ev-delivery"
           value={card.deliveryMode}
-          className="grid-cols-1"
+          className="grid-cols-1 gap-3"
           options={DELIVERY_MODES.map((mode) => ({
             value: mode,
             title: t(`mode_${mode}`),
@@ -119,16 +124,18 @@ export function SetupTab({ mayChange }: { mayChange: boolean }) {
 
         {card.deliveryMode !== "auto" ? (
           <fieldset className="flex flex-col gap-2" disabled={disabled}>
-            <legend className="text-body-strong text-body-ink mb-2">
+            <legend className="text-body-ink mb-1.5 text-[13px] font-semibold">
               {t("whoReviews")}
             </legend>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {REVIEWER_ROLES.map((role) => (
                 <ChoicePill
                   key={role}
                   type="checkbox"
                   checked={card.reviewerRoles.includes(role)}
                   disabled={disabled}
+                  tone="ink"
+                  size="xs"
                   onChange={() =>
                     void change({
                       reviewerRoles: card.reviewerRoles.includes(role)
@@ -144,6 +151,8 @@ export function SetupTab({ mayChange }: { mayChange: boolean }) {
                 type="checkbox"
                 checked={card.evaluatorSelfSend}
                 disabled={disabled}
+                tone="ink"
+                size="xs"
                 onChange={() =>
                   void change({ evaluatorSelfSend: !card.evaluatorSelfSend })
                 }
@@ -151,11 +160,13 @@ export function SetupTab({ mayChange }: { mayChange: boolean }) {
                 {t("selfSend")}
               </ChoicePill>
             </div>
-            <p className="text-meta text-ink-tertiary">{t("reviewersNote")}</p>
+            <p className="text-ink-tertiary text-[12.5px]">
+              {t("reviewersNote")}
+            </p>
           </fieldset>
         ) : null}
 
-        <div className="divide-line border-line flex flex-col divide-y border-t">
+        <div className="flex flex-col">
           {(
             [
               ["includePhoto", "photo"],
@@ -163,7 +174,7 @@ export function SetupTab({ mayChange }: { mayChange: boolean }) {
               ["hideInternal", "internal"],
             ] as const
           ).map(([key, copy]) => (
-            <div key={key} className="py-3">
+            <div key={key} className="border-t border-(--row-line) pt-2.5">
               <SwitchRow
                 id={`ev-setup-${key}`}
                 label={t(`switch_${copy}`)}
@@ -178,17 +189,21 @@ export function SetupTab({ mayChange }: { mayChange: boolean }) {
       </section>
 
       <div className="flex min-w-0 flex-[1_1_420px] flex-col gap-4">
-        <section className="bg-card border-line flex min-w-0 flex-col rounded-3xl border">
-          <header className="border-line flex flex-wrap items-center gap-3 border-b p-5">
+        <section className="bg-card border-line flex min-w-0 flex-col overflow-hidden rounded-[20px] border">
+          <header className="flex flex-wrap items-center gap-3 border-b border-(--inset-2) px-[18px] py-4">
             {/* A basis, so a long French button wraps under the title
                 rather than squeezing it to a column. */}
             <div className="min-w-0 flex-[1_1_14rem]">
-              <h2 className="text-section text-heading">{t("formTitle")}</h2>
-              <p className="text-meta text-ink-secondary">{t("formHelp")}</p>
+              <h2 className="text-body-ink text-[16px] font-bold">
+                {t("formTitle")}
+              </h2>
+              <p className="text-ink-tertiary text-[12.5px]">{t("formHelp")}</p>
             </div>
             <Button
               type="button"
-              variant="outline"
+              variant="quiet"
+              size="mock-34"
+              className="font-semibold"
               disabled={!mayChange}
               onClick={() => setQuestionsOpen(true)}
             >
@@ -197,21 +212,21 @@ export function SetupTab({ mayChange }: { mayChange: boolean }) {
               })}
             </Button>
           </header>
-          <ul className="divide-line divide-y">
+          <ul className="divide-y divide-(--row-line)">
             {FORM_MAP.map(({ key, glyph: Glyph }) => (
               <li
                 key={key}
-                className="flex min-w-0 flex-wrap items-center gap-3 px-5 py-3"
+                className="flex min-w-0 flex-wrap items-center gap-3 px-[18px] py-3"
               >
                 <Glyph
                   className="text-ink-secondary size-5 shrink-0"
                   aria-hidden
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="text-body-strong text-body-ink">
+                  <p className="text-body-ink text-[14px] font-semibold">
                     {t(`form_${key}`)}
                   </p>
-                  <p className="text-meta text-ink-secondary">
+                  <p className="text-ink-tertiary text-[12px]">
                     {t(`form_${key}_asks`)}
                   </p>
                 </div>
@@ -219,16 +234,16 @@ export function SetupTab({ mayChange }: { mayChange: boolean }) {
                   className="text-ink-disabled size-4 shrink-0"
                   aria-hidden
                 />
-                <Badge variant="cancelled" className="h-auto min-h-[26px] py-1">
+                <Chip tone="success" size="sm" className="px-[9px] py-[3px]">
                   {t(`form_${key}_card`)}
-                </Badge>
+                </Chip>
               </li>
             ))}
           </ul>
         </section>
 
-        <section className="bg-card border-line flex min-w-0 flex-col gap-3 rounded-3xl border p-5">
-          <h2 id="ev-theme" className="text-section text-heading">
+        <section className="bg-card border-line flex min-w-0 flex-col gap-2.5 rounded-[20px] border p-[18px]">
+          <h2 id="ev-theme" className="text-body-ink text-[16px] font-bold">
             {t("themeTitle")}
           </h2>
           <div
@@ -249,12 +264,12 @@ export function SetupTab({ mayChange }: { mayChange: boolean }) {
                   onClick={() => {
                     if (!on) void change({ theme });
                   }}
-                  className="bg-card border-line-strong hover:border-ink-disabled focus-visible:outline-primary text-body text-body-ink flex min-h-10 items-center gap-2 rounded-full border py-1.5 pr-4 pl-1.5 font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed data-[on=true]:border-transparent data-[on=true]:shadow-[inset_0_0_0_2px_var(--primary)] max-lg:min-h-12"
+                  className="bg-card border-line-strong focus-visible:outline-primary text-body-ink data-[on=true]:border-primary flex h-[38px] items-center gap-2 rounded-full border-[1.5px] pr-3 pl-1.5 text-[13px] font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed"
                 >
                   <span
                     aria-hidden
                     className={cn(
-                      "size-7 shrink-0 rounded-full",
+                      "size-[26px] shrink-0 rounded-full",
                       CARD_THEME_STYLE[theme].fill,
                     )}
                   />

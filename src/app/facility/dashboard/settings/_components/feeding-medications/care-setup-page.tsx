@@ -1,7 +1,6 @@
 "use client";
 
-import { Pill, Utensils } from "lucide-react";
-
+import { LookScope } from "@/components/look/look-context";
 import { Button } from "@/components/ui/button";
 import { SaveBar } from "@/components/ui/save-bar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -73,89 +72,101 @@ export function CareSetupPage({
     : setup.medicationsChanged(MEDICATION_KEYS);
 
   return (
-    <div className="flex min-w-0 flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <p className="text-body text-ink-secondary max-w-160 min-w-0 text-pretty">
-          {t("intro")}
-        </p>
-        {tabChanged ? (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() =>
-              feeding
-                ? setup.resetFeeding(FEEDING_KEYS)
-                : setup.resetMedications(MEDICATION_KEYS)
-            }
-          >
-            {t(feeding ? "resetAllFeeding" : "resetAllMedications")}
-          </Button>
-        ) : null}
-      </div>
-
-      <Tabs
-        value={setup.tab}
-        onValueChange={(value) => setup.setTab(value as SetupTab)}
-        className="gap-4"
-      >
-        <div className="border-line border-b">
-          <TabsList aria-label={t("tabsLabel")} className="gap-0 px-0">
-            <TabsTrigger value="feeding" className="border-transparent">
-              <Utensils aria-hidden />
-              {t("tabFeeding")}
-            </TabsTrigger>
-            <TabsTrigger value="medications" className="border-transparent">
-              <Pill aria-hidden />
-              {t("tabMedications")}
-            </TabsTrigger>
-          </TabsList>
+    <LookScope name="care-setup">
+      <div className="flex min-w-0 flex-col gap-6">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <p className="text-ink-tertiary max-w-160 min-w-0 text-[14px] text-pretty">
+            {t("intro")}
+          </p>
+          {tabChanged ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                feeding
+                  ? setup.resetFeeding(FEEDING_KEYS)
+                  : setup.resetMedications(MEDICATION_KEYS)
+              }
+            >
+              {t(feeding ? "resetAllFeeding" : "resetAllMedications")}
+            </Button>
+          ) : null}
         </div>
 
-        <nav
-          aria-label={t("jumpLabel")}
-          className="bg-background sticky top-16 z-(--z-sticky) -my-2 flex min-w-0 gap-1.5 overflow-x-auto py-2"
+        <Tabs
+          value={setup.tab}
+          onValueChange={(value) => setup.setTab(value as SetupTab)}
+          className="gap-4"
         >
-          {JUMPS[setup.tab].map((jump) => (
-            <a
-              key={jump.id}
-              href={`#${jump.id}`}
-              className="border-line bg-card text-meta text-ink-secondary hover:border-line-strong hover:text-body-ink focus-visible:outline-primary inline-flex min-h-10 shrink-0 items-center rounded-full border px-3.5 font-semibold whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2 max-lg:min-h-12"
-            >
-              {t(jump.key)}
-            </a>
-          ))}
-        </nav>
+          <div className="border-line border-b">
+            <TabsList aria-label={t("tabsLabel")} className="gap-0 px-0">
+              <TabsTrigger value="feeding" className={TAB}>
+                <span
+                  aria-hidden
+                  className="size-2 shrink-0 rounded-full bg-(--cs-dot-feeding)"
+                />
+                {t("tabFeeding")}
+              </TabsTrigger>
+              <TabsTrigger value="medications" className={TAB}>
+                <span
+                  aria-hidden
+                  className="size-2 shrink-0 rounded-full bg-(--cs-dot-meds)"
+                />
+                {t("tabMedications")}
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-        <TabsContent value="feeding">
-          <FeedingTab
-            setup={setup}
-            others={others}
-            t={t}
-            bt={bt}
-            locale={locale}
-          />
-        </TabsContent>
-        <TabsContent value="medications">
-          <MedicationsTab
-            setup={setup}
-            others={others}
-            t={t}
-            bt={bt}
-            locale={locale}
-          />
-        </TabsContent>
-      </Tabs>
+          <nav
+            aria-label={t("jumpLabel")}
+            className="bg-background sticky top-16 z-(--z-sticky) -my-2 flex min-w-0 gap-1.5 overflow-x-auto py-2"
+          >
+            {JUMPS[setup.tab].map((jump) => (
+              <a
+                key={jump.id}
+                href={`#${jump.id}`}
+                className="border-line bg-card text-ink-secondary focus-visible:outline-primary inline-flex h-[34px] shrink-0 items-center rounded-full border px-3 text-[13px] font-medium whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                {t(jump.key)}
+              </a>
+            ))}
+          </nav>
 
-      {/* As the design has it: there while something is unsaved, and only then. */}
-      {setup.dirty || setup.saving ? (
-        <SaveBar
-          placement="page"
-          dirty={setup.dirty}
-          saving={setup.saving}
-          onSave={setup.save}
-          onReset={setup.discard}
-        />
-      ) : null}
-    </div>
+          <TabsContent value="feeding">
+            <FeedingTab
+              setup={setup}
+              others={others}
+              t={t}
+              bt={bt}
+              locale={locale}
+            />
+          </TabsContent>
+          <TabsContent value="medications">
+            <MedicationsTab
+              setup={setup}
+              others={others}
+              t={t}
+              bt={bt}
+              locale={locale}
+            />
+          </TabsContent>
+        </Tabs>
+
+        {/* As the design has it: there while something is unsaved, and only then. */}
+        {setup.dirty || setup.saving ? (
+          <SaveBar
+            placement="page"
+            dirty={setup.dirty}
+            saving={setup.saving}
+            onSave={setup.save}
+            onReset={setup.discard}
+          />
+        ) : null}
+      </div>
+    </LookScope>
   );
 }
+
+/** The setup mock's tab: 46px, 15px, a dot; open, ink at 600 over the blue. */
+const TAB =
+  "text-ink-tertiary data-[state=active]:text-body-ink min-h-[46px] gap-2 border-transparent px-4 text-[15px] font-medium hover:bg-transparent data-[state=active]:font-semibold";

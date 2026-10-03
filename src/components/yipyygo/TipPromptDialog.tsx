@@ -72,7 +72,7 @@ type Choice =
   | { kind: "none" };
 
 const PILL =
-  "border-line-strong text-body-ink hover:border-ink-disabled aria-pressed:text-primary-hover flex min-h-12 flex-col items-center justify-center rounded-xl border px-2 py-2 text-center aria-pressed:shadow-[inset_0_0_0_2px_var(--primary)]";
+  "border-line-strong text-body-ink hover:border-ink-disabled aria-pressed:text-primary-ink flex min-h-12 flex-col items-center justify-center rounded-xl border px-2 py-2 text-center aria-pressed:shadow-[inset_0_0_0_2px_var(--primary)]";
 
 function TipChoice({
   config,

@@ -1,7 +1,5 @@
 "use client";
 
-import { Info, TriangleAlert } from "lucide-react";
-
 import { ChoicePill } from "@/components/ui/choice-pill";
 import { Input } from "@/components/ui/input";
 import { Segmented } from "@/components/ui/segmented";
@@ -95,19 +93,15 @@ export function EditorMedication({ step }: { step: MedicationStepState }) {
             autoComplete="off"
             placeholder={t("medsNamePlaceholder")}
             onChange={(event) => step.update({ name: event.target.value })}
+            className="h-12 rounded-[12px] px-3.5 text-[16px] max-lg:h-12"
           />
           {controlled ? (
             settings.rules.controlled ? (
-              <p className="text-meta text-ink-secondary flex items-start gap-2">
-                <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
+              <p className="text-ink-tertiary text-[13px]">
                 {t("medsControlledAccepted")}
               </p>
             ) : (
-              <p
-                role="alert"
-                className="text-meta text-destructive flex items-start gap-2"
-              >
-                <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+              <p role="alert" className="text-bad text-[13px]">
                 {fill(t("medsControlledRefused"), { name: draft.name.trim() })}
               </p>
             )
@@ -117,7 +111,7 @@ export function EditorMedication({ step }: { step: MedicationStepState }) {
           <div className="flex min-w-0 flex-col gap-1.5">
             <FieldLabel htmlFor="meds-strength">
               {t("medsStrengthLabel")}{" "}
-              <span className="text-ink-tertiary font-normal">
+              <span className="font-normal text-(--care-micro)">
                 {t("medsOptional")}
               </span>
             </FieldLabel>
@@ -130,13 +124,14 @@ export function EditorMedication({ step }: { step: MedicationStepState }) {
               onChange={(event) =>
                 step.update({ strength: event.target.value })
               }
+              className="h-12 rounded-[12px] px-3.5 text-[16px] max-lg:h-12"
             />
           </div>
         ) : null}
       </div>
 
       <fieldset className="flex min-w-0 flex-col gap-2.5">
-        <legend className="text-body-ink text-meta mb-2.5 font-semibold">
+        <legend className="text-body-ink mb-2.5 text-[14px] font-medium">
           {t("medsFormLabel")}
         </legend>
         <div className="flex flex-wrap gap-2">
@@ -155,8 +150,7 @@ export function EditorMedication({ step }: { step: MedicationStepState }) {
         </div>
         {/* Forms the facility does not give: the owner calls instead. */}
         {settings.forms.length < MED_FORMS.length ? (
-          <p className="text-meta text-ink-tertiary flex items-start gap-2">
-            <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <p className="text-ink-tertiary text-[13px] leading-[19.5px]">
             {t("medsFormsMissingNote")}
           </p>
         ) : null}
@@ -166,7 +160,10 @@ export function EditorMedication({ step }: { step: MedicationStepState }) {
         <FieldLabel
           id="meds-amount-label"
           aside={
-            <span className="text-body-strong text-body-ink" aria-live="polite">
+            <span
+              className="text-acc-soft-text text-[14px] font-semibold"
+              aria-live="polite"
+            >
               {fill(t("medsPerDose"), { dose })}
             </span>
           }
@@ -197,7 +194,7 @@ export function EditorMedication({ step }: { step: MedicationStepState }) {
             onChange={(event) =>
               step.update({ customUnit: event.target.value })
             }
-            className="max-w-80"
+            className="h-11 max-w-80 rounded-[12px] px-3.5 text-[15px] max-lg:h-11"
           />
         ) : null}
 
@@ -244,21 +241,20 @@ export function EditorMedication({ step }: { step: MedicationStepState }) {
             increaseLabel={t("medsIncrease")}
             inputLabel={t("medsAmountInput")}
           />
-          <span className="text-body text-ink-secondary">
+          <span className="text-ink-secondary text-[15px]">
             {unitWord(t, draft.unit, draft.amount, locale, draft.customUnit)}
           </span>
         </div>
 
         {spec.splittable && isFractional(draft.amount) && !settings.split ? (
-          <p className="text-meta text-ink-secondary flex items-start gap-2">
-            <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <p className="text-ink-tertiary text-[13px] leading-[19.5px]">
             {t("medsBringSplit")}
           </p>
         ) : null}
 
         {spec.splittable && isFractional(draft.amount) && settings.split ? (
-          <div className="border-line flex flex-wrap items-center gap-2.5 rounded-xl border px-3.5 py-3">
-            <span className="text-body text-body-ink">
+          <div className="bg-surface-inset flex flex-wrap items-center gap-2.5 rounded-[12px] border border-(--row-line) px-3.5 py-3">
+            <span className="text-ink-secondary text-[14px]">
               {fill(t("medsSplitQuestion"), { dose })}
             </span>
             <Segmented
@@ -270,12 +266,13 @@ export function EditorMedication({ step }: { step: MedicationStepState }) {
                 { value: "staff", label: t("medsSplitStaff") },
               ]}
               onChange={(splitBy) => step.update({ splitBy })}
+              className="rounded-[10px]"
             />
           </div>
         ) : null}
 
         {spec.note ? (
-          <p className="text-meta text-ink-tertiary">
+          <p className="text-ink-tertiary text-[13px] leading-[19.5px]">
             {formNote(t, spec.note)}
           </p>
         ) : null}

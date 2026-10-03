@@ -117,10 +117,10 @@ export function MedicationsTab({
       >
         <SetupRow className="justify-between">
           <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="text-body-strong text-body-ink">
+            <span className="text-body-ink text-[15px] font-medium">
               {t("splitTitle")}
             </span>
-            <span className="text-meta text-ink-tertiary">
+            <span className="text-ink-tertiary text-[13px]">
               {t("splitHelp")}
             </span>
           </span>

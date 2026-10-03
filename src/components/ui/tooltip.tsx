@@ -3,6 +3,7 @@
 import * as React from "react";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 
+import { useLookStamp } from "@/components/look/look-context";
 import { cn } from "@/lib/utils";
 
 function TooltipProvider({
@@ -40,6 +41,7 @@ function TooltipContent({
   children,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Content>) {
+  const stamp = useLookStamp(props.style);
   return (
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Content
@@ -50,6 +52,7 @@ function TooltipContent({
           className,
         )}
         {...props}
+        {...stamp}
       >
         {children}
         <TooltipPrimitive.Arrow className="bg-foreground fill-foreground z-50 size-2.5 translate-y-[calc(-50%-2px)] rotate-45 rounded-[2px]" />

@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import { test, expect, type Locator, type Page } from "@playwright/test";
 
 import { ACCOUNTS, signIn } from "../e2e/_auth";
+import { shootWholeDialog } from "./_whole-dialog";
 
 // ============================================================================
 // PHOTOGRAPH THE FEEDING STEP (2026-10-01).
@@ -79,7 +80,7 @@ async function toFeeding(page: Page): Promise<Locator> {
   await next();
   for (let i = 0; i < 4; i += 1) {
     await dialog
-      .locator("button:has(svg.lucide-chevron-right)")
+      .getByRole("button", { name: /^(next month|mois suivant)$/i })
       .first()
       .click();
   }
@@ -127,28 +128,34 @@ test("the Feeding step and its setting", async ({ page }) => {
     (
       await write({
         ...stored,
-        houseFoods: [
-          {
-            id: "hf-shots-kibble",
-            name: "House kibble",
-            description: "Adult, chicken & rice",
-            type: "kibble",
-            unit: "cup",
-            pricePerMeal: 3.5,
-            pricePerDay: 8,
-          },
-          {
-            id: "hf-shots-wet",
-            name: "Canned wet food",
-            description: "Chicken pâté, 13 oz can",
-            type: "wet",
-            unit: "can",
-            pricePerMeal: 2.5,
-            pricePerDay: 6,
-          },
-        ],
-        pricing: "meal",
-        includedWith: [],
+        // House food as the settings page has saved it since 2026-10-01: on,
+        // priced per meal, with the foods it offers.
+        house: {
+          on: true,
+          pricing: "meal",
+          foods: [
+            {
+              id: "hf-shots-kibble",
+              name: "House kibble",
+              description: "Adult, chicken & rice",
+              type: "kibble",
+              unit: "cup",
+              pricePerMeal: 3.5,
+              pricePerDay: 8,
+              on: true,
+            },
+            {
+              id: "hf-shots-wet",
+              name: "Canned wet food",
+              description: "Chicken pâté, 13 oz can",
+              type: "wet",
+              unit: "can",
+              pricePerMeal: 2.5,
+              pricePerDay: 6,
+              on: true,
+            },
+          ],
+        },
       })
     ).ok(),
   ).toBe(true);
@@ -199,23 +206,17 @@ test("the Feeding step and its setting", async ({ page }) => {
         await pick(dialog, "eats_fast");
         await pick(dialog, "Beef");
         await shoot(page, `${lang}-${width}-house`);
+        if (width === 1440) {
+          await shootWholeDialog(
+            page,
+            `${OUT}/feeding-${lang}-${width}-house-whole.png`,
+          );
+        }
       }
     }
 
-    // The setting, under Care tasks.
-    for (const lang of ["en", "fr"] as const) {
-      await language(page, lang);
-      for (const width of [1440, 599]) {
-        await page.setViewportSize({ width, height: 2600 });
-        await page.goto("/facility/dashboard/settings/care-tasks");
-        await page.getByRole("switch").first().waitFor({ timeout: 60_000 });
-        await page.waitForTimeout(600);
-        await page.screenshot({
-          path: `${OUT}/feeding-settings-${lang}-${width}.png`,
-          fullPage: true,
-        });
-      }
-    }
+    // The setting has its own page and its own shots since 2026-10-01:
+    // feeding-medications-settings.spec.ts.
   } finally {
     await language(page, "en");
     await write(stored);

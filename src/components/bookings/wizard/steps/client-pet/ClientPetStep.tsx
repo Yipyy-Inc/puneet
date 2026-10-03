@@ -56,6 +56,7 @@ export interface GuestInquiryState {
 export function ClientPetStep({
   isCustomerMode,
   clients,
+  clientsLoading = false,
   selectedClient,
   selectedPetIds,
   setSelectedPetIds,
@@ -71,6 +72,8 @@ export function ClientPetStep({
 }: {
   isCustomerMode: boolean;
   clients: readonly Client[];
+  /** The facility's client list has not arrived yet. */
+  clientsLoading?: boolean;
   selectedClient: Client | undefined;
   selectedPetIds: number[];
   setSelectedPetIds: Dispatch<SetStateAction<number[]>>;
@@ -178,6 +181,7 @@ export function ClientPetStep({
           {!isCustomerMode && !selectedClient ? (
             <ClientSearchPanel
               clients={clients}
+              loading={clientsLoading}
               query={searchQuery}
               onQuery={setSearchQuery}
               onPick={pick}

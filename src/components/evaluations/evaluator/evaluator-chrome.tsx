@@ -3,7 +3,6 @@
 import { BadgeCheck, CircleCheck, Heart, Tag, X } from "lucide-react";
 
 import { Playgroup } from "@/components/icons/yipyy-icons";
-import { Button } from "@/components/ui/button";
 import { DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import type { EvaluationDetail } from "@/lib/evaluations/detail-types";
 import { SECTIONS } from "@/lib/evaluations/questions";
@@ -39,12 +38,12 @@ export function EvaluatorHeader({
   const { t, fill } = useStaffText("evaluations");
   const percent = total > 0 ? Math.round((done / total) * 100) : 0;
   return (
-    <header className="bg-card border-line flex min-w-0 items-start gap-3 border-b px-4 py-3 md:px-5">
+    <header className="bg-card flex min-w-0 items-center gap-3 border-b border-(--inset-2) px-4 py-4 md:px-[22px]">
       <div className="min-w-0 flex-1">
-        <DialogTitle className="text-section text-heading">
+        <DialogTitle className="text-body-ink text-[19px] font-extrabold">
           {fill("evaluatorTitle", { pet: detail.pet.name })}
         </DialogTitle>
-        <DialogDescription className="text-meta text-ink-secondary">
+        <DialogDescription className="text-ink-secondary text-[13px]">
           {[
             detail.pet.breed,
             detail.client.name,
@@ -54,26 +53,26 @@ export function EvaluatorHeader({
             .join(" · ")}
         </DialogDescription>
       </div>
-      <div className="flex shrink-0 flex-col items-end gap-1 pt-1">
-        <div className="flex items-center gap-2.5">
+      <div className="flex shrink-0 flex-col items-end gap-0.5">
+        <div className="flex items-center gap-2">
           <div
             role="progressbar"
             aria-valuemin={0}
             aria-valuemax={total}
             aria-valuenow={done}
             aria-label={t("progressLabel")}
-            className="bg-primary-tint-2 hidden h-1.5 w-28 overflow-hidden rounded-full sm:block"
+            className="bg-surface-inset-2 hidden h-2 w-[110px] overflow-hidden rounded-full sm:block"
           >
             <div
-              className="bg-primary h-full rounded-full"
+              className="h-full rounded-full bg-(--em-progress)"
               style={{ width: `${percent}%` }}
             />
           </div>
-          <span className="text-meta text-body-ink font-semibold tabular-nums">
+          <span className="text-body-ink text-[12.5px] font-semibold tabular-nums">
             {fill("progressOf", { done, total })}
           </span>
         </div>
-        <span className="text-meta text-ink-tertiary" aria-live="polite">
+        <span className="text-ink-tertiary text-[12px]" aria-live="polite">
           {saveState === "saving"
             ? t("saving")
             : saveState === "saved"
@@ -83,16 +82,14 @@ export function EvaluatorHeader({
                 : ""}
         </span>
       </div>
-      <Button
+      <button
         type="button"
-        variant="outline"
-        size="icon"
-        className="rounded-full"
         onClick={onClose}
         aria-label={t("close")}
+        className="bg-surface-inset-2 text-body-ink focus-visible:outline-primary grid size-9 shrink-0 place-items-center rounded-full focus-visible:outline-2"
       >
-        <X aria-hidden />
-      </Button>
+        <X aria-hidden className="size-[18px]" />
+      </button>
     </header>
   );
 }
@@ -110,7 +107,7 @@ export function StepPills({
   return (
     <nav
       aria-label={t("stepsLabel")}
-      className="bg-surface-inset flex flex-wrap gap-2 px-4 pt-3 md:px-5"
+      className="flex flex-wrap gap-1 px-4 pt-3 md:px-[18px]"
     >
       {SECTIONS.map((section, index) => {
         const value = index as 0 | 1 | 2 | 3;
@@ -124,13 +121,10 @@ export function StepPills({
             aria-current={on ? "step" : undefined}
             data-on={on}
             onClick={() => onStep(value)}
-            className="text-body-strong text-body-ink hover:text-primary focus-visible:outline-primary data-[on=true]:bg-card data-[on=true]:text-primary flex min-h-10 items-center gap-2 rounded-full px-4 focus-visible:outline-2 focus-visible:outline-offset-2 data-[on=true]:shadow-[inset_0_0_0_2px_var(--primary)] max-lg:min-h-12"
+            data-done={done && !on}
+            className="text-body-ink focus-visible:outline-primary data-[done=true]:text-success data-[on=true]:text-primary flex h-[38px] items-center gap-1.5 rounded-full px-3.5 text-[13.5px] font-bold whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2 data-[on=true]:bg-(--em-step-on)"
           >
-            <Glyph
-              aria-hidden
-              data-done={done}
-              className="data-[done=true]:text-success size-4 shrink-0"
-            />
+            <Glyph aria-hidden className="size-[18px] shrink-0" />
             {t(`step_${section}`)}
           </button>
         );

@@ -57,7 +57,8 @@ test("operations › evaluations, as the mock shows it", async ({ page }) => {
   await signIn(page, ACCOUNTS.owner);
 
   await page.goto("/facility/dashboard/evaluations");
-  await page.getByText("Buddy").first().waitFor();
+  // A cold dev server compiles the module first: give it time.
+  await page.getByText("Buddy").first().waitFor({ timeout: 90_000 });
   await shoot(page, "module-today");
 
   await page.getByRole("button", { name: /Report cards to review/ }).click();
@@ -284,7 +285,8 @@ test("operations › evaluations in French", async ({ page }) => {
   };
 
   await page.goto("/facility/dashboard/evaluations");
-  await page.getByText("Buddy").first().waitFor();
+  // A cold dev server compiles the module first: give it time.
+  await page.getByText("Buddy").first().waitFor({ timeout: 90_000 });
   await page.waitForTimeout(800);
   await shootFr("module-today");
   await page.getByRole("button", { name: /Bulletins à relire/ }).click();

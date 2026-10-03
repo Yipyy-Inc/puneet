@@ -2890,6 +2890,7 @@
         "noTax": "No tax"
       },
       "trainingRates": {
+        "programPhotoSlot": "program photo",
         "notSaved": "The programs were not saved",
         "bookedAs": "Booked as",
         "formatLesson": "One-on-one lesson",
@@ -4251,6 +4252,7 @@
         "item": "item"
       },
       "lodging": {
+        "unitPhotoSlot": "room photo",
         "spaceType": "Space type",
         "room": "Room / kennel",
         "area": "Area",
@@ -4787,6 +4789,7 @@
         "previewCaption": "Built automatically from the answers",
         "cardEyebrow": "Evaluation report card",
         "cardFor": "{pet} · for {owner}",
+        "cardPhotoSlot": "evaluation photo",
         "cardPending": "Pending",
         "cardBy": "by {name}",
         "cardTemperament": "Temperament",
@@ -10930,6 +10933,7 @@
       "wizSearchHintPlain": "Matches name, email, phone number or any of their pets.",
       "wizPetMatch": "Pet match: {pets}",
       "wizNoPets": "No pets",
+      "wizFindingClients": "Looking up clients…",
       "wizNoClientMatch": "No client matches “{query}”. Check the spelling or create a new client.",
       "wizMoreMatches": "Showing {shown} of {total} — keep typing to narrow it down.",
       "wizClientLabel": "Client",
@@ -11401,7 +11405,9 @@
       "wizEvTermsCancel": "Cancel free up to {hours} hours before.",
       "wizEvTermsAgree": "I’ve read and agree",
       "wizEvDeposit": "Deposit",
-      "wizEvSummary": "Summary"
+      "wizEvSummary": "Summary",
+      "wizPhotoOf": "{kind} photo",
+      "wizRoomPhoto": "room photo · set by facility"
     },
     "meta": {
       "rootTitle": "Yipyy - Pet Services",
@@ -12928,6 +12934,7 @@
         "removeCardConfirm": "Remove the card"
       },
       "training": {
+        "coursePhotoSlot": "course photo",
         "training": "Training",
         "browseClassesEnrollYourPets": "Browse classes, enroll your pets, and manage makeup sessions",
         "searchByInstructorOrSeries": "Search by instructor or series name…",

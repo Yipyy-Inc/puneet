@@ -47,7 +47,10 @@ export function FoodPortion({
       <FieldLabel
         id={id}
         aside={
-          <span className="text-body-strong text-body-ink" aria-live="polite">
+          <span
+            className="text-acc-soft-text text-[14px] font-semibold"
+            aria-live="polite"
+          >
             {fill(t("feedPerMeal"), { portion })}
           </span>
         }
@@ -125,13 +128,13 @@ export function FoodPortion({
           increaseLabel={t("feedIncrease")}
           inputLabel={t("feedAmountInput")}
         />
-        <span className="text-body text-ink-secondary">
+        <span className="text-ink-secondary text-[15px]">
           {feedUnitWord(t, food.unit, food.amount, locale, food.customUnit)}
         </span>
       </div>
 
       {!(food.amount > 0) ? (
-        <p className="text-meta text-warning" aria-live="polite">
+        <p className="text-[13px] text-(--note-ink)" aria-live="polite">
           {t("feedHintAmount")}
         </p>
       ) : null}

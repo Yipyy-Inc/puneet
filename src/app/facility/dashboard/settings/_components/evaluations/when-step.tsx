@@ -94,7 +94,8 @@ export function WhenStep({
                   });
                 }}
                 aria-label={formatWeekday(day, locale, "long")}
-                className="min-w-[58px] justify-center"
+                tone="ink"
+                size="day"
               >
                 {formatWeekday(day, locale, "short")}
               </ChoicePill>
@@ -117,9 +118,9 @@ export function WhenStep({
                 openRange: { ...range, start: event.target.value },
               })
             }
-            className="w-[130px] tabular-nums"
+            className="h-10 w-[130px] rounded-[12px] px-2.5 text-[14px] tabular-nums max-lg:h-10"
           />
-          <span className="text-meta text-ink-tertiary">{t("and")}</span>
+          <span className="text-[13.5px]">{t("and")}</span>
           <Input
             type="time"
             aria-label={t(mode === "days" ? "dropOffTo" : "startTo")}
@@ -129,7 +130,7 @@ export function WhenStep({
                 openRange: { ...range, end: event.target.value },
               })
             }
-            className="w-[130px] tabular-nums"
+            className="h-10 w-[130px] rounded-[12px] px-2.5 text-[14px] tabular-nums max-lg:h-10"
           />
         </div>
       ) : null}
@@ -165,6 +166,8 @@ export function WhenStep({
               name="evaluation-length"
               value={String(minutes)}
               checked={minutes === length}
+              tone="ink"
+              size="md"
               onChange={() =>
                 setup.setSchedule((current) => ({
                   defaultDurationMinutes: minutes,

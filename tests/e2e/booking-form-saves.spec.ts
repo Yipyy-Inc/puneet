@@ -352,10 +352,7 @@ test.describe("the New Booking form saves all of it, or none of it", () => {
     await dialog.getByRole("button", { name: /^next$/i }).click();
 
     // Two open days next month — the facility is closed at weekends.
-    await dialog
-      .locator("button:has(svg.lucide-chevron-right)")
-      .first()
-      .click();
+    await dialog.getByRole("button", { name: "Next month" }).first().click();
     const [first, second] = nextMonthTuesdayAndWednesday();
     await dialog
       .getByRole("button", { name: String(first), exact: true })

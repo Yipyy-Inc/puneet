@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import { test, expect, type Locator, type Page } from "@playwright/test";
 
 import { ACCOUNTS, signIn } from "../e2e/_auth";
+import { shootWholeDialog } from "./_whole-dialog";
 
 // ============================================================================
 // PHOTOGRAPH THE MEDICATIONS STEP (2026-10-01).
@@ -80,7 +81,7 @@ async function toMedications(page: Page): Promise<Locator> {
   await next();
   for (let i = 0; i < 4; i += 1) {
     await dialog
-      .locator("button:has(svg.lucide-chevron-right)")
+      .getByRole("button", { name: /^(next month|mois suivant)$/i })
       .first()
       .click();
   }
@@ -162,6 +163,12 @@ test("the Medications step and its setting", async ({ page }) => {
           .click();
         await dialog.locator("#meds-supply").fill("3");
         await shoot(page, `${lang}-${width}-editor`);
+        if (width === 1440) {
+          await shootWholeDialog(
+            page,
+            `${OUT}/medications-${lang}-${width}-editor-whole.png`,
+          );
+        }
         await dialog.locator("#meds-label-confirmed").click();
         await dialog.locator('input[type="file"]').setInputFiles({
           name: "apoquel-label.png",

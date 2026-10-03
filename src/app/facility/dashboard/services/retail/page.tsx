@@ -67,7 +67,6 @@ import {
   ChevronDown,
   Camera,
   ScanLine,
-  Package,
   Wallet,
   Gift,
 } from "lucide-react";
@@ -122,6 +121,7 @@ import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { useAddLineItems } from "@/lib/api/booking-line-items";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
 import { formatDateISO, formatTime } from "@/lib/i18n/format";
+import { Photo } from "@/components/ui/photo";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import { formatMoney } from "@/lib/i18n/format";
 import { NO_ITEMS } from "@/lib/no-items";
@@ -2145,18 +2145,14 @@ export default function POSPage() {
                           }
                         }}
                       >
-                        {/* Product image */}
-                        {product.imageUrl ? (
-                          <img
-                            src={product.imageUrl}
-                            alt={product.name}
-                            className="size-12 shrink-0 rounded-lg object-cover"
-                          />
-                        ) : (
-                          <div className="bg-muted flex size-12 shrink-0 items-center justify-center rounded-lg">
-                            <Package className="text-muted-foreground/30 size-5" />
-                          </div>
-                        )}
+                        {/* The product's photo, or the striped placeholder
+                            every missing photo shares (CLAUDE.md § "Client
+                            mocks decide the look"). */}
+                        <Photo
+                          src={product.imageUrl}
+                          shape="tile"
+                          className="size-12 rounded-lg"
+                        />
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium">{product.name}</p>
                           <p className="text-muted-foreground text-xs">
@@ -2231,17 +2227,11 @@ export default function POSPage() {
                       }
                     }}
                   >
-                    {product.imageUrl ? (
-                      <img
-                        src={product.imageUrl}
-                        alt={product.name}
-                        className="size-9 shrink-0 rounded-md object-cover"
-                      />
-                    ) : (
-                      <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-md">
-                        <Package className="text-muted-foreground/30 size-4" />
-                      </div>
-                    )}
+                    <Photo
+                      src={product.imageUrl}
+                      shape="tile"
+                      className="size-9 rounded-md"
+                    />
                     <div className="text-left">
                       <p className="max-w-[120px] truncate text-xs font-medium">
                         {product.name}
@@ -2281,17 +2271,11 @@ export default function POSPage() {
                           }
                         }}
                       >
-                        {product.imageUrl ? (
-                          <img
-                            src={product.imageUrl}
-                            alt={product.name}
-                            className="mb-2 size-16 rounded-lg object-cover"
-                          />
-                        ) : (
-                          <div className="bg-muted mb-2 flex size-16 items-center justify-center rounded-lg">
-                            <Package className="text-muted-foreground/30 size-6" />
-                          </div>
-                        )}
+                        <Photo
+                          src={product.imageUrl}
+                          shape="tile"
+                          className="mb-2 size-16 rounded-lg"
+                        />
                         <span className="w-full truncate text-center text-sm font-medium">
                           {product.name}
                         </span>
@@ -2669,18 +2653,11 @@ export default function POSPage() {
                   {cart.map((item) => (
                     <div key={item.id} className="py-3 first:pt-0">
                       <div className="flex items-start gap-3">
-                        {/* Thumbnail */}
-                        {item.imageUrl ? (
-                          <img
-                            src={item.imageUrl}
-                            alt={item.productName}
-                            className="size-10 shrink-0 rounded-lg object-cover"
-                          />
-                        ) : (
-                          <div className="bg-muted flex size-10 shrink-0 items-center justify-center rounded-lg">
-                            <ShoppingCart className="text-muted-foreground/30 size-4" />
-                          </div>
-                        )}
+                        <Photo
+                          src={item.imageUrl}
+                          shape="tile"
+                          className="size-10 rounded-lg"
+                        />
                         <div className="min-w-0 flex-1">
                           <p className="text-sm/tight font-medium">
                             {item.productName}

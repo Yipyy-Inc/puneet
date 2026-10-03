@@ -1,7 +1,5 @@
 "use client";
 
-import { ImageIcon, TriangleAlert } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { describeMedication } from "@/lib/medications/describe";
 import { fill } from "@/lib/medications/dose";
@@ -44,28 +42,28 @@ export function MedicationCard({
   return (
     <article
       aria-label={item.name}
-      className="border-line bg-card flex flex-wrap items-center justify-between gap-4 rounded-xl border px-5 py-4"
+      className="border-line bg-card flex flex-wrap items-center justify-between gap-4 rounded-[16px] border px-5 py-[18px]"
     >
       <div className="flex min-w-0 flex-col gap-1">
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-          <span className="text-section text-body-ink">{item.name}</span>
+          <span className="text-body-ink text-[17px] font-semibold">
+            {item.name}
+          </span>
           {lines.dose ? (
-            <span className="text-meta text-ink-secondary">{lines.dose}</span>
+            <span className="text-ink-tertiary text-[14px]">{lines.dose}</span>
           ) : null}
         </div>
         {lines.schedule ? (
-          <p className="text-body text-body-ink">{lines.schedule}</p>
+          <p className="text-ink-secondary text-[14px]">{lines.schedule}</p>
         ) : null}
-        <p className="text-meta text-ink-tertiary">{lines.method}</p>
+        <p className="text-ink-tertiary text-[13px]">{lines.method}</p>
         {photo ? (
-          <p className="text-meta text-ink-secondary flex items-center gap-1.5">
-            <ImageIcon className="size-4 shrink-0" aria-hidden />
+          <p className="text-ink-tertiary text-[13px]">
             {t("medsPhotoAttached")}
           </p>
         ) : null}
         {dateless ? (
-          <p className="text-meta text-warning flex items-center gap-1.5">
-            <TriangleAlert className="size-4 shrink-0" aria-hidden />
+          <p className="text-[13px] text-(--note-ink)">
             {t("medsNoDaysWarning")}
           </p>
         ) : null}
@@ -73,7 +71,9 @@ export function MedicationCard({
       <div className="flex shrink-0 gap-2">
         <Button
           type="button"
-          variant="outline"
+          variant="quiet"
+          size="care-md"
+          className="font-medium"
           disabled={editDisabled}
           aria-label={fill(t("medsEditAria"), { name: item.name })}
           onClick={onEdit}
@@ -83,7 +83,8 @@ export function MedicationCard({
         <Button
           type="button"
           variant="ghost"
-          className="text-bad hover:text-bad"
+          size="care-md"
+          className="text-bad hover:text-bad px-3.5 font-normal"
           aria-label={fill(t("medsRemoveAria"), { name: item.name })}
           onClick={onRemove}
         >

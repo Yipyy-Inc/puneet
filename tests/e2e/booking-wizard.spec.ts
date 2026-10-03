@@ -201,10 +201,7 @@ test.describe("staff finish the New Booking wizard for every service", () => {
     // Confirm (the client's flow, 2026-10-01).
     await next(dialog);
 
-    await dialog
-      .locator("button:has(svg.lucide-chevron-right)")
-      .first()
-      .click();
+    await dialog.getByRole("button", { name: "Next month" }).first().click();
     const [tuesday] = nextMonthTuesday();
     await dialog
       .getByRole("button", { name: String(tuesday), exact: true })
@@ -285,10 +282,7 @@ test.describe("staff finish the New Booking wizard for every service", () => {
       .first()
       .click();
     await next(dialog);
-    await dialog
-      .locator("button:has(svg.lucide-chevron-right)")
-      .first()
-      .click();
+    await dialog.getByRole("button", { name: "Next month" }).first().click();
     const [tuesday, wednesday] = nextMonthTuesday();
     await dialog
       .getByRole("button", { name: String(tuesday), exact: true })
@@ -328,10 +322,7 @@ test.describe("staff finish the New Booking wizard for every service", () => {
       .first()
       .click();
     await next(dialog);
-    await dialog
-      .locator("button:has(svg.lucide-chevron-right)")
-      .first()
-      .click();
+    await dialog.getByRole("button", { name: "Next month" }).first().click();
     const [tuesday] = nextMonthTuesday();
     await dialog
       .getByRole("button", { name: String(tuesday), exact: true })

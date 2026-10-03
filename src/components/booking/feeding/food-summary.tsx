@@ -63,15 +63,15 @@ export function FoodSummary({
           ? "feedCalcOwnEach"
           : "feedCalcOwn";
     return (
-      <div className="border-line flex flex-col gap-0.5 rounded-xl border px-4 py-3.5">
-        <span className="text-body-strong text-body-ink">
+      <div className="bg-surface-inset flex flex-col gap-0.5 rounded-[12px] border border-(--row-line) px-4 py-3.5">
+        <span className="text-body-ink text-[15px] font-semibold">
           {prePortioned
             ? fill(t("feedPackPortions"), { count: servings + extra })
             : fill(t("feedPackAtLeast"), {
                 amount: portionWords(t, { ...food, amount: total }, locale),
               })}
         </span>
-        <span className="text-meta text-ink-tertiary">
+        <span className="text-ink-tertiary text-[13px]">
           {fill(t(calc), {
             meals: mealCount(t, servings, locale),
             extra,
@@ -96,12 +96,12 @@ export function FoodSummary({
 
   return (
     <div className="flex flex-col gap-2.5">
-      <div className="border-line flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3.5">
+      <div className="bg-surface-inset flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-(--row-line) px-4 py-3.5">
         <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="text-body-strong text-body-ink">
+          <span className="text-body-ink text-[15px] font-semibold">
             {fill(t("feedHouseTotal"), { quantity, name })}
           </span>
-          <span className="text-meta text-ink-tertiary">
+          <span className="text-ink-tertiary text-[13px]">
             {charge.per === "day"
               ? fill(t("feedCalcPerDay"), {
                   days: dayCount(t, charge.quantity, locale),
@@ -124,13 +124,13 @@ export function FoodSummary({
         <div className="flex flex-col items-end gap-0.5">
           <span
             data-waived={waived && !charge.included}
-            className="text-body-ink text-section data-[waived=true]:text-ink-tertiary tabular-nums data-[waived=true]:line-through"
+            className="text-body-ink data-[waived=true]:text-ink-disabled text-[20px] font-bold tabular-nums data-[waived=true]:line-through"
           >
             {charge.included
               ? t("feedIncluded")
               : formatMoney(charge.quantity * charge.unitPrice, locale)}
           </span>
-          <span className="text-meta text-ink-tertiary">
+          <span className="text-ink-tertiary text-[12px]">
             {charge.included
               ? withService
               : waived
@@ -155,7 +155,7 @@ export function FoodSummary({
           />
           <label
             htmlFor={`feed-waive-${food.id}`}
-            className="text-body text-ink-secondary cursor-pointer"
+            className="text-ink-secondary cursor-pointer text-[14px]"
           >
             {t("medsWaiveLabel")}
           </label>

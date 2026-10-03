@@ -72,12 +72,9 @@ export function EvaluationReview({
         {isCustomer && confirm.approval.required ? (
           <div
             role="note"
-            className="border-line bg-card text-meta text-body-ink flex gap-2.5 rounded-2xl border px-4 py-3.5"
+            className="text-meta flex gap-2.5 rounded-[16px] border border-(--note-line) bg-(--note-bg) px-4 py-3.5 text-(--note-ink)"
           >
-            <Clock
-              aria-hidden
-              className="text-ink-secondary mt-0.5 size-4 shrink-0"
-            />
+            <Clock aria-hidden className="mt-0.5 size-5 shrink-0" />
             <p className="text-pretty">
               {fill(t("wizEvNeedsApproval"), {
                 hours: confirm.approval.hours,
@@ -87,8 +84,8 @@ export function EvaluationReview({
         ) : null}
 
         {vaccinesRequired && vaccinations.length > 0 ? (
-          <section className="border-line bg-card flex flex-col gap-2 rounded-2xl border p-4">
-            <h3 className="text-body-strong text-body-ink">
+          <section className="border-line bg-card flex flex-col gap-2 rounded-[18px] border p-4">
+            <h3 className="text-body-ink text-[15px] font-bold">
               {t("wizVaccinations")}
             </h3>
             <ul className="flex flex-col gap-1.5">
@@ -101,7 +98,7 @@ export function EvaluationReview({
                 return (
                   <li
                     key={line.petId}
-                    className="text-meta flex items-start gap-2"
+                    className="flex items-start gap-2 text-[13.5px]"
                   >
                     {ok ? (
                       <CircleCheck
@@ -156,20 +153,21 @@ export function EvaluationReview({
           </ConfirmCard>
         ) : null}
 
-        <section className="border-line bg-card flex flex-col gap-2 rounded-2xl border p-4">
-          <h3 className="text-body-strong text-body-ink">
+        <section className="border-line bg-card flex flex-col gap-2 rounded-[18px] border p-4">
+          <h3 className="text-body-ink text-[15px] font-bold">
             {t("wizEvTermsTitle")}
           </h3>
-          <p className="text-meta text-ink-secondary text-pretty">
+          <p className="text-ink-secondary text-[13px] leading-[19.5px] text-pretty">
             {fill(t("wizEvTerms"), { hours: terms.responseHours })}
             {terms.cancelHours !== null && terms.cancelHours > 0
               ? ` ${fill(t("wizEvTermsCancel"), { hours: terms.cancelHours })}`
               : ""}
           </p>
-          <label className="text-body-strong text-body-ink mt-1 flex min-h-10 cursor-pointer items-center gap-2.5 max-lg:min-h-12">
+          <label className="text-body-ink mt-1 flex cursor-pointer items-center gap-2.5 text-[14px] font-semibold">
             <Checkbox
               checked={terms.accepted}
               onCheckedChange={(checked) => terms.onAccept(checked === true)}
+              className="size-6 rounded-[7px]"
             />
             {t("wizEvTermsAgree")}
           </label>
@@ -194,28 +192,28 @@ export function EvaluationReview({
 
       <section
         aria-labelledby="wizard-evaluation-summary"
-        className="border-line bg-card flex max-w-[400px] min-w-0 flex-[1_1_280px] flex-col gap-2.5 rounded-2xl border p-[18px] lg:sticky lg:top-0"
+        className="border-line bg-card flex max-w-[400px] min-w-0 flex-[1_1_280px] flex-col gap-2.5 rounded-[20px] border p-[18px] lg:sticky lg:top-0"
       >
         <h3
           id="wizard-evaluation-summary"
-          className="text-body-strong text-body-ink"
+          className="text-body-ink text-[15px] font-bold"
         >
           {t("wizEvSummary")}
         </h3>
         <dl className="flex flex-col gap-2">
           {summary.rows.map((row) => (
-            <div key={row.key} className="text-meta flex gap-2.5">
+            <div key={row.key} className="flex gap-2.5 text-[13.5px]">
               <dt className="text-ink-tertiary w-[84px] shrink-0">
                 {row.label}
               </dt>
-              <dd className="text-body-ink min-w-0 flex-1 font-semibold">
+              <dd className="text-body-ink min-w-0 flex-1 font-bold">
                 {row.value}
               </dd>
             </div>
           ))}
         </dl>
         <div className="border-line flex flex-col gap-1 border-t pt-2.5">
-          <span className="text-meta text-ink-tertiary">
+          <span className="text-ink-tertiary text-[12.5px]">
             {summary.priceNote}
           </span>
           {summary.taxes.map((tax) => (
@@ -227,12 +225,12 @@ export function EvaluationReview({
               <span>{money(tax.amount)}</span>
             </span>
           ))}
-          <span className="text-heading text-[26px]/[1.2] font-bold tabular-nums">
+          <span className="text-body-ink text-[26px] font-extrabold tabular-nums">
             {summary.total === 0 ? t("priceFree") : money(summary.total)}
           </span>
         </div>
         {summary.deposit && summary.deposit.amount > 0 ? (
-          <p className="border-line text-meta text-body-ink flex gap-2.5 rounded-xl border px-3 py-2.5 font-semibold">
+          <p className="text-acc-soft-text flex gap-2.5 rounded-[12px] bg-(--acc-pale) px-3 py-2.5 text-[13.5px] font-semibold">
             <span className="min-w-0 flex-1">{summary.deposit.label}</span>
             <span className="tabular-nums">
               {money(summary.deposit.amount)}

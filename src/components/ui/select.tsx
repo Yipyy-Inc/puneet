@@ -4,6 +4,7 @@ import * as React from "react";
 import * as SelectPrimitive from "@radix-ui/react-select";
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 
+import { useLookStamp } from "@/components/look/look-context";
 import { cn } from "@/lib/utils";
 
 function Select({
@@ -53,7 +54,7 @@ function SelectTrigger({
         // in the product measured 40px on a phone while the class meant to
         // make it 48 sat in the same string doing nothing. Measured at 599px:
         // 168 of them on the roles screen alone (§6 rule 7).
-        `border-line-strong hover:not-disabled:border-ink-disabled bg-card text-body-ink data-placeholder:text-ink-tertiary [&_svg:not([class*='text-'])]:text-ink-disabled focus-visible:border-primary aria-invalid:border-error-dot disabled:bg-surface-inset disabled:text-ink-disabled flex min-h-10 w-fit items-center justify-between gap-2 rounded-full border px-4 text-[14.5px] whitespace-nowrap transition-[color,border-color,box-shadow] duration-120 ease-[ease] outline-none focus-visible:shadow-[inset_0_0_0_2px_var(--primary),0_0_0_3px_rgba(22,104,227,0.12)] disabled:cursor-not-allowed aria-invalid:focus-visible:shadow-[inset_0_0_0_2px_var(--error-dot),0_0_0_3px_rgba(210,69,69,0.12)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 motion-reduce:transition-none max-lg:min-h-12 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
+        `border-line-strong hover:not-disabled:border-ink-disabled bg-card text-body-ink data-placeholder:text-ink-tertiary [&_svg:not([class*='text-'])]:text-ink-disabled focus-visible:border-primary aria-invalid:border-error-dot disabled:bg-surface-inset disabled:text-ink-disabled flex min-h-10 w-fit items-center justify-between gap-2 rounded-full border px-4 text-[14.5px] whitespace-nowrap transition-[color,border-color,box-shadow] duration-120 ease-[ease] outline-none focus-visible:shadow-[inset_0_0_0_2px_var(--primary),0_0_0_3px_var(--ring-halo)] disabled:cursor-not-allowed aria-invalid:focus-visible:shadow-[inset_0_0_0_2px_var(--error-dot),0_0_0_3px_rgba(210,69,69,0.12)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 motion-reduce:transition-none max-lg:min-h-12 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
         className,
       )}
       {...props}
@@ -77,6 +78,7 @@ function SelectContent({
   align = "center",
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
+  const stamp = useLookStamp(props.style);
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
@@ -90,6 +92,7 @@ function SelectContent({
         position={position}
         align={align}
         {...props}
+        {...stamp}
       >
         <SelectScrollUpButton />
         <SelectPrimitive.Viewport

@@ -4,12 +4,18 @@ import * as React from "react";
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import { CheckIcon } from "lucide-react";
 
+import { useLook } from "@/components/look/look-context";
 import { cn } from "@/lib/utils";
 
 function Checkbox({
   className,
   ...props
 }: React.ComponentProps<typeof CheckboxPrimitive.Root>) {
+  // Inside the booking wizard (CLAUDE.md § "Client mocks decide the look"):
+  // the mock's 20px box, 6px corners, a warm grey edge, a "✓" when ticked.
+  const look = useLook();
+  const setup = look?.names.includes("care-setup") ?? false;
+  const mock = !setup && (look?.names.includes("booking") ?? false);
   return (
     <CheckboxPrimitive.Root
       data-slot="checkbox"
@@ -32,6 +38,9 @@ function Checkbox({
         // It also makes the two checkbox sizes in use (16px, and 20px where a
         // caller sizes it up) land on one number instead of two.
         `relative max-lg:before:absolute max-lg:before:top-1/2 max-lg:before:left-1/2 max-lg:before:size-12 max-lg:before:-translate-x-1/2 max-lg:before:-translate-y-1/2 max-lg:before:content-['']`,
+        mock &&
+          "size-5 rounded-[6px] border-[1.5px] border-(--check-off) shadow-none",
+        setup && "size-[18px] rounded-[4px] shadow-none",
         className,
       )}
       {...props}
@@ -40,7 +49,13 @@ function Checkbox({
         data-slot="checkbox-indicator"
         className="grid place-content-center text-current transition-none"
       >
-        <CheckIcon className="size-3.5" />
+        {mock ? (
+          <span aria-hidden className="text-[12px] leading-none font-bold">
+            ✓
+          </span>
+        ) : (
+          <CheckIcon className="size-3.5" />
+        )}
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>
   );

@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Check } from "lucide-react";
 
+import { Tick } from "@/components/ui/tick";
 import { fetchTrainingPrograms } from "@/lib/api/training-book";
 import { formatMoney, isPluralOne } from "@/lib/i18n/format";
 import { fill } from "@/lib/medications/dose";
@@ -81,10 +81,14 @@ export function ProgramStep({
   };
 
   return (
-    <div className="flex flex-col gap-[18px]">
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <h3 className="text-section text-body-ink">{t("wizChooseProgram")}</h3>
-        <p className="text-meta text-ink-tertiary">{t("wizPricesPerPet")}</p>
+    <div className="flex max-w-[1000px] flex-col gap-[18px]">
+      <div className="flex min-w-0 flex-col gap-[3px]">
+        <h3 className="text-body-ink text-[17px] font-semibold">
+          {t("wizChooseProgram")}
+        </h3>
+        <p className="text-ink-tertiary text-[13.5px]">
+          {t("wizPricesPerPet")}
+        </p>
       </div>
 
       {programs.length === 0 && isPending ? (
@@ -95,7 +99,7 @@ export function ProgramStep({
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="border-line bg-card yy-skel flex h-[150px] flex-col gap-3 rounded-2xl border px-5 py-[18px]"
+              className="border-line bg-card yy-skel flex h-[150px] flex-col gap-3 rounded-[22px] border-[1.5px] p-5"
             >
               <span className="bg-surface-inset h-4 w-2/5 rounded-full" />
               <span className="bg-surface-inset h-3 w-3/5 rounded-full" />
@@ -103,7 +107,7 @@ export function ProgramStep({
           ))}
         </div>
       ) : programs.length === 0 ? (
-        <p className="border-line-strong text-meta text-ink-secondary rounded-2xl border border-dashed px-6 py-8 text-center">
+        <p className="border-line-strong text-ink-secondary rounded-[20px] border-[1.5px] border-dashed px-6 py-8 text-center text-[13.5px]">
           {t("wizNoPrograms")}
         </p>
       ) : (
@@ -117,33 +121,28 @@ export function ProgramStep({
                 aria-pressed={on}
                 data-on={on}
                 onClick={() => onChange({ programId: program.id, pack: 1 })}
-                className="border-line-strong bg-card hover:border-ink-disabled focus-visible:outline-primary relative flex min-w-0 flex-col gap-2.5 rounded-2xl border px-5 py-[18px] text-left transition-[box-shadow,border-color] duration-120 ease-[ease] focus-visible:outline-2 focus-visible:outline-offset-2 data-[on=true]:border-transparent data-[on=true]:shadow-[inset_0_0_0_2px_var(--primary)] motion-reduce:transition-none"
+                className="mk-pick bg-card focus-visible:outline-primary relative flex min-w-0 flex-col gap-2.5 rounded-[22px] p-5 text-left focus-visible:outline-2 focus-visible:outline-offset-2"
               >
-                <span className="text-section text-body-ink pr-8">
+                <span className="text-body-ink pr-7 text-[16.5px] font-semibold">
                   {program.name}
                 </span>
                 {program.description ? (
-                  <span className="text-meta text-ink-tertiary line-clamp-3 flex-1 text-pretty">
+                  <span className="text-ink-tertiary line-clamp-3 flex-1 text-[13px] text-pretty">
                     {program.description}
                   </span>
                 ) : (
                   <span className="flex-1" />
                 )}
-                <span className="border-line flex items-baseline justify-between gap-2 border-t pt-2.5">
-                  <span className="text-body-strong text-body-ink tabular-nums">
+                <span className="border-line-soft flex items-center justify-between gap-2 border-t pt-2.5">
+                  <span className="text-body-ink text-[15px] font-bold tabular-nums">
                     {priceLabel(program)}
                   </span>
-                  <span className="text-meta text-ink-tertiary tabular-nums">
+                  <span className="text-ink-tertiary text-[12.5px] tabular-nums">
                     {metaLabel(program)}
                   </span>
                 </span>
                 {on ? (
-                  <span
-                    aria-hidden
-                    className="bg-primary text-primary-foreground absolute top-4 right-4 flex size-6 items-center justify-center rounded-full"
-                  >
-                    <Check className="size-4" strokeWidth={3} />
-                  </span>
+                  <Tick size={24} className="top-[18px] right-[18px]" />
                 ) : null}
               </button>
             );
@@ -153,7 +152,7 @@ export function ProgramStep({
 
       {chosen && packs.length > 1 ? (
         <div className="flex flex-col gap-2.5">
-          <span className="text-micro text-ink-tertiary uppercase">
+          <span className="text-ink-tertiary text-[11.5px] font-semibold tracking-[0.07em] uppercase">
             {t("wizSessions")}
           </span>
           <div
@@ -173,14 +172,14 @@ export function ProgramStep({
                   onClick={() =>
                     onChange({ programId: chosen.id, pack: pack.sessions })
                   }
-                  className="border-line-strong bg-card hover:border-ink-disabled focus-visible:outline-primary flex min-h-12 flex-col justify-center rounded-xl border px-4 py-2 text-left transition-[box-shadow,border-color] duration-120 ease-[ease] focus-visible:outline-2 focus-visible:outline-offset-2 data-[on=true]:border-transparent data-[on=true]:shadow-[inset_0_0_0_2px_var(--primary)] motion-reduce:transition-none"
+                  className="mk-opt text-body-ink focus-visible:outline-primary flex flex-col items-start gap-0.5 rounded-[16px] px-4 py-2.5 text-left focus-visible:outline-2 focus-visible:outline-offset-2"
                 >
-                  <span className="text-body-strong text-body-ink">
+                  <span className="text-[14px] font-semibold">
                     {pack.sessions === 1
                       ? t("wizSingleSession")
                       : fill(t("wizSessionPack"), { count: pack.sessions })}
                   </span>
-                  <span className="text-meta text-ink-tertiary tabular-nums">
+                  <span className="text-ink-tertiary text-[12px] tabular-nums">
                     {pack.saves > 0
                       ? fill(t("wizPackSaves"), {
                           price: money(pack.price),
@@ -192,7 +191,7 @@ export function ProgramStep({
               );
             })}
           </div>
-          <p className="text-meta text-ink-tertiary">{t("wizPackNote")}</p>
+          <p className="text-ink-tertiary text-[12.5px]">{t("wizPackNote")}</p>
         </div>
       ) : null}
     </div>

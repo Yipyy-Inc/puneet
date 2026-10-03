@@ -253,10 +253,7 @@ async function toFeeding(page: Page, ahead: number) {
     .click();
   await next(dialog);
   for (let i = 0; i < ahead; i += 1) {
-    await dialog
-      .locator("button:has(svg.lucide-chevron-right)")
-      .first()
-      .click();
+    await dialog.getByRole("button", { name: "Next month" }).first().click();
   }
   const monday = firstMonday(ahead);
   await dialog

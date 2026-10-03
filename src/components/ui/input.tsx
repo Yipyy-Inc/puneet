@@ -57,7 +57,7 @@ const INPUT_BASE_CLASSES = `
   motion-reduce:transition-none
 
   focus-visible:border-primary
-  focus-visible:shadow-[inset_0_0_0_2px_var(--primary),0_0_0_3px_rgba(22,104,227,0.12)]
+  focus-visible:shadow-[inset_0_0_0_2px_var(--primary),0_0_0_3px_var(--ring-halo)]
 
   aria-invalid:border-error-dot
   aria-invalid:focus-visible:shadow-[inset_0_0_0_2px_var(--error-dot),0_0_0_3px_rgba(210,69,69,0.12)]

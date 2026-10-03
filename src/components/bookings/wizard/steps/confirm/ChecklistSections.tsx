@@ -24,7 +24,8 @@ import { useShellLocale, useShellText } from "@/lib/shell/use-shell-text";
 // kept from the old form) and the deposit.
 // ============================================================================
 
-const SECTION = "border-line flex flex-col gap-2 border-t py-3.5";
+// The booking mock's sections (2026-10-02): a warm hairline above each.
+const SECTION = "border-line-soft flex flex-col gap-2 border-t py-3.5";
 
 export function VaccinationsSection({
   lines,
@@ -39,7 +40,9 @@ export function VaccinationsSection({
   if (lines.length === 0) return null;
   return (
     <div className={SECTION}>
-      <p className="text-body-strong text-body-ink">{t("wizVaccinations")}</p>
+      <p className="text-body-ink text-[14.5px] font-semibold">
+        {t("wizVaccinations")}
+      </p>
       <ul className="flex flex-col gap-1.5">
         {lines.map((line) => {
           const names = formatList(line.vaccines, locale);
@@ -65,16 +68,16 @@ export function VaccinationsSection({
           return (
             <li
               key={line.petId}
-              className="text-meta flex items-center gap-2.5"
+              className="flex items-center gap-2.5 text-[13.5px]"
             >
               <span
                 aria-hidden
                 className={
                   line.state === "ok"
-                    ? "bg-success-dot size-[7px] shrink-0 rounded-full"
+                    ? "size-2 shrink-0 rounded-full bg-(--dot-ok,var(--success-dot))"
                     : line.state === "missing"
-                      ? "bg-error-dot size-[7px] shrink-0 rounded-full"
-                      : "bg-warning-dot size-[7px] shrink-0 rounded-full"
+                      ? "bg-error-dot size-2 shrink-0 rounded-full"
+                      : "size-2 shrink-0 rounded-full bg-(--dot-warn,var(--warning-dot))"
                 }
               />
               <span className="text-body-ink font-semibold">
@@ -130,11 +133,11 @@ export function EvaluationSection({
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <label
             htmlFor="wizard-evaluation"
-            className="text-body-strong text-body-ink cursor-pointer"
+            className="text-body-ink cursor-pointer text-[14.5px] font-semibold"
           >
             {t("evaluation")}
           </label>
-          <p className="text-meta text-ink-tertiary text-pretty">
+          <p className="text-ink-tertiary text-[13px] text-pretty">
             {on
               ? fill(t("wizEvalOn"), {
                   pets,
@@ -163,12 +166,13 @@ export function EvaluationSection({
             aria-label={t("wizEvalReason")}
             rows={2}
           />
-          <p className="text-meta text-ink-tertiary">
+          <p className="text-ink-tertiary text-[12.5px]">
             {fill(t("wizEvalReasonHelp"), { count: minReason })}
           </p>
           <Button
             type="button"
-            variant="outline"
+            variant="quiet"
+            size="mock-36"
             className="self-start"
             onClick={onBookEvaluation}
           >
@@ -194,14 +198,16 @@ export function PassesSection({
   if (packages.length === 0) return null;
   return (
     <div className={SECTION}>
-      <p className="text-body-strong text-body-ink">{t("wizPasses")}</p>
+      <p className="text-body-ink text-[14.5px] font-semibold">
+        {t("wizPasses")}
+      </p>
       <ul className="flex flex-col gap-2">
         {packages.map((pkg) => {
           const on = applied === pkg.id;
           return (
             <li key={pkg.id} className="flex flex-wrap items-center gap-3">
               <Gift aria-hidden className="text-ink-tertiary size-5 shrink-0" />
-              <span className="text-body text-body-ink min-w-0 flex-1">
+              <span className="text-body-ink min-w-0 flex-1 text-[14px]">
                 {fill(
                   t(
                     isPluralOne(pkg.passesLeft, locale)
@@ -267,15 +273,15 @@ export function DepositSection({
     { value: "later", label: t("wizCollectLater") },
   ];
   return (
-    <div className="border-line flex flex-col gap-2.5 border-t pt-3.5">
+    <div className="border-line-soft flex flex-col gap-2.5 border-t pt-3.5">
       <div className="flex flex-wrap justify-between gap-2">
-        <span className="text-body-strong text-body-ink tabular-nums">
+        <span className="text-body-ink text-[14.5px] font-semibold tabular-nums">
           {fill(t("wizDepositAmount"), { amount: formatMoney(amount, locale) })}
         </span>
-        <span className="text-meta text-ink-tertiary">{ruleText}</span>
+        <span className="text-ink-tertiary text-[12.5px]">{ruleText}</span>
       </div>
       {isCustomer ? (
-        <p className="text-meta text-ink-secondary">
+        <p className="text-ink-secondary text-[13px]">
           {cardLabel
             ? fill(
                 t(
@@ -302,6 +308,7 @@ export function DepositSection({
                 value={option.value}
                 checked={mode === option.value}
                 onChange={() => onMode(option.value)}
+                className="min-h-9 max-lg:min-h-9"
               >
                 {option.label}
               </ChoicePill>

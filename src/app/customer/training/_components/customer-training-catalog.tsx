@@ -1,12 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Photo } from "@/components/ui/photo";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import {
@@ -15,7 +15,6 @@ import {
   Check,
   Clock,
   GraduationCap,
-  ImageIcon,
   Inbox,
   Lock,
   Route,
@@ -293,29 +292,16 @@ function CourseCard({
 
   return (
     <Card className="flex h-full flex-col overflow-hidden p-0">
-      {/* Cover image (or gradient placeholder) ─────────────────────────── */}
-      <div className="relative aspect-video w-full bg-slate-100">
-        {course.imageUrl ? (
-          <Image
-            src={course.imageUrl}
-            alt={course.name}
-            fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            className="object-cover"
-            unoptimized
-          />
-        ) : (
-          <div
-            className="absolute inset-0 flex items-center justify-center bg-linear-to-br"
-            style={{
-              background: disciplineColor
-                ? `linear-gradient(135deg, ${hexToRgba(disciplineColor, 0.18)} 0%, ${hexToRgba(disciplineColor, 0.04)} 100%)`
-                : undefined,
-            }}
-          >
-            <ImageIcon className="text-muted-foreground/40 size-8" />
-          </div>
-        )}
+      {/* The course's photo — or, none or one that will not load, the
+          striped placeholder every missing photo shares (CLAUDE.md § "Client
+          mocks decide the look"). */}
+      <div className="relative aspect-video w-full">
+        <Photo
+          src={course.imageUrl}
+          shape="band"
+          label={t("coursePhotoSlot")}
+          className="absolute inset-0 size-full"
+        />
         {course.popular && (
           <Badge
             variant="default"

@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronRight, PawPrint, Plus, Search, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/ui/chip";
 import { Input } from "@/components/ui/input";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import {
@@ -35,12 +35,15 @@ const DEBOUNCE_MS = 220;
 
 export function ClientSearchPanel({
   clients,
+  loading = false,
   query,
   onQuery,
   onPick,
   onNewClient,
 }: {
   clients: readonly Client[];
+  /** The list has not arrived: a search finds nobody yet, and says why. */
+  loading?: boolean;
   query: string;
   onQuery: (query: string) => void;
   onPick: (hit: ClientSearchHit) => void;
@@ -68,12 +71,20 @@ export function ClientSearchPanel({
       className="flex flex-col gap-3.5"
     >
       <div className="flex items-center justify-between gap-3">
-        <h3 id="wizard-find-client" className="text-section text-body-ink">
+        <h3
+          id="wizard-find-client"
+          className="text-body-ink text-[17px] font-semibold"
+        >
           {t("wizFindClient")}
         </h3>
         {onNewClient ? (
-          <Button type="button" variant="outline" onClick={onNewClient}>
-            <Plus aria-hidden />
+          <Button
+            type="button"
+            variant="quiet"
+            size="mock-36"
+            onClick={onNewClient}
+          >
+            <span aria-hidden>+</span>
             {t("wizNewClient")}
           </Button>
         ) : null}
@@ -82,7 +93,8 @@ export function ClientSearchPanel({
       <div className="relative">
         <Search
           aria-hidden
-          className="text-ink-tertiary pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2"
+          strokeWidth={2}
+          className="text-ink-tertiary pointer-events-none absolute top-1/2 left-5 size-[19px] -translate-y-1/2"
         />
         <Input
           type="search"
@@ -93,7 +105,7 @@ export function ClientSearchPanel({
           onChange={(event) => onQuery(event.target.value)}
           aria-label={t("wizSearchLabel")}
           placeholder={t(phone ? "wizSearchPhShort" : "wizSearchPh")}
-          className="pr-12 pl-11 [&::-webkit-search-cancel-button]:appearance-none"
+          className="border-primary h-14 border-2 pr-12 pl-[51px] text-[16px] shadow-[0_0_0_4px_var(--acc-soft)] focus-visible:shadow-[0_0_0_4px_var(--acc-soft)] max-lg:h-14 [&::-webkit-search-cancel-button]:appearance-none"
         />
         {query ? (
           <Button
@@ -102,7 +114,7 @@ export function ClientSearchPanel({
             size="icon"
             onClick={() => onQuery("")}
             aria-label={t("wizClearSearch")}
-            className="absolute top-1/2 right-0 -translate-y-1/2"
+            className="absolute top-1/2 right-1.5 -translate-y-1/2"
           >
             <X aria-hidden />
           </Button>
@@ -110,11 +122,11 @@ export function ClientSearchPanel({
       </div>
 
       {!typed ? (
-        <div className="border-line-strong flex flex-col items-center gap-1.5 rounded-2xl border border-dashed px-6 py-9 text-center">
-          <p className="text-body-strong text-body-ink">
+        <div className="border-line-strong flex flex-col items-center gap-1.5 rounded-[20px] border-[1.5px] border-dashed px-6 py-9 text-center">
+          <p className="text-body-ink text-[15px] font-semibold">
             {t("wizSearchHintTitle")}
           </p>
-          <p className="text-meta text-ink-tertiary text-pretty">
+          <p className="text-ink-tertiary text-[13.5px] text-pretty">
             {examples
               ? fill(t("wizSearchHintText"), examples)
               : t("wizSearchHintPlain")}
@@ -122,25 +134,30 @@ export function ClientSearchPanel({
         </div>
       ) : hits.length > 0 ? (
         <div className="flex flex-col gap-2">
-          <ul className="border-line bg-card shadow-card overflow-hidden rounded-2xl border">
+          <ul className="border-line bg-card overflow-hidden rounded-[20px] border">
             {hits.map((hit) => (
               <li
                 key={hit.client.id}
-                className="border-line border-b last:border-b-0"
+                className="border-line-soft border-b last:border-b-0"
               >
                 <ResultRow hit={hit} onPick={onPick} />
               </li>
             ))}
           </ul>
           {total > hits.length ? (
-            <p className="text-meta text-ink-tertiary px-1">
+            <p className="text-ink-tertiary px-1 text-[13px]">
               {fill(t("wizMoreMatches"), { shown: hits.length, total })}
             </p>
           ) : null}
         </div>
       ) : settled === query ? (
-        <p className="border-line bg-card text-body text-ink-secondary rounded-2xl border p-[22px] text-center">
-          {fill(t("wizNoClientMatch"), { query: query.trim() })}
+        <p
+          aria-live="polite"
+          className="border-line bg-card text-ink-tertiary rounded-[20px] border p-[22px] text-center text-[14px]"
+        >
+          {loading
+            ? t("wizFindingClients")
+            : fill(t("wizNoClientMatch"), { query: query.trim() })}
         </p>
       ) : null}
     </section>
@@ -164,42 +181,44 @@ function ResultRow({
   const chips = (
     <>
       {matchedPets.length > 0 ? (
-        <Badge variant="checkedIn">
-          <PawPrint aria-hidden />
+        <Chip tone="accent" size="md">
           {fill(t("wizPetMatch"), {
             pets: matchedPets.map((pet) => pet.name).join(", "),
           })}
-        </Badge>
+        </Chip>
       ) : null}
-      <Badge
-        variant="outline"
-        className="border-line text-ink-secondary h-[26px] px-2.5 text-[12.5px] md:text-[12.5px]"
-      >
+      <Chip tone="outline" size="md" className="font-normal">
         {pets}
-      </Badge>
+      </Chip>
     </>
   );
   return (
     <button
       type="button"
       onClick={() => onPick(hit)}
-      className="hover:bg-surface-inset focus-visible:outline-primary flex w-full min-w-0 items-center gap-3.5 px-[18px] py-3.5 text-left transition-[background-color] duration-120 ease-[ease] focus-visible:outline-2 focus-visible:-outline-offset-2 motion-reduce:transition-none"
+      className="focus-visible:outline-primary flex w-full min-w-0 items-center gap-3.5 px-[18px] py-3.5 text-left transition-[background-color] duration-120 ease-[ease] hover:bg-(--row-hover) focus-visible:outline-2 focus-visible:-outline-offset-2 motion-reduce:transition-none"
     >
       <span
         aria-hidden
-        className="bg-surface-inset text-body-ink flex size-11 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold"
+        className="bg-surface-inset-2 text-body-ink flex size-11 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold"
       >
         {initialsOf(client.name)}
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-body-strong text-body-ink">{client.name}</span>
-        <span className="text-meta text-ink-tertiary truncate">{contact}</span>
+        <span className="text-body-ink text-[15.5px] font-semibold">
+          {client.name}
+        </span>
+        <span className="text-ink-tertiary truncate text-[13px]">
+          {contact}
+        </span>
         <span className="mt-1 flex flex-wrap gap-1.5 sm:hidden">{chips}</span>
       </span>
       <span className="flex shrink-0 items-center gap-2 max-sm:hidden">
         {chips}
       </span>
-      <ChevronRight aria-hidden className="text-ink-disabled size-5 shrink-0" />
+      <span aria-hidden className="text-ink-disabled shrink-0 text-[18px]">
+        ›
+      </span>
     </button>
   );
 }

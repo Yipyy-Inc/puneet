@@ -1,20 +1,7 @@
 "use client";
 
-import {
-  Info,
-  Package,
-  Refrigerator,
-  Snowflake,
-  Tag,
-  TriangleAlert,
-  X,
-  type LucideIcon,
-} from "lucide-react";
-
 import { FieldLabel } from "@/components/booking/care/editor-section";
 import { OptionCards } from "@/components/booking/care/option-cards";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { ChoicePill } from "@/components/ui/choice-pill";
 import { Input } from "@/components/ui/input";
 import { Segmented } from "@/components/ui/segmented";
@@ -42,7 +29,6 @@ import {
   FOOD,
   PACKS,
   type FeedUnit,
-  type FoodStorage,
   type FoodType,
 } from "@/lib/feeding/vocabulary";
 import { formatMoney } from "@/lib/i18n/format";
@@ -65,14 +51,6 @@ import type { FeedingStepState } from "./use-feeding-step";
 // portion; which meals it is served at; how it is prepared; and what it comes
 // to over the stay.
 // ============================================================================
-
-const STORAGE_GLYPH: Record<FoodStorage, LucideIcon> = {
-  pantry: Package,
-  fridge_after_opening: Refrigerator,
-  frozen: Snowflake,
-  fridge: Refrigerator,
-  follow_label: Tag,
-};
 
 export function FoodCard({
   step,
@@ -112,7 +90,6 @@ export function FoodCard({
       ? [house?.unit ?? food.unit]
       : FOOD[food.type].units;
   const storage = food.source === "own" ? FOOD[food.type].storage : null;
-  const StorageGlyph = storage ? STORAGE_GLYPH[storage] : null;
   const included = houseFoodIncluded(settings);
   const named = (h: HouseFood) => ({
     id: h.id,
@@ -131,13 +108,13 @@ export function FoodCard({
           });
 
   return (
-    <div className="border-line overflow-hidden rounded-xl border">
-      <div className="border-line bg-card flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3.5">
+    <div className="border-line overflow-hidden rounded-[16px] border">
+      <div className="bg-surface-inset flex flex-wrap items-center justify-between gap-3 border-b border-(--row-line) px-[18px] py-3.5">
         <div className="flex min-w-0 flex-wrap items-baseline gap-2.5">
-          <span className="text-body-strong text-body-ink">
+          <span className="text-body-ink text-[15px] font-semibold">
             {fill(t("feedFoodTitle"), { n })}
           </span>
-          <span className="text-body text-ink-secondary">
+          <span className="text-ink-tertiary text-[14px]">
             {food.source === "house"
               ? foodName(t, food, settings)
               : foodTypeLabel(t, food.type)}
@@ -163,27 +140,27 @@ export function FoodCard({
                     : asOwnFood(current),
                 );
               }}
+              className="bg-surface-inset-2 rounded-[10px]"
             />
           ) : null}
           {plan.foods.length > 1 ? (
-            <Button
+            <button
               type="button"
-              variant="ghost"
-              size="icon"
               aria-label={fill(t("feedRemoveFood"), { n })}
               onClick={() => step.removeFood(food.id)}
+              className="text-ink-tertiary focus-visible:outline-primary flex size-9 items-center justify-center rounded-[10px] text-[22px] focus-visible:outline-2"
             >
-              <X className="size-5" aria-hidden />
-            </Button>
+              <span aria-hidden>×</span>
+            </button>
           ) : null}
         </div>
       </div>
 
-      <div className="flex flex-col gap-5 p-4 sm:p-5">
+      <div className="flex flex-col gap-[18px] p-4 sm:p-[18px]">
         {food.source === "own" ? (
           <>
             <fieldset className="flex min-w-0 flex-col gap-2.5">
-              <legend className="text-body-ink text-meta mb-2.5 font-semibold">
+              <legend className="text-body-ink mb-2.5 text-[14px] font-medium">
                 {t("feedTypeLabel")}
               </legend>
               <div className="flex flex-wrap gap-2">
@@ -207,12 +184,12 @@ export function FoodCard({
             </fieldset>
 
             {show.brand || storage ? (
-              <div className="grid items-end gap-3.5 sm:grid-cols-[minmax(0,1fr)_auto]">
+              <div className="grid items-end gap-3.5 sm:grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
                 {show.brand ? (
                   <div className="flex min-w-0 flex-col gap-1.5">
                     <FieldLabel htmlFor={`feed-brand-${index}`}>
                       {t("feedBrandLabel")}{" "}
-                      <span className="text-ink-tertiary font-normal">
+                      <span className="font-normal text-(--care-micro)">
                         {t("medsOptional")}
                       </span>
                     </FieldLabel>
@@ -225,18 +202,18 @@ export function FoodCard({
                       onChange={(event) =>
                         step.updateFood(food.id, { brand: event.target.value })
                       }
+                      className="h-12 rounded-[12px] px-3.5 text-[16px] max-lg:h-12"
                     />
                   </div>
                 ) : null}
-                {storage && StorageGlyph ? (
-                  <div className="flex min-h-10 items-center gap-2 max-lg:min-h-12">
-                    <span className="text-micro text-ink-tertiary uppercase">
+                {storage ? (
+                  <div className="text-ink-secondary flex h-12 items-center gap-2 text-[14px]">
+                    <span className="text-[12px] font-semibold tracking-[0.04em] text-(--care-micro) uppercase">
                       {t("feedStorageLabel")}
                     </span>
-                    <Badge variant="checkedIn">
-                      <StorageGlyph aria-hidden />
+                    <span className="rounded-full bg-(--storage-bg) px-2.5 py-1.5 font-medium text-(--storage-ink)">
                       {storageLabel(t, storage)}
-                    </Badge>
+                    </span>
                   </div>
                 ) : null}
               </div>
@@ -292,8 +269,7 @@ export function FoodCard({
               />
             ) : null}
             {!stillOffered ? (
-              <p className="text-meta text-warning flex items-center gap-2">
-                <TriangleAlert className="size-4 shrink-0" aria-hidden />
+              <p className="rounded-[10px] bg-(--note-bg) px-3 py-2.5 text-[13px] text-(--note-ink)">
                 {t("feedHouseGone")}
               </p>
             ) : null}
@@ -370,8 +346,7 @@ export function FoodCard({
         ) : null}
 
         {food.source === "own" && FOOD[food.type].note === "prescription" ? (
-          <p className="text-meta text-warning flex items-start gap-2">
-            <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <p className="rounded-[10px] bg-(--note-bg) px-3 py-2.5 text-[13px] text-(--note-ink)">
             {t("feedNotePrescription")}
           </p>
         ) : null}

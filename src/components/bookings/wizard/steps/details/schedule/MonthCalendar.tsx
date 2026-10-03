@@ -1,7 +1,5 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import {
   monthGrid,
@@ -69,43 +67,49 @@ export function MonthCalendar({
   return (
     <section
       aria-label={label}
-      className="border-line bg-card shadow-card rounded-2xl border p-2.5 sm:p-[18px]"
+      className="border-line bg-card rounded-[22px] border p-2.5 shadow-(--sh-card) sm:p-[18px]"
     >
       <div className="mb-3 flex items-center gap-2">
         <Button
           type="button"
-          variant="outline"
-          size="icon"
+          variant="quiet"
+          size="mock-icon-34"
           disabled={!canGoBack}
           aria-label={t("wizPreviousMonth")}
           onClick={() =>
             onMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))
           }
         >
-          <ChevronLeft aria-hidden />
+          <span aria-hidden>‹</span>
         </Button>
         <Button
           type="button"
-          variant="outline"
-          size="icon"
+          variant="quiet"
+          size="mock-icon-34"
           aria-label={t("wizNextMonth")}
           onClick={() =>
             onMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))
           }
         >
-          <ChevronRight aria-hidden />
+          <span aria-hidden>›</span>
         </Button>
-        <p className="text-section text-body-ink flex-1 pl-1.5 capitalize">
+        <p className="text-body-ink flex-1 pl-1.5 text-[16px] font-semibold capitalize">
           {label}
         </p>
-        <Button type="button" variant="outline" onClick={onClear}>
+        <Button
+          type="button"
+          variant="quiet"
+          size="mock-30"
+          className="border-line text-ink-secondary"
+          onClick={onClear}
+        >
           {t("wizClear")}
         </Button>
       </div>
 
       <div
         aria-hidden
-        className="text-micro text-ink-tertiary grid grid-cols-7 pt-1 pb-2 text-center uppercase"
+        className="grid grid-cols-7 pt-1 pb-2 text-center text-[11.5px] font-semibold text-(--dow-ink) uppercase"
       >
         {short.map((name, index) => (
           <span key={index}>
@@ -146,7 +150,7 @@ export function MonthCalendar({
                   key={col}
                   className={cn(
                     "flex h-11 items-center justify-center sm:h-[50px]",
-                    banded && "bg-surface-inset",
+                    banded && "bg-acc-soft",
                     banded && isStart && "rounded-l-full",
                     banded && isEnd && "rounded-r-full",
                   )}
@@ -161,18 +165,18 @@ export function MonthCalendar({
                     className={cn(
                       "text-body-ink focus-visible:outline-primary flex size-[38px] flex-col items-center justify-center rounded-full text-[14px] font-medium tabular-nums transition-[background-color] duration-120 ease-[ease] focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:transition-none sm:size-11",
                       !unavailable && !picked && "hover:bg-surface-inset-2",
-                      "data-[today=true]:shadow-[inset_0_0_0_2px_var(--primary)]",
+                      "data-[today=true]:shadow-[inset_0_0_0_1.5px_var(--primary)]",
                       "data-[picked=true]:bg-primary data-[picked=true]:text-primary-foreground data-[picked=true]:font-bold",
                       unavailable &&
                         !picked &&
-                        "text-ink-tertiary cursor-not-allowed",
+                        "cursor-not-allowed text-(--day-off)",
                     )}
                   >
                     <span className={cn(struck && "line-through")}>
                       {day.getDate()}
                     </span>
                     {struck ? (
-                      <span className="text-warning text-[10px] leading-none font-semibold">
+                      <span className="text-[9px] leading-none font-semibold text-(--warm-ink)">
                         {status === "full" ? t("wizFull") : t("wizClosed")}
                       </span>
                     ) : null}
@@ -184,22 +188,22 @@ export function MonthCalendar({
         ))}
       </div>
 
-      <div className="border-line text-meta text-ink-tertiary mt-3 flex flex-wrap gap-4 border-t pt-3">
+      <div className="border-line-soft text-ink-tertiary mt-3 flex flex-wrap gap-4 border-t pt-3 text-[12px]">
         <span className="flex items-center gap-1.5">
           <span aria-hidden className="bg-primary size-3 rounded-full" />
           {t("wizLegendSelected")}
         </span>
         {showNights ? (
           <span className="flex items-center gap-1.5">
-            <span
-              aria-hidden
-              className="bg-surface-inset h-2.5 w-4 rounded-[3px]"
-            />
+            <span aria-hidden className="bg-acc-soft h-2.5 w-4 rounded-[3px]" />
             {t("wizLegendNights")}
           </span>
         ) : null}
         <span className="flex items-center gap-1.5">
-          <span aria-hidden className="text-warning font-semibold line-through">
+          <span
+            aria-hidden
+            className="font-semibold text-(--warm-ink) line-through"
+          >
             12
           </span>
           {blockedLabel}

@@ -57,15 +57,15 @@ export function CardPreview({ card }: { card: ReportCardModel }) {
   return (
     <aside
       aria-label={t("previewLabel")}
-      className="bg-surface-inset flex min-h-0 flex-col items-center gap-3 overflow-y-auto px-5 py-4"
+      className="flex min-h-0 flex-col items-center gap-2 overflow-y-auto p-[18px]"
     >
-      <p className="text-micro text-ink-tertiary uppercase">
+      <p className="text-ink-tertiary text-[11px] font-bold tracking-[0.08em] uppercase">
         {t("previewLabel")}
       </p>
-      <div className="border-heading bg-ground w-full max-w-[360px] overflow-hidden rounded-3xl border-[6px]">
+      <div className="bg-ground w-full max-w-[360px] overflow-hidden rounded-[38px] border-[9px] border-(--body) shadow-[0_20px_40px_rgba(20,33,61,0.18)]">
         <EvaluationReportCard card={card} serviceName={serviceName} />
       </div>
-      <p className="text-meta text-ink-tertiary">{t("previewCaption")}</p>
+      <p className="text-ink-tertiary text-[12.5px]">{t("previewCaption")}</p>
     </aside>
   );
 }

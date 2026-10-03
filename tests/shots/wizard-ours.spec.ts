@@ -48,6 +48,20 @@ async function shootAll(page: Page, name: string) {
   for (const size of WIDTHS) {
     await page.setViewportSize(size);
     await page.waitForTimeout(450);
+    // A lazy photo still on its way paints as an empty white band, which
+    // reads as a missing placeholder in the comparison.
+    await page
+      .waitForFunction(
+        () =>
+          [...document.images].every((img) => {
+            if (img.complete) return true;
+            const box = img.getBoundingClientRect();
+            return box.bottom < 0 || box.top > innerHeight || box.width === 0;
+          }),
+        undefined,
+        { timeout: 5_000 },
+      )
+      .catch(() => undefined);
     await page.screenshot({ path: `${OUT}/${name}-${size.width}.png` });
   }
   await page.setViewportSize(WIDTHS[0]);
@@ -160,10 +174,7 @@ async function choosePet(dialog: Locator, name: RegExp) {
 /** Boarding's Schedule: four months on, a Monday to the Friday. */
 async function pickStay(dialog: Locator) {
   for (let i = 0; i < 4; i += 1) {
-    await dialog
-      .locator("button:has(svg.lucide-chevron-right)")
-      .first()
-      .click();
+    await dialog.getByRole("button", { name: "Next month" }).first().click();
   }
   const monday = firstMonday(4) + 7;
   await dialog
@@ -637,7 +648,7 @@ test("the staff portal: daycare to Confirm and done", async ({ page }) => {
     .first()
     .click();
   await next(dialog);
-  await dialog.locator("button:has(svg.lucide-chevron-right)").first().click();
+  await dialog.getByRole("button", { name: "Next month" }).first().click();
   const [first, second] = nextMonthTuesdayAndWednesday();
   await dialog
     .getByRole("button", { name: String(first), exact: true })
@@ -722,7 +733,7 @@ test("the customer portal: daycare to request sent", async ({ page }) => {
     .click();
   await next(dialog);
   await page.waitForTimeout(600);
-  await dialog.locator("button:has(svg.lucide-chevron-right)").first().click();
+  await dialog.getByRole("button", { name: "Next month" }).first().click();
   const [first, second] = nextMonthTuesdayAndWednesday();
   await dialog
     .getByRole("button", { name: String(first), exact: true })

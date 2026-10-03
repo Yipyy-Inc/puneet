@@ -249,7 +249,7 @@ test("D3 a stay booked with the service carries them, counted by the stay", asyn
   await next(dialog);
 
   // One night: Tuesday in, Wednesday out — two days.
-  await dialog.locator("button:has(svg.lucide-chevron-right)").first().click();
+  await dialog.getByRole("button", { name: "Next month" }).first().click();
   const [tuesday, wednesday] = nextMonthTuesday();
   await dialog
     .getByRole("button", { name: String(tuesday), exact: true })

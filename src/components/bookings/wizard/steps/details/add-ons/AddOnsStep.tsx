@@ -1,10 +1,11 @@
 "use client";
 
-import { Gift, Minus, Plus, Sparkles } from "lucide-react";
+import { Gift } from "lucide-react";
 
 import { IncludedAddOns } from "@/components/bookings/modals/service-details/IncludedAddOns";
 import { Badge } from "@/components/ui/badge";
 import { PetAvatar } from "@/components/ui/pet-avatar";
+import { Photo } from "@/components/ui/photo";
 import { useOfferedAddOns } from "@/lib/add-ons/use-offered-add-ons";
 import { formatDuration, formatMoney } from "@/lib/i18n/format";
 import { fill } from "@/lib/medications/dose";
@@ -24,8 +25,10 @@ import type { Pet } from "@/types/pet";
 
 const MAX_QUANTITY = 99;
 
+// The booking mock's −/+ (2026-10-02): 28px circles, 36px on touch, faded
+// when there is nothing to take away or no room to add.
 const STEP_BUTTON =
-  "border-line bg-card text-body-ink hover:border-line-strong focus-visible:outline-primary flex size-10 shrink-0 items-center justify-center rounded-full border disabled:cursor-not-allowed disabled:bg-surface-inset disabled:text-ink-disabled disabled:hover:border-line focus-visible:outline-2 focus-visible:outline-offset-2 max-lg:size-12";
+  "border-line-strong bg-card text-body-ink focus-visible:outline-primary flex size-7 shrink-0 items-center justify-center rounded-full border text-[15px] leading-none disabled:cursor-not-allowed disabled:opacity-35 focus-visible:outline-2 focus-visible:outline-offset-2 max-lg:size-9";
 
 export function AddOnsStep({
   careType,
@@ -73,8 +76,10 @@ export function AddOnsStep({
   return (
     <div className="flex max-w-[1000px] flex-col gap-4">
       <div className="flex flex-col gap-0.5">
-        <h3 className="text-section text-body-ink">{t("addOnsLabel")}</h3>
-        <p className="text-meta text-ink-tertiary">
+        <h3 className="text-body-ink text-[17px] font-semibold">
+          {t("addOnsLabel")}
+        </h3>
+        <p className="text-ink-tertiary text-[13.5px]">
           {hint ?? fill(t("wizAddOnsHint"), { kind: kindLabel.toLowerCase() })}
         </p>
       </div>
@@ -88,7 +93,7 @@ export function AddOnsStep({
       ) : null}
 
       {offered.length === 0 ? (
-        <p className="border-line-strong text-meta text-ink-secondary rounded-2xl border border-dashed px-6 py-8 text-center">
+        <p className="border-line-strong text-ink-secondary rounded-[20px] border-[1.5px] border-dashed px-6 py-8 text-center text-[13.5px]">
           {t("wizNoAddOns")}
         </p>
       ) : (
@@ -102,31 +107,19 @@ export function AddOnsStep({
             return (
               <li
                 key={addOn.ref}
-                className="border-line bg-card flex flex-wrap items-center gap-4 rounded-2xl border px-[18px] py-3.5"
+                className="border-line bg-card flex flex-wrap items-center gap-4 rounded-[20px] border px-[18px] py-3.5"
               >
-                <span
-                  aria-hidden
-                  className="bg-surface-inset text-ink-tertiary flex size-13 shrink-0 items-center justify-center overflow-hidden rounded-lg"
-                >
-                  {addOn.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- a facility's own picture may live on any host
-                    <img
-                      src={addOn.imageUrl}
-                      alt=""
-                      className="size-full object-cover"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  ) : (
-                    <Sparkles className="size-5" />
-                  )}
-                </span>
+                <Photo
+                  src={addOn.imageUrl}
+                  shape="tile"
+                  className="size-13 shrink-0 rounded-[14px]"
+                />
                 <span className="flex min-w-[200px] flex-1 flex-col gap-0.5">
                   <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                    <span className="text-body-strong text-body-ink">
+                    <span className="text-body-ink text-[15px] font-semibold">
                       {addOn.name}
                     </span>
-                    <span className="text-meta text-body-ink font-semibold tabular-nums">
+                    <span className="text-acc-deep text-[13.5px] font-semibold tabular-nums">
                       {formatMoney(addOn.price, locale, {
                         whole: Number.isInteger(addOn.price),
                       })}
@@ -134,13 +127,16 @@ export function AddOnsStep({
                     {/* A groom's add-on lengthens the appointment (the
                         mock's "+15 min"); elsewhere minutes say nothing. */}
                     {careType === "grooming" && addOn.durationMin > 0 ? (
-                      <span className="text-meta text-ink-tertiary">
-                        +{formatDuration(addOn.durationMin, locale)}
+                      <span className="text-ink-tertiary text-[12px]">
+                        +
+                        {addOn.durationMin < 60
+                          ? fill(t("wizMinutes"), { count: addOn.durationMin })
+                          : formatDuration(addOn.durationMin, locale)}
                       </span>
                     ) : null}
                   </span>
                   {addOn.description ? (
-                    <span className="text-meta text-ink-tertiary">
+                    <span className="text-ink-tertiary text-[13px]">
                       {addOn.description}
                     </span>
                   ) : null}
@@ -168,14 +164,15 @@ export function AddOnsStep({
                         return (
                           <span
                             key={pet.id}
-                            className="border-line bg-background flex items-center gap-1.5 rounded-full border py-0.5 pr-2.5 pl-1.5"
+                            className="border-line flex items-center gap-2 rounded-full border bg-(--stepper-bg) px-1.5 py-[5px] pr-2.5"
                           >
                             <PetAvatar
                               name={pet.name}
                               src={pet.imageUrl}
-                              size="sm"
+                              size="mk-26"
+                              surface="muted"
                             />
-                            <span className="text-meta text-body-ink pr-1 font-medium">
+                            <span className="text-body-ink pr-1 text-[13px] font-medium">
                               {pet.name}
                             </span>
                             <Badge variant="confirmed">
@@ -188,14 +185,15 @@ export function AddOnsStep({
                       return (
                         <span
                           key={pet.id}
-                          className="border-line bg-background flex items-center gap-1.5 rounded-full border py-0.5 pr-0.5 pl-1.5"
+                          className="border-line flex items-center gap-2 rounded-full border bg-(--stepper-bg) px-1.5 py-[5px]"
                         >
                           <PetAvatar
                             name={pet.name}
                             src={pet.imageUrl}
-                            size="sm"
+                            size="mk-26"
+                            surface="muted"
                           />
-                          <span className="text-meta text-body-ink pr-1 font-medium">
+                          <span className="text-body-ink pr-1 text-[13px] font-medium">
                             {pet.name}
                           </span>
                           <button
@@ -210,14 +208,14 @@ export function AddOnsStep({
                               setQuantity(addOn.ref, pet.id, quantity - 1)
                             }
                           >
-                            <Minus aria-hidden className="size-4" />
+                            <span aria-hidden>−</span>
                           </button>
                           <output
                             aria-live="polite"
                             className={
                               quantity > 0
-                                ? "text-body-strong text-body-ink min-w-4 text-center tabular-nums"
-                                : "text-body-strong text-ink-tertiary min-w-4 text-center tabular-nums"
+                                ? "text-body-ink min-w-4 text-center text-[14px] font-semibold tabular-nums"
+                                : "text-ink-disabled min-w-4 text-center text-[14px] font-semibold tabular-nums"
                             }
                           >
                             {quantity}
@@ -234,7 +232,7 @@ export function AddOnsStep({
                               setQuantity(addOn.ref, pet.id, quantity + 1)
                             }
                           >
-                            <Plus aria-hidden className="size-4" />
+                            <span aria-hidden>+</span>
                           </button>
                         </span>
                       );

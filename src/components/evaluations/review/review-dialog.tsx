@@ -11,6 +11,7 @@ import {
 import { useEvaluationServiceName } from "@/components/evaluations/use-evaluation-service-name";
 import { Button } from "@/components/ui/button";
 import { ChoicePill } from "@/components/ui/choice-pill";
+import { LookScope } from "@/components/look/look-context";
 import {
   Dialog,
   DialogContent,
@@ -52,23 +53,25 @@ export function ReviewDialog({
   const { t } = useStaffText("evaluations");
   const detail = useEvaluationDetail(evaluationId);
   return (
-    <Dialog open onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={false} className={WIDE_DIALOG_FRAME}>
-        {detail.data ? (
-          <ReviewBody
-            detail={detail.data}
-            onClose={() => onOpenChange(false)}
-          />
-        ) : (
-          <div className="flex flex-col gap-4 p-6">
-            <DialogTitle className="text-section text-heading">
-              {detail.isError ? t("loadFailed") : t("loadingEvaluation")}
-            </DialogTitle>
-            <Skeleton className="h-40 rounded-2xl" />
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+    <LookScope name="eval-module">
+      <Dialog open onOpenChange={onOpenChange}>
+        <DialogContent showCloseButton={false} className={WIDE_DIALOG_FRAME}>
+          {detail.data ? (
+            <ReviewBody
+              detail={detail.data}
+              onClose={() => onOpenChange(false)}
+            />
+          ) : (
+            <div className="flex flex-col gap-4 p-6">
+              <DialogTitle className="text-section text-heading">
+                {detail.isError ? t("loadFailed") : t("loadingEvaluation")}
+              </DialogTitle>
+              <Skeleton className="h-40 rounded-2xl" />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </LookScope>
   );
 }
 
@@ -160,32 +163,30 @@ function ReviewBody({
   return (
     <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)]">
       <div className="flex min-h-0 min-w-0 flex-col">
-        <header className="bg-card border-line flex min-w-0 items-start gap-3 border-b px-4 py-3 md:px-5">
+        <header className="bg-card flex min-w-0 items-center gap-3 border-b border-(--inset-2) px-4 py-4 md:px-[22px]">
           <div className="min-w-0 flex-1">
-            <DialogTitle className="text-section text-heading">
+            <DialogTitle className="text-body-ink text-[19px] font-extrabold">
               {fill("reviewTitle", { pet: detail.pet.name })}
             </DialogTitle>
-            <DialogDescription className="text-meta text-ink-secondary">
+            <DialogDescription className="text-ink-secondary text-[13px]">
               {[detail.pet.breed, detail.client.name]
                 .filter(Boolean)
                 .join(" · ")}
             </DialogDescription>
           </div>
-          <Button
+          <button
             type="button"
-            variant="outline"
-            size="icon"
-            className="rounded-full"
             onClick={onClose}
             aria-label={t("close")}
+            className="bg-surface-inset-2 text-body-ink focus-visible:outline-primary grid size-9 shrink-0 place-items-center rounded-full focus-visible:outline-2"
           >
-            <X aria-hidden />
-          </Button>
+            <X aria-hidden className="size-[18px]" />
+          </button>
         </header>
 
-        <div className="bg-surface-inset flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4 md:px-5">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4 md:px-[18px]">
           {!mayAct ? (
-            <p className="bg-card border-line text-body text-body-ink rounded-2xl border px-4 py-3">
+            <p className="bg-card border-line text-body-ink rounded-[18px] border px-4 py-3 text-[14px]">
               {detail.cardStatus === "sent"
                 ? t("alreadySent")
                 : t("notYoursToReview")}
@@ -193,14 +194,16 @@ function ReviewBody({
           ) : null}
           <ReviewChecks detail={detail} ownerNote={ownerNote} />
 
-          <section className="bg-card border-line flex flex-col gap-2 rounded-2xl border p-4">
+          <section className="bg-card border-line flex flex-col gap-2 rounded-[18px] border px-4 py-3.5">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-body-strong text-body-ink min-w-0 flex-1">
+              <h3 className="text-body-ink min-w-0 flex-1 text-[15px] font-bold">
                 <label htmlFor="ev-review-note">{t("editNoteTitle")}</label>
               </h3>
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
+                size="mock-34"
+                className="gap-1.5 bg-(--violet-wash) px-3 text-[12.5px] font-bold text-(--violet-ink) hover:bg-(--violet-wash)"
                 disabled={!mayAct || rewrite.isPending}
                 onClick={() =>
                   rewrite.mutate(
@@ -227,7 +230,7 @@ function ReviewBody({
                   )
                 }
               >
-                <Sparkles aria-hidden />
+                <Sparkles aria-hidden className="size-4" />
                 {rewrite.isPending ? t("aiWriting") : t("aiRewrite")}
               </Button>
             </div>
@@ -238,13 +241,16 @@ function ReviewBody({
               rows={5}
               disabled={!mayAct}
               onChange={(event) => setOwnerNote(event.target.value)}
+              className="rounded-[14px] px-3 py-2.5 text-[14px]"
             />
-            <p className="text-meta text-ink-tertiary">{t("editNoteHelp")}</p>
+            <p className="text-ink-tertiary text-[12.5px]">
+              {t("editNoteHelp")}
+            </p>
           </section>
 
-          <div className="bg-card border-line rounded-2xl border p-4">
+          <div className="bg-card border-line rounded-[18px] border px-4 py-3.5">
             <fieldset className="flex flex-col gap-2" disabled={!mayAct}>
-              <legend className="text-body-strong text-body-ink">
+              <legend className="text-body-ink mb-2 text-[15px] font-bold">
                 {t("sendBy")}
               </legend>
               <div className="flex flex-wrap gap-2">
@@ -259,6 +265,7 @@ function ReviewBody({
                       key={channel}
                       type="checkbox"
                       checked={channels.includes(channel)}
+                      className={SEND_BY}
                       onChange={() =>
                         setChannels((current) =>
                           current.includes(channel)
@@ -267,6 +274,7 @@ function ReviewBody({
                         )
                       }
                     >
+                      {channels.includes(channel) ? "✓ " : null}
                       {t(`channel_${channel}`)}
                     </ChoicePill>
                   );
@@ -275,8 +283,10 @@ function ReviewBody({
                   type="checkbox"
                   checked
                   disabled
+                  className={SEND_BY}
                   onChange={() => undefined}
                 >
+                  {"✓ "}
                   {t("channel_portal")}
                 </ChoicePill>
               </div>
@@ -284,10 +294,10 @@ function ReviewBody({
           </div>
 
           {returning ? (
-            <section className="bg-card border-line flex flex-col gap-2 rounded-2xl border p-4">
+            <section className="bg-card border-line flex flex-col gap-2 rounded-[18px] border px-4 py-3.5">
               <label
                 htmlFor="ev-return-comment"
-                className="text-body-strong text-body-ink"
+                className="text-body-ink text-[15px] font-bold"
               >
                 {t("returnCommentLabel")}
               </label>
@@ -320,10 +330,12 @@ function ReviewBody({
           ) : null}
         </div>
 
-        <footer className="bg-card border-line flex flex-wrap items-center gap-3 border-t px-4 py-3 md:px-5">
+        <footer className="bg-card flex flex-wrap items-center gap-2 border-t border-(--inset-2) px-4 py-3.5 md:px-[18px]">
           <Button
             type="button"
-            variant="outline"
+            variant="quiet"
+            size="lg"
+            className="px-[18px] text-[14.5px] font-semibold"
             disabled={!mayAct || busy || returning}
             onClick={() => setReturning(true)}
           >
@@ -331,8 +343,9 @@ function ReviewBody({
           </Button>
           <Button
             type="button"
-            size="prominent"
-            className="yy-cta min-w-0 flex-1"
+            size="lg"
+            // The mock's approval: green, flat, the width it is given.
+            className="bg-success hover:bg-success min-w-[200px] flex-1 text-[15px] font-bold [--sh-cta-active:none] [--sh-cta-hover:none] [--sh-cta:none]"
             disabled={!mayAct || busy}
             onClick={approve}
           >
@@ -346,3 +359,7 @@ function ReviewBody({
     </div>
   );
 }
+
+/** The evaluation mock's send-by chip: chosen, the info tint with a tick. */
+const SEND_BY =
+  "has-checked:border-transparent has-checked:bg-(--info-wash) has-checked:text-(--info-ink) has-disabled:text-(--info-ink) font-bold";

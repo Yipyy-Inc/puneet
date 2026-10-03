@@ -43,14 +43,14 @@ export function MoneyInput({
   const [typing, setTyping] = useState<string | null>(null);
   const invalid = typing !== null && parseTyped(typing, locale) === null;
   const sign = (
-    <span aria-hidden className="text-body text-ink-tertiary">
+    <span aria-hidden className="text-ink-tertiary text-[14px]">
       $
     </span>
   );
   return (
     <div
       data-invalid={invalid}
-      className="border-line-strong bg-card has-focus-visible:border-primary has-focus-visible:outline-primary data-[invalid=true]:border-destructive flex min-h-10 w-full min-w-24 items-center gap-1 rounded-full border px-4 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 max-lg:min-h-12"
+      className="border-line-strong bg-card has-focus-visible:border-primary has-focus-visible:outline-primary data-[invalid=true]:border-destructive flex h-[38px] w-full min-w-24 items-center gap-1 rounded-[10px] border px-2.5 has-focus-visible:outline-2 has-focus-visible:outline-offset-2"
     >
       {locale === "fr" ? null : sign}
       <input
@@ -69,7 +69,7 @@ export function MoneyInput({
           if (amount !== null) onChange(amount);
         }}
         onBlur={() => setTyping(null)}
-        className="text-body text-body-ink w-full min-w-0 border-0 bg-transparent tabular-nums outline-none"
+        className="text-body-ink w-full min-w-0 border-0 bg-transparent text-[14px] tabular-nums outline-none"
       />
       {locale === "fr" ? sign : null}
     </div>

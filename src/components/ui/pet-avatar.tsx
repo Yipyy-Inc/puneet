@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { cn } from "@/lib/utils";
 import { useShellText } from "@/lib/shell/use-shell-text";
 
@@ -72,6 +74,11 @@ const SIZES = {
   lg: { box: 48, text: "text-[16px]", dot: "size-3.5" },
   xl: { box: 64, text: "text-[20px]", dot: "size-4" },
   "2xl": { box: 96, text: "text-[30px]", dot: "size-5" },
+  // The client mocks' own sizes (CLAUDE.md § "Client mocks decide the look"):
+  // a pet card's 52px square, a pet pill's 26px circle.
+  "mk-52": { box: 52, text: "text-[19px]", dot: "size-3.5" },
+  "mk-26": { box: 26, text: "text-[11px]", dot: "size-2" },
+  "mk-30": { box: 30, text: "text-[12px]", dot: "size-2" },
 } as const;
 
 export interface PetAvatarProps {
@@ -91,6 +98,13 @@ export interface PetAvatarProps {
    * see the note above. Ignored unless `present`.
    */
   pulse?: boolean;
+  /** The client mocks draw a pet card's picture as a rounded square. */
+  shape?: "circle" | "rounded";
+  /**
+   * The client mocks' discs: `card` on a pill (85% white), `accent` on
+   * Confirm's hero, `muted` in an add-on's pet list.
+   */
+  surface?: "default" | "card" | "muted" | "accent";
   className?: string;
 }
 
@@ -100,11 +114,16 @@ export function PetAvatar({
   size = "md",
   present,
   pulse,
+  shape = "circle",
+  surface = "default",
   className,
 }: PetAvatarProps) {
   const t = useShellText("primitives");
   const s = SIZES[size];
   const initial = name.trim().charAt(0).toUpperCase() || "?";
+  // A URL that will not load shows the initial, never a broken image.
+  const [failed, setFailed] = useState<string | null>(null);
+  const photo = src && failed !== src ? src : null;
 
   return (
     <span
@@ -114,15 +133,29 @@ export function PetAvatar({
       style={{ width: s.box, height: s.box }}
     >
       <span
-        className="bg-surface-inset-2 text-ink-secondary relative block size-full overflow-hidden rounded-full"
+        className={cn(
+          "relative block size-full overflow-hidden",
+          shape === "rounded" ? "rounded-[16px]" : "rounded-full",
+          // The booking mock's pill disc: 85% white, so it reads pale on a
+          // picked (solid accent) pill and white on an unpicked one.
+          surface === "card"
+            ? "text-body-ink bg-white/85"
+            : surface === "accent"
+              ? "bg-card text-acc-deep"
+              : surface === "muted"
+                ? "text-body-ink bg-(--avatar-muted,var(--inset-2))"
+                : "bg-surface-inset-2 text-ink-secondary",
+        )}
         // The ring, as one shadow: a 2px card-coloured gap, then 2px of
         // brand orange. Written here rather than as a Tailwind arbitrary
         // value because it reads as one idea and takes two tokens.
         style={{
-          boxShadow: `0 0 0 2px var(--card), 0 0 0 4px var(--brand-orange)`,
+          // A client-mock look sets --pet-ring: none (CLAUDE.md § "Client mocks
+          // decide the look"); everywhere else the ring is unchanged.
+          boxShadow: `var(--pet-ring, 0 0 0 2px var(--card), 0 0 0 4px var(--brand-orange))`,
         }}
       >
-        {src ? (
+        {photo ? (
           // ── A PLAIN <img>, AND THAT IS DELIBERATE ────────────────────────
           //
           // Two reasons, both load-bearing. `pet.imageUrl` is an arbitrary
@@ -138,12 +171,13 @@ export function PetAvatar({
           //
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={src}
+            src={photo}
             alt=""
             width={s.box}
             height={s.box}
             loading="lazy"
             decoding="async"
+            onError={() => setFailed(photo)}
             className="size-full object-cover"
           />
         ) : (

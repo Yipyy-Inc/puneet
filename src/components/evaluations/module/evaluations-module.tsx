@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { LookScope } from "@/components/look/look-context";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { SavedViews } from "@/components/ui/saved-views";
@@ -112,111 +113,118 @@ export function EvaluationsModule() {
   const data = board.data;
 
   return (
-    <div className="flex min-w-0 flex-col gap-5 p-4 md:p-6">
-      <div className="flex min-w-0 flex-col gap-1">
-        <p className="text-micro text-ink-tertiary uppercase">{t("eyebrow")}</p>
-        <PageHeader
-          title={t("title")}
-          description={t("subtitle")}
-          secondary={
-            tab === "setup" ? null : (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => goTo("setup")}
-              >
-                <SlidersHorizontal aria-hidden />
-                {t("tabSetup")}
-              </Button>
-            )
-          }
-        />
-      </div>
-
-      <SavedViews
-        activeKey={tab}
-        onSelect={(key) => goTo(key as Tab)}
-        className="border-line border-b"
-        views={[
-          {
-            key: "today",
-            label: t("tabToday"),
-            icon: CalendarDays,
-            count: data?.visits.length,
-          },
-          {
-            key: "review",
-            label: t("tabReview"),
-            icon: ListChecks,
-            count: data?.waiting.length,
-            countTone: "error",
-          },
-          {
-            key: "all",
-            label: t("tabAll"),
-            icon: List,
-            count: data?.all.length,
-          },
-          { key: "setup", label: t("tabSetup"), icon: SlidersHorizontal },
-        ]}
-      />
-
-      {tab === "setup" ? (
-        <SetupTab mayChange={mayChangeSetup} />
-      ) : board.isPending ? (
-        <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            {[0, 1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-28 rounded-2xl" />
-            ))}
-          </div>
-          <Skeleton className="h-56 rounded-3xl" />
-        </div>
-      ) : !data ? (
-        <div className="bg-card border-line flex flex-wrap items-center gap-3 rounded-3xl border p-5">
-          <p className="text-body text-body-ink min-w-0 flex-1">
-            {t("loadFailed")}
+    <LookScope name="eval-module">
+      <div className="flex min-w-0 flex-col gap-4 p-4 md:p-6">
+        <div className="flex min-w-0 flex-col gap-1">
+          <p className="text-ink-tertiary text-[11px] font-semibold tracking-[0.08em] uppercase">
+            {t("eyebrow")}
           </p>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => void board.refetch()}
-          >
-            {t("tryAgain")}
-          </Button>
+          <PageHeader
+            title={t("title")}
+            description={t("subtitle")}
+            secondary={
+              tab === "setup" ? null : (
+                <Button
+                  type="button"
+                  variant="quiet"
+                  size="mock-42"
+                  className="gap-1.5 font-semibold"
+                  onClick={() => goTo("setup")}
+                >
+                  <SlidersHorizontal aria-hidden className="size-[18px]" />
+                  {t("tabSetup")}
+                </Button>
+              )
+            }
+          />
         </div>
-      ) : tab === "today" ? (
-        <TodayTab
-          board={data}
-          highlightRef={highlightRef}
-          startingKey={startingKey}
-          onStart={startEvaluation}
-          onOpen={setOpenId}
-        />
-      ) : tab === "review" ? (
-        <ReviewTab
-          board={data}
-          now={now}
-          onReview={setReviewId}
-          onOpen={setOpenId}
-          onSetup={() => goTo("setup")}
-        />
-      ) : (
-        <AllTab board={data} onOpen={setOpenId} />
-      )}
 
-      {openId ? (
-        <EvaluatorDialog
-          evaluationId={openId}
-          onOpenChange={(open) => !open && setOpenId(null)}
+        <SavedViews
+          variant="pills"
+          activeKey={tab}
+          onSelect={(key) => goTo(key as Tab)}
+          className="border-line mb-0.5 border-b"
+          views={[
+            {
+              key: "today",
+              label: t("tabToday"),
+              icon: CalendarDays,
+              count: data?.visits.length,
+            },
+            {
+              key: "review",
+              label: t("tabReview"),
+              icon: ListChecks,
+              count: data?.waiting.length,
+              countTone: "error",
+            },
+            {
+              key: "all",
+              label: t("tabAll"),
+              icon: List,
+              count: data?.all.length,
+            },
+            { key: "setup", label: t("tabSetup"), icon: SlidersHorizontal },
+          ]}
         />
-      ) : null}
-      {reviewId ? (
-        <ReviewDialog
-          evaluationId={reviewId}
-          onOpenChange={(open) => !open && setReviewId(null)}
-        />
-      ) : null}
-    </div>
+
+        {tab === "setup" ? (
+          <SetupTab mayChange={mayChangeSetup} />
+        ) : board.isPending ? (
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              {[0, 1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-28 rounded-2xl" />
+              ))}
+            </div>
+            <Skeleton className="h-56 rounded-3xl" />
+          </div>
+        ) : !data ? (
+          <div className="bg-card border-line flex flex-wrap items-center gap-3 rounded-[20px] border p-5">
+            <p className="text-body-ink min-w-0 flex-1 text-[14px]">
+              {t("loadFailed")}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void board.refetch()}
+            >
+              {t("tryAgain")}
+            </Button>
+          </div>
+        ) : tab === "today" ? (
+          <TodayTab
+            board={data}
+            highlightRef={highlightRef}
+            startingKey={startingKey}
+            onStart={startEvaluation}
+            onOpen={setOpenId}
+          />
+        ) : tab === "review" ? (
+          <ReviewTab
+            board={data}
+            now={now}
+            onReview={setReviewId}
+            onOpen={setOpenId}
+            onSetup={() => goTo("setup")}
+          />
+        ) : (
+          <AllTab board={data} onOpen={setOpenId} />
+        )}
+
+        {openId ? (
+          <EvaluatorDialog
+            evaluationId={openId}
+            onOpenChange={(open) => !open && setOpenId(null)}
+          />
+        ) : null}
+        {reviewId ? (
+          <ReviewDialog
+            evaluationId={reviewId}
+            onOpenChange={(open) => !open && setReviewId(null)}
+          />
+        ) : null}
+      </div>
+    </LookScope>
   );
 }

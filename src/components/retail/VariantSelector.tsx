@@ -9,7 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Minus, Plus, Package, ShoppingCart } from "lucide-react";
+import { Minus, Plus, ShoppingCart } from "lucide-react";
+import { Photo } from "@/components/ui/photo";
 import { cn } from "@/lib/utils";
 import type { Product, ProductVariant } from "@/data/retail";
 
@@ -165,19 +166,11 @@ function MultiDimSelector({
     <div className="space-y-4 py-1">
       {/* Product header — image updates with selection */}
       <div className="flex items-center gap-4">
-        <div className="size-20 shrink-0 overflow-hidden rounded-xl shadow-sm">
-          {headerImage ? (
-            <img
-              src={headerImage}
-              alt={selectedVariant?.name ?? product.name}
-              className="size-full object-cover transition-all duration-300"
-            />
-          ) : (
-            <div className="bg-muted flex size-full items-center justify-center">
-              <Package className="text-muted-foreground/30 size-8" />
-            </div>
-          )}
-        </div>
+        <Photo
+          src={headerImage}
+          shape="tile"
+          className="size-20 rounded-xl shadow-sm"
+        />
         <div>
           <p className="font-semibold">{product.name}</p>
           {product.brand && (
@@ -233,17 +226,11 @@ function MultiDimSelector({
                   >
                     {/* Variant thumbnail with accent strip + color dot */}
                     <div className="relative size-12 overflow-hidden rounded-lg">
-                      {match?.imageUrl ? (
-                        <img
-                          src={match.imageUrl}
-                          alt={val}
-                          className="size-full object-cover"
-                        />
-                      ) : (
-                        <div className="bg-muted flex size-full items-center justify-center">
-                          <Package className="text-muted-foreground/30 size-5" />
-                        </div>
-                      )}
+                      <Photo
+                        src={match?.imageUrl}
+                        shape="tile"
+                        className="size-full rounded-none"
+                      />
                       {/* Colored accent strip at bottom of thumbnail */}
                       {colorHex && (
                         <div
@@ -442,19 +429,11 @@ function SingleDimSelector({
     <div className="space-y-4 py-1">
       {/* Product header */}
       <div className="flex items-center gap-4">
-        <div className="size-20 shrink-0 overflow-hidden rounded-xl shadow-sm">
-          {headerImage ? (
-            <img
-              src={headerImage}
-              alt={selectedVariant?.name ?? product.name}
-              className="size-full object-cover transition-all duration-300"
-            />
-          ) : (
-            <div className="bg-muted flex size-full items-center justify-center">
-              <Package className="text-muted-foreground/30 size-8" />
-            </div>
-          )}
-        </div>
+        <Photo
+          src={headerImage}
+          shape="tile"
+          className="size-20 rounded-xl shadow-sm"
+        />
         <div>
           <p className="font-semibold">{product.name}</p>
           {product.brand && (
@@ -505,17 +484,11 @@ function SingleDimSelector({
                     )}
                   >
                     <div className="relative size-12 overflow-hidden rounded-lg">
-                      {v.imageUrl ? (
-                        <img
-                          src={v.imageUrl}
-                          alt={label}
-                          className="size-full object-cover"
-                        />
-                      ) : (
-                        <div className="bg-muted flex size-full items-center justify-center">
-                          <Package className="text-muted-foreground/30 size-5" />
-                        </div>
-                      )}
+                      <Photo
+                        src={v.imageUrl}
+                        shape="tile"
+                        className="size-full rounded-none"
+                      />
                       {/* Colored accent strip */}
                       {colorHex && (
                         <div

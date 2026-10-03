@@ -1,8 +1,6 @@
 "use client";
 
-import { Check, CircleCheck, Clock, CircleSlash } from "lucide-react";
-
-import { Badge } from "@/components/ui/badge";
+import { Chip } from "@/components/ui/chip";
 import { formatMonthShort, isPluralOne } from "@/lib/i18n/format";
 import { shortPersonName } from "@/lib/bookings/wizard/staff-slots";
 import { fill } from "@/lib/medications/dose";
@@ -61,10 +59,12 @@ export function ClassStep({
       : t("wizClassesRunWeekly");
 
   return (
-    <div className="flex flex-col gap-[18px]">
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <h3 className="text-section text-body-ink">{t("wizPickClass")}</h3>
-        <p className="text-meta text-ink-tertiary">{subtitle}</p>
+    <div className="flex max-w-[900px] flex-col gap-4">
+      <div className="flex min-w-0 flex-col gap-[3px]">
+        <h3 className="text-body-ink text-[17px] font-semibold">
+          {t("wizPickClass")}
+        </h3>
+        <p className="text-ink-tertiary text-[13.5px]">{subtitle}</p>
       </div>
 
       {classes.length === 0 && isPending ? (
@@ -72,12 +72,12 @@ export function ClassStep({
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="border-line bg-card yy-skel h-[84px] rounded-2xl border"
+              className="border-line bg-card yy-skel h-[88px] rounded-[20px] border-[1.5px]"
             />
           ))}
         </div>
       ) : classes.length === 0 ? (
-        <p className="border-line-strong text-meta text-ink-secondary rounded-2xl border border-dashed px-6 py-8 text-center">
+        <p className="border-line-strong text-ink-secondary rounded-[20px] border-[1.5px] border-dashed px-6 py-8 text-center text-[13.5px]">
           {t("wizNoClasses")}
         </p>
       ) : (
@@ -106,24 +106,24 @@ export function ClassStep({
                 data-on={on}
                 data-full={blocked || undefined}
                 onClick={() => !blocked && onChange(c.id)}
-                className="border-line-strong bg-card hover:border-ink-disabled focus-visible:outline-primary data-[full=true]:bg-surface-inset data-[full=true]:hover:border-line-strong flex min-w-0 flex-wrap items-center gap-4 rounded-2xl border px-5 py-4 text-left transition-[box-shadow,border-color] duration-120 ease-[ease] focus-visible:outline-2 focus-visible:outline-offset-2 data-[full=true]:cursor-not-allowed data-[on=true]:border-transparent data-[on=true]:shadow-[inset_0_0_0_2px_var(--primary)] motion-reduce:transition-none"
+                className="mk-pick bg-card focus-visible:outline-primary flex min-w-0 flex-wrap items-center gap-4 rounded-[20px] px-5 py-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 data-[full=true]:cursor-not-allowed data-[full=true]:opacity-55"
               >
                 <span
                   aria-hidden
-                  className="bg-surface-inset text-body-ink flex size-14 shrink-0 flex-col items-center justify-center rounded-xs"
+                  className="text-body-ink flex size-14 shrink-0 flex-col items-center justify-center rounded-[16px] bg-(--tag-bg)"
                 >
-                  <span className="text-micro text-ink-tertiary uppercase">
+                  <span className="text-ink-tertiary text-[10.5px] font-bold uppercase">
                     {formatMonthShort(first.slice(0, 7), locale)}
                   </span>
-                  <span className="text-section tabular-nums">
+                  <span className="text-[19px] font-bold tabular-nums">
                     {start.getDate()}
                   </span>
                 </span>
-                <span className="flex min-w-[180px] flex-1 flex-col gap-0.5">
-                  <span className="text-body-strong text-body-ink">
+                <span className="flex min-w-[200px] flex-1 flex-col gap-0.5">
+                  <span className="text-body-ink text-[15.5px] font-semibold">
                     {c.name}
                   </span>
-                  <span className="text-meta text-ink-tertiary">
+                  <span className="text-ink-tertiary text-[13px]">
                     {c.trainerName
                       ? fill(t("wizClassWith"), {
                           when,
@@ -133,37 +133,42 @@ export function ClassStep({
                   </span>
                 </span>
                 {full ? (
-                  <Badge variant="cancelled">
-                    <CircleSlash aria-hidden />
+                  <Chip
+                    tone="neutral"
+                    size="md"
+                    className="text-ink-tertiary px-3 py-[5px]"
+                  >
                     {t("wizClassFull")}
-                  </Badge>
+                  </Chip>
                 ) : tooFew ? (
-                  <Badge variant="cancelled">
-                    <CircleSlash aria-hidden />
+                  <Chip
+                    tone="neutral"
+                    size="md"
+                    className="text-ink-tertiary px-3 py-[5px]"
+                  >
                     {fill(t("wizClassTooFew"), {
                       left: c.spotsLeft,
                       count: needed,
                     })}
-                  </Badge>
+                  </Chip>
                 ) : (
-                  <Badge variant={c.spotsLeft <= 2 ? "pending" : "confirmed"}>
-                    {c.spotsLeft <= 2 ? (
-                      <Clock aria-hidden />
-                    ) : (
-                      <CircleCheck aria-hidden />
-                    )}
+                  <Chip
+                    tone={c.spotsLeft <= 2 ? "warning" : "success"}
+                    size="md"
+                    className="px-3 py-[5px]"
+                  >
                     {fill(t("wizSpotsLeft"), {
                       left: c.spotsLeft,
                       capacity: c.capacity,
                     })}
-                  </Badge>
+                  </Chip>
                 )}
                 {on ? (
                   <span
                     aria-hidden
-                    className="bg-primary text-primary-foreground flex size-6 shrink-0 items-center justify-center rounded-full"
+                    className="bg-primary text-primary-foreground flex size-6 shrink-0 items-center justify-center rounded-full text-[13px] leading-none font-bold"
                   >
-                    <Check className="size-4" strokeWidth={3} />
+                    ✓
                   </span>
                 ) : null}
               </button>

@@ -1,36 +1,43 @@
-import { Check } from "lucide-react";
-
 import { cn } from "@/lib/utils";
 
 import type { WizardStepState } from "./types";
 
 // ============================================================================
-// The wizard's step badge (§5c): a finished step is a white tick on solid
-// success, the open one solid primary carrying its number, a step still ahead
-// an outline. The number lives in the badge, so the label never repeats it,
-// and a finished step shows the tick INSTEAD of its number.
+// The wizard's step badge, exactly as the client's mocks draw it (2026-10-02,
+// CLAUDE.md § "Client mocks decide the look"). The number lives in the badge,
+// so the label never repeats it, and a finished step shows a tick INSTEAD of
+// its number — the mock's own "✓" glyph.
 //
-// `onPrimary`: the open step's card is itself solid primary in the client's
-// layout, so its badge turns white with a primary number — a primary circle on
-// a primary card would vanish.
+//   tone "step"  the booking mock's step cards and top-bar pills: a finished
+//                step is the accent with a white tick; the open step's card
+//                is itself the accent, so its badge turns white with a deep
+//                accent number; a step ahead is grey.
+//   tone "sub"   the booking mock's Details sub-steps: the open and finished
+//                ones are the accent, the rest grey.
+//   tone "eval"  the evaluation mock's flat rail: finished green, open the
+//                accent, the rest the line colour.
 // ============================================================================
 
 const SIZES = {
-  lg: "size-7 text-[12px] [&_svg]:size-3.5",
-  md: "size-6 text-[11px] [&_svg]:size-3",
-  sm: "size-5 text-[10.5px] [&_svg]:size-3",
+  step: "size-6 text-[12px]",
+  sub: "size-5 text-[10.5px]",
+  pill: "size-7 text-[12px]",
+  chip: "size-[26px] text-[11px]",
+  eval: "size-[26px] text-[12px]",
 } as const;
+
+export type StepBadgeTone = "step" | "sub" | "eval";
 
 export function StepBadge({
   state,
   label,
-  size = "lg",
-  onPrimary = false,
+  size = "step",
+  tone = "step",
 }: {
   state: WizardStepState;
   label: number | string;
   size?: keyof typeof SIZES;
-  onPrimary?: boolean;
+  tone?: StepBadgeTone;
 }) {
   return (
     <span
@@ -39,15 +46,25 @@ export function StepBadge({
       className={cn(
         "flex shrink-0 items-center justify-center rounded-full font-bold tabular-nums",
         SIZES[size],
-        state === "done" && "bg-success text-white",
-        state === "current" &&
-          (onPrimary
-            ? "bg-card text-primary"
+        tone === "step" &&
+          (state === "done"
+            ? "bg-primary text-primary-foreground"
+            : state === "current"
+              ? "bg-card text-acc-deep"
+              : "text-ink-disabled bg-(--step-todo)"),
+        tone === "sub" &&
+          (state === "todo"
+            ? "bg-primary-tint-2 text-ink-tertiary"
             : "bg-primary text-primary-foreground"),
-        state === "todo" && "border-line-strong text-ink-tertiary border",
+        tone === "eval" &&
+          (state === "done"
+            ? "bg-success text-white"
+            : state === "current"
+              ? "bg-primary text-primary-foreground"
+              : "bg-line-strong text-ink-tertiary"),
       )}
     >
-      {state === "done" ? <Check strokeWidth={2.5} /> : label}
+      {state === "done" ? "✓" : label}
     </span>
   );
 }

@@ -51,7 +51,7 @@ async function toRoomStep(page: Page) {
   // advance: the facility closes at weekends and blocks dates of its own, and
   // a hardcoded "10" is a spec that fails on a calendar rather than on the
   // thing it is photographing.
-  await dialog.locator("button:has(svg.lucide-chevron-right)").first().click();
+  await dialog.getByRole("button", { name: "Next month" }).first().click();
   const days = dialog.locator("button:not([disabled])").filter({
     hasText: /^\d{1,2}$/,
   });

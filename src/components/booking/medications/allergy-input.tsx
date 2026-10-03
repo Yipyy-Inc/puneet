@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { TriangleAlert, X } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 
 // ============================================================================
@@ -37,18 +35,20 @@ export function AllergyInput({
   return (
     <div className="flex flex-wrap items-center gap-2">
       {values.map((value) => (
-        <Badge key={value} variant="overdue" className="h-auto min-h-9 pr-1">
-          <TriangleAlert aria-hidden />
+        <span
+          key={value}
+          className="inline-flex min-h-9 items-center gap-1 rounded-full bg-(--care-allergy-bg) pr-1.5 pl-3 text-[14px] font-medium text-(--care-allergy-ink)"
+        >
           <span className="whitespace-normal">{value}</span>
           <button
             type="button"
             aria-label={removeLabel(value)}
             onClick={() => onChange(values.filter((v) => v !== value))}
-            className="hover:bg-card focus-visible:outline-primary flex size-7 items-center justify-center rounded-full focus-visible:outline-2"
+            className="focus-visible:outline-primary flex size-[26px] items-center justify-center rounded-full text-[16px] focus-visible:outline-2"
           >
-            <X className="size-4" aria-hidden />
+            <span aria-hidden>×</span>
           </button>
-        </Badge>
+        </span>
       ))}
       <Input
         id={id}
@@ -62,7 +62,7 @@ export function AllergyInput({
           }
         }}
         onBlur={add}
-        className="w-56 max-w-full"
+        className="h-10 w-[200px] max-w-full px-3.5 text-[14px] max-lg:h-10"
       />
     </div>
   );

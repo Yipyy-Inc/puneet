@@ -55,11 +55,15 @@ export function GoalsStep({
   ];
 
   return (
-    <div className="flex max-w-[900px] flex-col gap-6">
-      <div className="flex flex-col gap-3">
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <h3 className="text-section text-body-ink">{t("wizWorkOn")}</h3>
-          <p className="text-meta text-ink-tertiary">{t("wizWorkOnHint")}</p>
+    <div className="flex max-w-[860px] flex-col gap-[22px]">
+      <div className="flex flex-col gap-2.5">
+        <div className="flex min-w-0 flex-col gap-[3px]">
+          <h3 className="text-body-ink text-[17px] font-semibold">
+            {t("wizWorkOn")}
+          </h3>
+          <p className="text-ink-tertiary text-[13.5px]">
+            {t("wizWorkOnHint")}
+          </p>
         </div>
         <div
           role="group"
@@ -75,6 +79,7 @@ export function GoalsStep({
                 name="wizard-training-goals"
                 value={goal}
                 checked={on}
+                size="lg"
                 onChange={() =>
                   onChange({
                     ...value,
@@ -94,7 +99,7 @@ export function GoalsStep({
       <div className="flex flex-col gap-2.5">
         <span
           id="wizard-training-experience"
-          className="text-micro text-ink-tertiary uppercase"
+          className="text-ink-tertiary text-[11.5px] font-semibold tracking-[0.07em] uppercase"
         >
           {t("wizPreviousTraining")}
         </span>
@@ -110,6 +115,8 @@ export function GoalsStep({
               name="wizard-training-experience"
               value={option.value}
               checked={value.experience === option.value}
+              size="lg"
+              className="px-[18px]"
               onChange={() => onChange({ ...value, experience: option.value })}
             >
               {option.label}
@@ -121,12 +128,13 @@ export function GoalsStep({
       <div className="flex flex-col gap-2.5">
         <label
           htmlFor="wizard-trainer-notes"
-          className="text-micro text-ink-tertiary uppercase"
+          className="text-ink-tertiary text-[11.5px] font-semibold tracking-[0.07em] uppercase"
         >
           {t("wizTrainerNotes")}
         </label>
         <Textarea
           id="wizard-trainer-notes"
+          className="border-line-strong bg-card text-body-ink min-h-[100px] rounded-[18px] px-4 py-3.5 text-[14px]"
           value={value.notes}
           maxLength={2000}
           rows={4}

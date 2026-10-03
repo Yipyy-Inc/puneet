@@ -1,7 +1,5 @@
 "use client";
 
-import { Plus } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -82,6 +80,7 @@ export function TimeRowsCard({
           return (
             <SetupRow key={row.id}>
               <Switch
+                size="sm"
                 checked={row.on}
                 onCheckedChange={(on) => update(row.id, { on })}
                 aria-label={fill(t("rowOn"), { name: shown })}
@@ -104,7 +103,7 @@ export function TimeRowsCard({
                     update(row.id, { label: undefined });
                   }
                 }}
-                className="w-44 min-w-40 flex-1 sm:flex-none"
+                className="w-[180px] min-w-40 flex-1 sm:flex-none"
               />
               <Input
                 type="time"
@@ -118,7 +117,7 @@ export function TimeRowsCard({
                 }}
                 className="w-36 tabular-nums"
               />
-              <label className="text-body text-ink-secondary flex min-h-10 min-w-40 flex-1 cursor-pointer items-center gap-2 max-lg:min-h-12">
+              <label className="text-ink-secondary flex min-w-40 flex-1 cursor-pointer items-center gap-2 text-[14px]">
                 <Checkbox
                   checked={row.preselected}
                   onCheckedChange={(checked) =>
@@ -131,7 +130,8 @@ export function TimeRowsCard({
                 <Button
                   type="button"
                   variant="ghost"
-                  className="text-destructive hover:text-destructive"
+                  size="setup"
+                  className="text-bad hover:text-bad px-2.5 font-normal"
                   aria-label={fill(t("removeNamed"), { name: shown })}
                   onClick={() => {
                     onChange((current) =>
@@ -157,11 +157,12 @@ export function TimeRowsCard({
           );
         })}
       </div>
-      <div className="border-line flex flex-wrap items-center justify-between gap-3 border-t px-5 py-3.5 sm:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-(--row-line) px-5 pt-3 pb-[18px] sm:px-6">
         <Button
           type="button"
-          variant="outline"
-          className="border-dashed"
+          variant="quiet"
+          size="setup"
+          className="text-primary gap-1 border-[1.5px] border-dashed border-(--cs-line) font-semibold"
           disabled={rows.length >= 12}
           onClick={() => {
             const row: CareTime = {
@@ -174,11 +175,11 @@ export function TimeRowsCard({
             onChange((current) => [...current, row]);
           }}
         >
-          <Plus aria-hidden />
+          <span aria-hidden>+</span>
           {addLabel}
         </Button>
         {customTimes ? (
-          <label className="text-body text-ink-secondary flex min-h-10 cursor-pointer items-center gap-2 max-lg:min-h-12">
+          <label className="text-ink-secondary flex cursor-pointer items-center gap-2 text-[14px]">
             <Checkbox
               checked={customTimes.checked}
               onCheckedChange={(checked) =>

@@ -61,13 +61,13 @@ export function EvaluationIntakeStep({
       {questions.map((question) => (
         <fieldset
           key={question.key}
-          className="border-line bg-card flex min-w-0 flex-col gap-2.5 rounded-2xl border p-4"
+          className="border-line bg-card flex min-w-0 flex-col gap-2.5 rounded-[18px] border p-4"
         >
           <legend className="sr-only">
             {/* french-ok: a catalogue key built from an id */}
             {t(`wizEvQ_${question.key}`)}
           </legend>
-          <p aria-hidden className="text-body-strong text-body-ink">
+          <p aria-hidden className="text-body-ink text-[15px] font-bold">
             {/* french-ok: a catalogue key built from an id */}
             {t(`wizEvQ_${question.key}`)}
           </p>
@@ -80,6 +80,7 @@ export function EvaluationIntakeStep({
                 value={option}
                 checked={answers[question.key] === option}
                 onChange={() => set({ [question.key]: option })}
+                tone="ink"
               >
                 {/* french-ok: a catalogue key built from an id */}
                 {t(`wizEvA_${question.key}_${option}`)}
@@ -95,6 +96,7 @@ export function EvaluationIntakeStep({
         placeholder={t("wizEvAnythingElse")}
         value={answers.notes ?? ""}
         onChange={(event) => set({ notes: event.target.value })}
+        className="border-line-strong rounded-[16px] px-3.5 py-3 text-[14px]"
       />
     </div>
   );

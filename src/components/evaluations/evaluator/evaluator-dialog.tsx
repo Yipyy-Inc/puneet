@@ -8,6 +8,7 @@ import {
   cardModelOf,
 } from "@/components/evaluations/card/card-preview";
 import { Button } from "@/components/ui/button";
+import { LookScope } from "@/components/look/look-context";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WIDE_DIALOG_FRAME } from "@/components/ui/wide-dialog";
@@ -51,38 +52,40 @@ export function EvaluatorDialog({
   const detail = useEvaluationDetail(evaluationId);
 
   return (
-    <Dialog open onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={false} className={WIDE_DIALOG_FRAME}>
-        {detail.data ? (
-          <EvaluatorBody
-            detail={detail.data}
-            onClose={() => onOpenChange(false)}
-          />
-        ) : (
-          <div className="flex flex-col gap-4 p-6">
-            <DialogTitle className="text-section text-heading">
-              {detail.isError ? t("loadFailed") : t("loadingEvaluation")}
-            </DialogTitle>
-            {detail.isError ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="self-start"
-                onClick={() => void detail.refetch()}
-              >
-                {t("tryAgain")}
-              </Button>
-            ) : (
-              <>
-                <Skeleton className="h-12 rounded-full" />
-                <Skeleton className="h-40 rounded-2xl" />
-                <Skeleton className="h-40 rounded-2xl" />
-              </>
-            )}
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+    <LookScope name="eval-module">
+      <Dialog open onOpenChange={onOpenChange}>
+        <DialogContent showCloseButton={false} className={WIDE_DIALOG_FRAME}>
+          {detail.data ? (
+            <EvaluatorBody
+              detail={detail.data}
+              onClose={() => onOpenChange(false)}
+            />
+          ) : (
+            <div className="flex flex-col gap-4 p-6">
+              <DialogTitle className="text-section text-heading">
+                {detail.isError ? t("loadFailed") : t("loadingEvaluation")}
+              </DialogTitle>
+              {detail.isError ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="self-start"
+                  onClick={() => void detail.refetch()}
+                >
+                  {t("tryAgain")}
+                </Button>
+              ) : (
+                <>
+                  <Skeleton className="h-12 rounded-full" />
+                  <Skeleton className="h-40 rounded-2xl" />
+                  <Skeleton className="h-40 rounded-2xl" />
+                </>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </LookScope>
   );
 }
 
@@ -159,7 +162,7 @@ function EvaluatorBody({
             )
           }
         />
-        <div className="bg-surface-inset flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4 md:px-5">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4 md:px-[18px]">
           {detail.returnedComment && detail.status === "in_progress" ? (
             <p
               role="status"
@@ -190,7 +193,7 @@ function EvaluatorBody({
             ))
           )}
         </div>
-        <footer className="bg-card border-line flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 md:px-5">
+        <footer className="bg-card flex flex-wrap items-center justify-between gap-3 border-t border-(--inset-2) px-4 py-3.5 md:px-[22px]">
           <div className="flex flex-wrap items-center gap-3">
             {step > 0 ? (
               <Button

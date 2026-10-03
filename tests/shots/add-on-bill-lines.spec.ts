@@ -171,7 +171,10 @@ async function toConfirmStep(page: Page): Promise<Locator> {
     .click();
   await next();
 
-  await dialog.locator("button:has(svg.lucide-chevron-right)").first().click();
+  await dialog
+    .getByRole("button", { name: /^(next month|mois suivant)$/i })
+    .first()
+    .click();
   const [tuesday, wednesday] = nextMonthTuesday();
   await dialog
     .getByRole("button", { name: String(tuesday), exact: true })

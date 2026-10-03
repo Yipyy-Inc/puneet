@@ -115,6 +115,19 @@ const buttonVariants = cva(
           text-primary underline-offset-4
           hover:underline
         `,
+        /**
+         * The client mocks' plain outline (CLAUDE.md § "Client mocks decide
+         * the look"): a hairline on white that neither lifts nor shadows.
+         * Disabled, the booking mock's warm grey (--quiet-disabled).
+         */
+        quiet: `
+          border-line-strong bg-card text-body-ink border
+          [&:disabled:not([data-loading])]:bg-(--quiet-disabled,var(--inset))
+        `,
+        /** The care mocks' action: the accent, flat — no lift, no glow. */
+        flat: `
+          bg-primary text-primary-foreground
+        `,
       },
       size: {
         // 40px, and 48px below 1024px — §1, and rule 7's standing-staff tap
@@ -148,6 +161,39 @@ const buttonVariants = cva(
           max-lg:size-12
         `,
         "icon-lg": "size-12",
+        /**
+         * The booking wizard's footer buttons as the client's mock sizes them:
+         * 46px, 52px on touch, 15px type. Mocked screens only.
+         */
+        wizard: `
+          h-[46px] px-6 text-[15px]
+          max-lg:h-[52px]
+        `,
+        /** The mocks' small pills: "Select all" (34px), "+ New client" (36px),
+         *  "Change client" (38px). Mocked screens only. */
+        "mock-30": "h-[30px] px-3 text-[12.5px]",
+        "mock-32": "h-8 px-3.5 text-[12.5px]",
+        "mock-34": "h-[34px] px-3.5 text-[13px]",
+        "mock-36": "h-9 px-4 text-[13.5px]",
+        "mock-38": "h-[38px] px-[18px] text-[13.5px]",
+        /** "Take this slot": 40px, 14px type. */
+        "mock-40": "h-10 px-5 text-[14px]",
+        /** The evaluation settings' header buttons: 42px, 14px type. */
+        "mock-42": "h-[42px] px-4 text-[14px]",
+        /** The setup page's "+ Add meal time": 40px, 10px corners. */
+        setup: "h-10 rounded-[10px] px-3.5 text-[14px]",
+        /** Its "Reset to default": 32px, 8px corners, 13px. */
+        "setup-sm": "h-8 rounded-[8px] px-3 text-[13px]",
+        /** The care mocks' buttons: 44px with 12px corners, 15px type. */
+        care: "h-11 rounded-[12px] px-[18px] text-[15px]",
+        /** "Remove plan": 36px, 10px corners, 14px type. */
+        "care-sm": "h-9 rounded-[10px] px-3 text-[14px]",
+        /** A saved medication's Edit and Remove: 40px, 10px corners. */
+        "care-md": "h-10 rounded-[10px] px-4 text-[14px]",
+        /** "Save medication": 46px, 12px corners. */
+        "care-lg": "h-[46px] rounded-[12px] px-[22px] text-[15px]",
+        /** The calendar's month arrows: 34px circles. */
+        "mock-icon-34": "size-[34px] text-[15px]",
       },
     },
     defaultVariants: {

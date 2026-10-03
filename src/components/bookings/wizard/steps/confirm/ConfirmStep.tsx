@@ -1,9 +1,8 @@
 "use client";
 
 import type { ComponentProps, ReactNode } from "react";
-import { CircleCheck, Info, TriangleAlert } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
+import { Chip } from "@/components/ui/chip";
 import type { WaiverRow } from "@/lib/api/waivers";
 import type { PreviewStatus } from "@/lib/bookings/wizard/confirm-view";
 import type { EstimateTotals } from "@/lib/bookings/wizard/estimate-totals";
@@ -120,9 +119,10 @@ export function ConfirmStep(props: ConfirmStepProps) {
         {isCustomer && props.approval.required ? (
           <div
             role="note"
-            className="border-info bg-card text-meta text-body-ink flex gap-2.5 rounded-xl border px-[18px] py-3.5"
+            // The booking mock's note (2026-10-02): pale blue, its words in
+            // the info ink, no glyph.
+            className="text-meta rounded-[18px] border border-(--info-line) bg-(--info-note) px-[18px] py-3.5 text-(--info-ink)"
           >
-            <Info aria-hidden className="text-info mt-0.5 size-4 shrink-0" />
             <p className="text-pretty">
               <strong className="font-semibold">{t("wizApprovalTitle")}</strong>{" "}
               {fill(t("wizApprovalText"), { hours: props.approval.hours })}
@@ -139,8 +139,7 @@ export function ConfirmStep(props: ConfirmStepProps) {
             flush
             aside={
               issues > 0 ? (
-                <Badge variant="pending">
-                  <TriangleAlert aria-hidden />
+                <Chip tone="warning" size="md" className="px-[11px] py-1">
                   {fill(
                     t(
                       isPluralOne(issues, locale)
@@ -149,12 +148,11 @@ export function ConfirmStep(props: ConfirmStepProps) {
                     ),
                     { count: issues },
                   )}
-                </Badge>
+                </Chip>
               ) : (
-                <Badge variant="confirmed">
-                  <CircleCheck aria-hidden />
+                <Chip tone="success" size="md" className="px-[11px] py-1">
                   {t("wizAllSet")}
-                </Badge>
+                </Chip>
               )
             }
           >
